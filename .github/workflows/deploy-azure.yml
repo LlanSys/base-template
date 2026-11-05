@@ -24,7 +24,6 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   REGISTRY: ghcr.io
-  IMAGE_NAMESPACE: ${{ github.repository_owner }}
   API_IMAGE: base-template-api
   BLAZOR_IMAGE: base-template-blazor
 
@@ -37,6 +36,7 @@ jobs:
       target: ${{ steps.resolve.outputs.target }}
       deployment_enabled: ${{ steps.resolve.outputs.deployment_enabled }}
       image_tag: latest
+      image_namespace: ${{ steps.resolve.outputs.image_namespace }}
     steps:
       - id: resolve
         env:
@@ -47,6 +47,7 @@ jobs:
             TARGET="${{ vars.AZURE_DEPLOYMENT_TARGET || 'app-service' }}"
           fi
           echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "image_namespace=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
           if [ "$AZURE_DEPLOYMENT_ENABLED" = "true" ]; then
             echo "deployment_enabled=true" >> "$GITHUB_OUTPUT"
             echo "### Azure deployment enabled" >> "$GITHUB_STEP_SUMMARY"
@@ -482,8 +483,8 @@ jobs:
       - name: Set GHCR Environment
         if: needs.setup.outputs.target == 'aca-ghcr'
         run: |
-          echo "DOCKER_REGISTRY=ghcr.io" >> $GITHUB_ENV
-          echo "DOCKER_NAMESPACE=${{ env.IMAGE_NAMESPACE }}/" >> $GITHUB_ENV
+          echo "DOCKER_REGISTRY=ghcr.io" >> "$GITHUB_ENV"
+          echo "DOCKER_NAMESPACE=${{ needs.setup.outputs.image_namespace }}/" >> "$GITHUB_ENV"
 
       - name: Build and push image
         uses: docker/build-push-action@v6
@@ -542,7 +543,7 @@ jobs:
           registryUrl: ghcr.io
           registryUsername: ${{ github.actor }}
           registryPassword: ${{ secrets.GHCR_PAT }}
-          imageToDeploy: ghcr.io/${{ env.IMAGE_NAMESPACE }}/${{ env.API_IMAGE }}:sha-${{ github.sha }}
+          imageToDeploy: ghcr.io/${{ needs.setup.outputs.image_namespace }}/${{ env.API_IMAGE }}:sha-${{ github.sha }}
 
       - name: Deploy UI to ACA (GHCR)
         if: needs.setup.outputs.target == 'aca-ghcr'
@@ -553,4 +554,4 @@ jobs:
           registryUrl: ghcr.io
           registryUsername: ${{ github.actor }}
           registryPassword: ${{ secrets.GHCR_PAT }}
-          imageToDeploy: ghcr.io/${{ env.IMAGE_NAMESPACE }}/${{ env.BLAZOR_IMAGE }}:sha-${{ github.sha }}
+          imageToDeploy: ghcr.io/${{ needs.setup.outputs.image_namespace }}/${{ env.BLAZOR_IMAGE }}:sha-${{ github.sha }}

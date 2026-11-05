@@ -30,7 +30,6 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   REGISTRY: ghcr.io
-  IMAGE_NAMESPACE: ${{ github.repository_owner }}
   API_IMAGE: base-template-api
   BLAZOR_IMAGE: base-template-blazor
 
@@ -42,10 +41,12 @@ jobs:
     outputs:
       deploy_target: ${{ steps.resolve.outputs.target }}
       image_tag: ${{ steps.resolve.outputs.tag }}
+      image_namespace: ${{ steps.resolve.outputs.image_namespace }}
     steps:
       - id: resolve
         run: |
           set -euo pipefail
+          echo "image_namespace=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "target=${{ inputs.deploy_target }}" >> $GITHUB_OUTPUT
             echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
@@ -99,8 +100,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:${{ needs.setup.outputs.image_tag }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ needs.setup.outputs.image_namespace }}/${{ matrix.image }}:${{ needs.setup.outputs.image_tag }}
+            ${{ env.REGISTRY }}/${{ needs.setup.outputs.image_namespace }}/${{ matrix.image }}:sha-${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
@@ -348,6 +349,6 @@ jobs:
       - name: Print image references
         run: |
           set -euo pipefail
-          echo "API image: ghcr.io/${{ env.IMAGE_NAMESPACE }}/${{ env.API_IMAGE }}:${{ needs.setup.outputs.image_tag }}"
-          echo "Blazor image: ghcr.io/${{ env.IMAGE_NAMESPACE }}/${{ env.BLAZOR_IMAGE }}:${{ needs.setup.outputs.image_tag }}"
+          echo "API image: ghcr.io/${{ needs.setup.outputs.image_namespace }}/${{ env.API_IMAGE }}:${{ needs.setup.outputs.image_tag }}"
+          echo "Blazor image: ghcr.io/${{ needs.setup.outputs.image_namespace }}/${{ env.BLAZOR_IMAGE }}:${{ needs.setup.outputs.image_tag }}"
           echo "Pull these images from the target host and run them behind a TLS-terminating reverse proxy."

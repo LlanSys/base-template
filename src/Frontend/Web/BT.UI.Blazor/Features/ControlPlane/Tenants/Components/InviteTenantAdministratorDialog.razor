@@ -1,0 +1,45 @@
+@inject BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces.IBackendApiClient Client
+@inject ISnackbar Snackbar
+<MudDialog>
+    <DialogContent>
+        <MudText Class="mb-3">Invite an administrator for @Tenant.DisplayName. The recipient verifies their email through the configured password recovery flow.</MudText>
+        <MudTextField @bind-Value="_firstName"
+                      Label="First name"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense" />
+        <MudTextField @bind-Value="_lastName"
+                      Label="Last name"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense" />
+        <MudTextField @bind-Value="_email"
+                      Label="Email"
+                      InputType="InputType.Email"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   Disabled="_busy"
+                   OnClick="@(() => Dialog.Cancel())">Cancel</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Send"
+                   Disabled="_busy"
+                   Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="InviteAsync">Send invitation</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Parameter, EditorRequired] public TenantResponse Tenant { get; set; } = default!;
+    private string _firstName = string.Empty, _lastName = string.Empty, _email = string.Empty;
+    private bool _busy;
+    private async Task InviteAsync()
+    {
+        _busy = true;
+        var response = await Client.SendAsync<bool>(HttpMethod.Post, $"api/v1/control-plane/tenants/{Tenant.Id}/administrator",
+            request: new InviteTenantAdministratorRequest(_email, _firstName, _lastName));
+        _busy = false;
+        if (response.IsSuccess) Dialog.Close(DialogResult.Ok(true));
+        else Snackbar.Add(response.Message ?? "Invitation failed.", Severity.Error);
+    }
+}

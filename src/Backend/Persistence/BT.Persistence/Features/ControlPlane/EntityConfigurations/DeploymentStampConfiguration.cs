@@ -1,18 +1,23 @@
 using BT.Domain.Features.ControlPlane.Tenants.Enums;
 using BT.Domain.Features.ControlPlane.Tenants.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BT.Persistence.Features.ControlPlane.EntityConfigurations;
 
-internal class DeploymentStampConfiguration : IEntityTypeConfiguration<DeploymentStamp>
+internal sealed class DeploymentStampConfiguration : IEntityTypeConfiguration<DeploymentStamp>
 {
     public void Configure(EntityTypeBuilder<DeploymentStamp> builder)
     {
         builder.ToTable("DeploymentStamps");
 
         builder.HasKey(x => x.Id);
-        
+        builder.Property(stamp => stamp.Revision).IsConcurrencyToken();
+        builder.Property(stamp => stamp.IsActive).HasDefaultValue(true);
+        builder.HasQueryFilter(stamp => !stamp.IsDeleted);
+        builder.Property(stamp => stamp.DeletedBy).HasMaxLength(128);
+
         builder.Property(x => x.Name)
             .IsRequired()
             .HasMaxLength(256);

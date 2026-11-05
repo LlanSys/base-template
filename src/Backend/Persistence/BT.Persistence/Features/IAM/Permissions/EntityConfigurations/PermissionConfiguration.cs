@@ -22,6 +22,8 @@ internal sealed class PermissionConfiguration : IEntityTypeConfiguration<Permiss
             .HasDatabaseName("UX_Permissions_Key");
 
         builder.Property(permission => permission.DepartmentId);
+        builder.Property(permission => permission.RequiredModule).HasMaxLength(128);
+        builder.Property(permission => permission.IsTenantDelegatable).IsRequired();
 
         builder.HasIndex(permission => permission.DepartmentId)
             .HasDatabaseName("IX_Permissions_DepartmentId");

@@ -11,7 +11,7 @@ using BT.Infrastructure.Logging;
 
 namespace BT.Infrastructure.Features.IAM.Users.EventHandlers;
 
-internal sealed class TenantInfrastructureChangedEventHandlers : 
+internal sealed class TenantInfrastructureChangedEventHandlers :
     INotificationHandler<TenantStampChangedDomainEvent>,
     INotificationHandler<TenantModuleRevokedDomainEvent>
 {
@@ -32,25 +32,25 @@ internal sealed class TenantInfrastructureChangedEventHandlers :
     public async Task Handle(TenantStampChangedDomainEvent notification, CancellationToken cancellationToken)
     {
         ControlPlaneLogDefinitions.LogTenantStampChangedRevokingSessions(_logger, notification.TenantId);
-        await RevokeAllTenantSessionsAsync(notification.TenantId, cancellationToken);
+        await RevokeAllTenantSessionsAsync(notification.TenantId, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task Handle(TenantModuleRevokedDomainEvent notification, CancellationToken cancellationToken)
     {
         ControlPlaneLogDefinitions.LogTenantModuleRevokedRevokingSessions(_logger, notification.TenantId, notification.ModuleKey);
-        await RevokeAllTenantSessionsAsync(notification.TenantId, cancellationToken);
+        await RevokeAllTenantSessionsAsync(notification.TenantId, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task RevokeAllTenantSessionsAsync(System.Guid tenantId, CancellationToken cancellationToken)
+    private async Task RevokeAllTenantSessionsAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         var users = await _iamUnitOfWork.UserRepository.FindAll()
             .Where(u => u.TenantId == tenantId && u.IsActive)
             .Select(u => u.Id)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         foreach (var userId in users)
         {
-            await _sessionService.RevokeAllUserSessionsAsync(userId, null, cancellationToken);
+            await _sessionService.RevokeAllUserSessionsAsync(userId, null, cancellationToken).ConfigureAwait(false);
         }
     }
 }

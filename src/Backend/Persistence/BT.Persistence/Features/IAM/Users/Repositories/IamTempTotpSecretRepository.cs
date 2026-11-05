@@ -12,13 +12,14 @@ using System.Collections.ObjectModel;
 
 namespace BT.Persistence.Features.IAM.Users.Repositories;
 
-internal sealed class IamTempTotpSecretRepository(IamDBContext context, ILogger<IamTempTotpSecretRepository> logger) : Repository<TempTotpSecret>(context), ITempTotpSecretRepository
+internal sealed class IamTempTotpSecretRepository(IamDBContext context, ILogger<IamTempTotpSecretRepository> logger, TimeProvider timeProvider) : Repository<TempTotpSecret>(context), ITempTotpSecretRepository
 {
     public async Task<TempTotpSecret?> GetValidTempSecretByUserIdAsync(string userId)
     {
+        var now = timeProvider.GetUtcNow();
         return await FindByCondition(x => x.UserId == userId &&
                                          !x.IsDeleted &&
-                                         x.ExpiresAt > DateTimeOffset.UtcNow)
+                                         x.ExpiresAt > now)
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync()
             .ConfigureAwait(false);
@@ -28,13 +29,14 @@ internal sealed class IamTempTotpSecretRepository(IamDBContext context, ILogger<
     {
         try
         {
-            var expiredSecrets = await FindByCondition(x => x.ExpiresAt <= DateTimeOffset.UtcNow && !x.IsDeleted)
+            var now = timeProvider.GetUtcNow();
+            var expiredSecrets = await FindByCondition(x => x.ExpiresAt <= now && !x.IsDeleted)
                 .ToListAsync(cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
             foreach (var secret in expiredSecrets)
             {
-                secret.MarkAsDeleted("System");
+                secret.MarkAsDeleted("System", now);
             }
 
             await UpdateRangeAsync(new Collection<TempTotpSecret>(expiredSecrets), cancellationToken).ConfigureAwait(false);
@@ -57,9 +59,9 @@ internal sealed class IamTempTotpSecretRepository(IamDBContext context, ILogger<
 
             if (tempSecret == null) return false;
 
-            tempSecret.MarkAsDeleted(userId);
+            tempSecret.MarkAsDeleted(userId, timeProvider.GetUtcNow());
 
-            await UpdateAsync(tempSecret).ConfigureAwait(false);
+            await UpdateAsync(tempSecret, cancellationToken).ConfigureAwait(false);
             return true;
         }
         catch (Exception ex)

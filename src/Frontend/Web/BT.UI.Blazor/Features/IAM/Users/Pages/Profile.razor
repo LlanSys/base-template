@@ -10,7 +10,8 @@
 <section class="dashboard-page">
     @if (!_isReady)
     {
-        <MudPaper Class="status-card" Elevation="0">Loading profile...</MudPaper>
+        <MudPaper Class="status-card"
+                  Elevation="0">Loading profile...</MudPaper>
     }
     else
     {
@@ -20,19 +21,29 @@
                 <h1>@DisplayName</h1>
                 <p>@AuthSession.CurrentUser?.Email</p>
             </div>
-            <MudButton Href="/iam/security" Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Security">
+            <MudButton Href="/iam/security"
+                       Variant="Variant.Filled"
+                       Size="Size.Small"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Security">
                 Security settings
             </MudButton>
         </div>
 
-        <MudPaper Class="poc-panel profile-detail-card" Elevation="0">
-            <MudGrid Spacing="3" Class="profile-detail-grid">
-                <MudItem xs="12" md="3">
+        <MudPaper Class="poc-panel profile-detail-card"
+                  Elevation="0">
+            <MudGrid Spacing="3"
+                     Class="profile-detail-grid">
+                <MudItem xs="12"
+                         md="3">
                     <div class="profile-summary-card embedded">
-                        <MudAvatar Size="Size.Large" Class="profile-avatar-large">
+                        <MudAvatar Size="Size.Large"
+                                   Class="profile-avatar-large">
                             @if (ProfilePictureSource is not null)
                             {
-                                <MudImage Src="@ProfilePictureSource" Alt="@DisplayName" ObjectFit="ObjectFit.Cover" />
+                                <MudImage Src="@ProfilePictureSource"
+                                          Alt="@DisplayName"
+                                          ObjectFit="ObjectFit.Cover" />
                             }
                             else
                             {
@@ -41,15 +52,20 @@
                         </MudAvatar>
                         <h2>@DisplayName</h2>
                         <span>@PrimaryRole</span>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Active</MudChip>
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Color="Color.Success">Active</MudChip>
                         <div class="profile-upload-control">
-                            <InputFile OnChange="OnProfilePictureSelectedAsync" accept="image/jpeg,image/png,image/webp" disabled="@_isUploading" />
+                            <InputFile OnChange="OnProfilePictureSelectedAsync"
+                                       accept="image/jpeg,image/png,image/webp"
+                                       disabled="@_isUploading" />
                             <small>JPEG, PNG, or WebP up to 10 MB.</small>
                         </div>
                     </div>
                 </MudItem>
 
-                <MudItem xs="12" md="9">
+                <MudItem xs="12"
+                         md="9">
                     <div class="panel-heading">
                         <div>
                             <span class="eyebrow">Account details</span>
@@ -58,19 +74,23 @@
                     </div>
 
                     <MudGrid>
-                        <MudItem xs="12" sm="6">
+                        <MudItem xs="12"
+                                 sm="6">
                             <strong>Username</strong>
                             <p>@AuthSession.CurrentUser?.UserName</p>
                         </MudItem>
-                        <MudItem xs="12" sm="6">
+                        <MudItem xs="12"
+                                 sm="6">
                             <strong>Email</strong>
                             <p>@AuthSession.CurrentUser?.Email</p>
                         </MudItem>
-                        <MudItem xs="12" sm="6">
+                        <MudItem xs="12"
+                                 sm="6">
                             <strong>Role</strong>
                             <p>@PrimaryRole</p>
                         </MudItem>
-                        <MudItem xs="12" sm="6">
+                        <MudItem xs="12"
+                                 sm="6">
                             <strong>Two-factor</strong>
                             <p>@(AuthSession.CurrentUser?.TwoFactorEnabled == true ? "Enabled" : "Recommended")</p>
                         </MudItem>

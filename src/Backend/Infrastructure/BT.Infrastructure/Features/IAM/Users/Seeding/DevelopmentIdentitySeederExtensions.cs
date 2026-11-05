@@ -11,6 +11,7 @@ public static class DevelopmentIdentitySeederExtensions
         ArgumentNullException.ThrowIfNull(app);
 
         var scope = app.Services.CreateAsyncScope();
+
         try
         {
             var seeder = scope.ServiceProvider.GetRequiredService<DevelopmentIdentitySeeder>();

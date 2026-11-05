@@ -1,8 +1,9 @@
-using System.Linq;
 using System.Text.RegularExpressions;
+
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
+
 using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure.Internal;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Migrations;
 
@@ -24,12 +25,12 @@ public class IdempotentNpgsqlMigrationsSqlGenerator : NpgsqlMigrationsSqlGenerat
         base.Generate(operation, model, dummyBuilder, terminate: false);
         dummyBuilder.EndCommand();
 
-        var command = dummyBuilder.GetCommandList().FirstOrDefault();
-        if (command != null)
+        var commands = dummyBuilder.GetCommandList();
+        if (commands is [{ } command, ..])
         {
             var sql = command.CommandText;
-            sql = Regex.Replace(sql, @"^CREATE\s+(UNIQUE\s+)?INDEX", "CREATE $1INDEX IF NOT EXISTS", RegexOptions.IgnoreCase);
-            
+            sql = Regex.Replace(sql, @"^CREATE\s+(UNIQUE\s+)?INDEX(?!\s+IF\s+NOT\s+EXISTS)", "CREATE $1INDEX IF NOT EXISTS", RegexOptions.IgnoreCase);
+
             builder.Append(sql);
         }
 
@@ -41,16 +42,24 @@ public class IdempotentNpgsqlMigrationsSqlGenerator : NpgsqlMigrationsSqlGenerat
     }
     protected override void Generate(CreateTableOperation operation, IModel? model, MigrationCommandListBuilder builder, bool terminate = true)
     {
+        // NpgsqlHistoryRepository adds IF NOT EXISTS to the generated history-table SQL.
+        // Leave that model to the provider so its second pass does not duplicate the clause.
+        if (model?.FindEntityType(typeof(HistoryRow)) is not null)
+        {
+            base.Generate(operation, model, builder, terminate);
+            return;
+        }
+
         var dummyBuilder = new MigrationCommandListBuilder(Dependencies);
         base.Generate(operation, model, dummyBuilder, terminate: false);
         dummyBuilder.EndCommand();
 
-        var command = dummyBuilder.GetCommandList().FirstOrDefault();
-        if (command != null)
+        var commands = dummyBuilder.GetCommandList();
+        if (commands is [{ } command, ..])
         {
             var sql = command.CommandText;
-            sql = Regex.Replace(sql, @"^CREATE\s+TABLE", "CREATE TABLE IF NOT EXISTS", RegexOptions.IgnoreCase);
-            
+            sql = Regex.Replace(sql, @"^CREATE\s+TABLE(?!\s+IF\s+NOT\s+EXISTS)", "CREATE TABLE IF NOT EXISTS", RegexOptions.IgnoreCase);
+
             builder.Append(sql);
         }
 

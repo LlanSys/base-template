@@ -105,7 +105,7 @@ public static class EmployeeSeed
             departmentId,
             managerId,
             createdBy
-            
+
         );
 
         // Overwrite with deterministic values for migration stability.

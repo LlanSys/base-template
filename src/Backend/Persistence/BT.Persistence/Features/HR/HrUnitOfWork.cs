@@ -16,13 +16,14 @@ using Microsoft.Extensions.Logging;
 namespace BT.Persistence.Features.HR;
 
 public sealed class HrUnitOfWork(
+    TimeProvider timeProvider,
     HrDBContext context,
     IDepartmentRepository departmentRepository,
     IEmployeeRepository employeeRepository,
     IEmployeeNumberSequenceRepository employeeNumberSequenceRepository,
     IPublisher publisher,
     ILogger<HrUnitOfWork> logger
-) : BaseUnitOfWork<HrDBContext>(context, publisher, logger), IHrUnitOfWork
+) : BaseUnitOfWork<HrDBContext>(context, publisher, logger, timeProvider), IHrUnitOfWork
 {
     public IDepartmentRepository DepartmentRepository { get; } = departmentRepository;
     public IEmployeeRepository EmployeeRepository { get; } = employeeRepository;

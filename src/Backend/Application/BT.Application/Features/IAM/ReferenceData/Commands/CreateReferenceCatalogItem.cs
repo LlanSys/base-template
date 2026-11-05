@@ -26,12 +26,14 @@ internal sealed class CreateReferenceCatalogItemCommandHandler(IIamUnitOfWork un
 
             var duplicate = await KeyExistsAsync(unitOfWork, command.CatalogType, command.Request.Key, command.Request.ParentKey, cancellationToken)
                 .ConfigureAwait(false);
+
             if (duplicate)
             {
                 return AppResponses.Failure<ReferenceCatalogItemResponse>($"Catalog key '{command.Request.Key}' already exists.");
             }
 
             var validationError = await ValidateParentAsync(unitOfWork, command.CatalogType, command.Request, cancellationToken).ConfigureAwait(false);
+
             if (validationError is not null)
             {
                 return AppResponses.Failure<ReferenceCatalogItemResponse>(validationError);

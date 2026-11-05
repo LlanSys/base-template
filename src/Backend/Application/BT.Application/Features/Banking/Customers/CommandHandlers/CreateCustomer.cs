@@ -37,6 +37,7 @@ namespace BT.Application.Features.Banking.Customers.CommandHandlers;
 
 
 internal sealed class CreateCustomerCommandHandler(
+    TimeProvider timeProvider,
     IBankingUnitOfWork _bankingUnitOfWork,
     ILogger<CreateCustomerCommandHandler> _logger,
     ICustomerNumberGenerator _customerNumberGenerator
@@ -99,6 +100,7 @@ internal sealed class CreateCustomerCommandHandler(
 
             // Create aggregate root — domain rules enforced inside
             var customer = Customer.Create(
+                timeProvider.GetUtcNow(),
                 customerNumber,
                 req.CompanyName,
                 req.Type.ToEnum<CustomerType>(),

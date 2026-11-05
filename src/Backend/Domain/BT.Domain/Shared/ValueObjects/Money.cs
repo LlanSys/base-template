@@ -20,6 +20,7 @@ public sealed record Money
     {
         ArgumentNullException.ThrowIfNull(left, nameof(left));
         ArgumentNullException.ThrowIfNull(right, nameof(right));
+
         if (left.Currency != right.Currency)
             throw new InvalidOperationException($"Cannot add monies with different currencies: {left.Currency} and {right.Currency}");
 
@@ -30,6 +31,7 @@ public sealed record Money
     {
         ArgumentNullException.ThrowIfNull(left, nameof(left));
         ArgumentNullException.ThrowIfNull(right, nameof(right));
+
         if (left.Currency != right.Currency)
             throw new InvalidOperationException($"Cannot subtract monies with different currencies: {left.Currency} and {right.Currency}");
 
@@ -45,6 +47,7 @@ public sealed record Money
     public static Money operator /(Money left, decimal divisor)
     {
         ArgumentNullException.ThrowIfNull(left, nameof(left));
+
         if (divisor == 0)
             throw new DivideByZeroException("Cannot divide money by zero");
 

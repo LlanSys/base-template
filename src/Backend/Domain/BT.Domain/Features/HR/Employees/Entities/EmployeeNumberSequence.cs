@@ -47,12 +47,12 @@ public sealed class EmployeeNumberSequence : ISoftDeletable
         return LastNumber;
     }
 
-    public void MarkAsDeleted(string deletedBy)
+    public void MarkAsDeleted(string deletedBy, DateTimeOffset now)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(deletedBy);
 
         IsDeleted = true;
-        DeletedAt = DateTimeOffset.UtcNow;
+        DeletedAt = now;
         DeletedBy = deletedBy.Trim();
     }
 }

@@ -4,8 +4,10 @@ using BT.Persistence.Features.ControlPlane.DataContext;
 using BT.Persistence.Features.HR.DataContext;
 using BT.Persistence.Features.IAM.DataContext;
 using BT.Persistence.Features.Shared.DataContext;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
 using Xunit;
 
 namespace BT.Tests.Architecture.Database;
@@ -63,28 +65,28 @@ public class MigrationGuardrailTests
 
     private static void AssertNoPendingModelChanges<TContext>(Action<DbContextOptionsBuilder> configureOptions) where TContext : DbContext
     {
-        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        var services = new ServiceCollection();
         services.AddDbContext<TContext>(configureOptions);
-        
+
         // Register mock providers to satisfy constructor dependencies for various DbContexts
         services.AddScoped<ICurrentTenantProvider, DummyTenantProvider>();
         services.AddScoped<ICurrentActorProvider, DummyActorProvider>();
         // Add a generic logger just in case
         services.AddLogging();
-        
+
         using var provider = services.BuildServiceProvider();
         using var context = provider.GetRequiredService<TContext>();
-        
+
         bool hasPendingChanges = context.Database.HasPendingModelChanges();
-        
+
         Assert.False(hasPendingChanges, $"The model for {typeof(TContext).Name} has changed since the last migration. Please run 'dotnet ef migrations add' to generate a new migration.");
     }
-    
+
     private sealed class DummyTenantProvider : ICurrentTenantProvider
     {
         public Guid TenantId => Guid.Empty;
     }
-    
+
     private sealed class DummyActorProvider : ICurrentActorProvider
     {
         public string ActorId => "System";

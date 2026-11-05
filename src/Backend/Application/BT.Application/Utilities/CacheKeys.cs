@@ -67,19 +67,19 @@ public static class CacheKeys
 
 
 
-    public static string EmailOtp(string userId) 
+    public static string EmailOtp(string userId)
         => $"otp:email:{NormalizeRequired(userId, nameof(userId))}";
 
-    public static string EmailOtpCooldown(string userId) 
+    public static string EmailOtpCooldown(string userId)
         => $"otp:email:cooldown:{NormalizeRequired(userId, nameof(userId))}";
 
-    public static string EmailOtpAttempts(string userId) 
+    public static string EmailOtpAttempts(string userId)
         => $"otp:email:attempts:{NormalizeRequired(userId, nameof(userId))}";
 
-    public static string PasswordResetOtp(string userId) 
+    public static string PasswordResetOtp(string userId)
         => $"pwdreset:otp:{NormalizeRequired(userId, nameof(userId))}";
 
-    public static string PasswordResetRateLimit(string userId) 
+    public static string PasswordResetRateLimit(string userId)
         => $"pwdreset:ratelimit:{NormalizeRequired(userId, nameof(userId))}";
 
     /// <summary>
@@ -88,12 +88,12 @@ public static class CacheKeys
     /// after it has resolved the version token — not by queries directly.
     /// </summary>
     internal static string VersionedList(
-        string group, 
-        string scope, 
-        string versionToken, 
+        string group,
+        string scope,
+        string versionToken,
         string discriminator)
         => $"{NormalizeRequired(group, nameof(group))}:list:{NormalizeRequired(scope, nameof(scope))}:{NormalizeRequired(versionToken, nameof(versionToken))}:{NormalizeRequired(discriminator, nameof(discriminator))}";
-        
+
 
     // ── Discriminator helpers ──────────────────────────────────────────────────
 

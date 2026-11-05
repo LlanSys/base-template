@@ -12,7 +12,7 @@ namespace BT.Application.Features.HR.Employees.CommandHandlers;
 
 
 
-internal sealed class UpdateEmployeeCommandHandler(IHrUnitOfWork unitOfWork, ILogger<UpdateEmployeeCommandHandler> logger)
+internal sealed class UpdateEmployeeCommandHandler(TimeProvider timeProvider, IHrUnitOfWork unitOfWork, ILogger<UpdateEmployeeCommandHandler> logger)
     : IRequestHandler<UpdateEmployeeCommand, AppResponse<EmployeeResponse>>
 {
     public async Task<AppResponse<EmployeeResponse>> Handle(UpdateEmployeeCommand command, CancellationToken cancellationToken)
@@ -21,6 +21,7 @@ internal sealed class UpdateEmployeeCommandHandler(IHrUnitOfWork unitOfWork, ILo
         {
             var request = command.Request;
             var employee = await unitOfWork.EmployeeRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
             if (employee is null)
             {
                 return AppResponses.Failure<EmployeeResponse>($"Employee {command.Id} not found.");
@@ -41,6 +42,7 @@ internal sealed class UpdateEmployeeCommandHandler(IHrUnitOfWork unitOfWork, ILo
                 request.PhoneNumber);
 
             employee.Update(
+                timeProvider.GetUtcNow(),
                 employee.Number,
                 request.Email,
                 request.FirstName,

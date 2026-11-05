@@ -1,0 +1,60 @@
+@inject BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces.IBackendApiClient Client
+@inject IAuthSession AuthSession
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.subtitle2">@PermissionKey</MudText>
+        <MudTable Items="_roles"
+                  Dense="true"
+                  Hover="true"
+                  Breakpoint="Breakpoint.None">
+            <HeaderContent>
+                <MudTh>Role</MudTh>
+                <MudTh>Scope</MudTh>
+                <MudTh>Permission assigned</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.RoleName</MudTd>
+                <MudTd>@context.Scope</MudTd>
+                <MudTd>@(context.HasPermission ? "Yes" : "No")</MudTd>
+                <MudTd>
+                    @if (AuthSession.HasPermission("roles.manage_permissions") && (!context.IsDefault || AuthSession.CurrentUser?.IsPlatformStaff == true))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Security"
+                                       title="Manage role permissions"
+                                       Size="Size.Small"
+                                       OnClick="@(() => ManageAsync(context))" />
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DialogContent>
+    <DialogActions>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   OnClick="@(() => Dialog.Close())">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Parameter, EditorRequired] public string PermissionKey { get; set; } = string.Empty;
+    private List<RolePermissionUsageResponse> _roles = [];
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        var response = await Client.SendAsync<List<RolePermissionUsageResponse>>(HttpMethod.Get, "api/v1/iam/admin/permission-role-usage/" + Uri.EscapeDataString(PermissionKey));
+        if (response.IsSuccess && response.Data is not null) _roles = response.Data;
+        else Snackbar.Add(response.Message ?? "Role usage could not be loaded.", Severity.Error);
+    }
+    private async Task ManageAsync(RolePermissionUsageResponse role)
+    {
+        var dialog = await Dialogs.ShowAsync<RolePermissionsDialog>("Role permissions", new DialogParameters
+        {
+            [nameof(RolePermissionsDialog.Role)] = new AdminRoleListResponse(role.RoleId, role.RoleName,
+                role.RoleName.ToUpperInvariant(), role.DepartmentId, role.Scope, 0, role.IsDefault, true, role.IsPlatformRole)
+        }, new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+        await dialog.Result;
+        await LoadAsync();
+    }
+}

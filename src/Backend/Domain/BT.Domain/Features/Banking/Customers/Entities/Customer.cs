@@ -9,6 +9,7 @@ using BT.Domain.Shared.Entities;
 using BT.Domain.Features.Banking.Customers.Events;
 using BT.Domain.Exceptions;
 using BT.Domain.Features.Banking.Customers.ValueObjects;
+
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -17,7 +18,7 @@ using System.Text;
 namespace BT.Domain.Features.Banking.Customers.Entities;
 
 /// <summary>
-    /// Customer is the aggregate root for corporate customer onboarding.
+/// Customer is the aggregate root for corporate customer onboarding.
 /// All state changes go through this entity — nothing is set directly
 /// on owned entities from outside the aggregate.
 /// </summary>
@@ -58,6 +59,7 @@ public class Customer : BaseEntity, ISoftDeletable, IHasDomainEvents
     /// Raises CustomerCreatedEvent on success.
     /// </summary>
     public static Customer Create(
+        DateTimeOffset now,
         string number,
         string name,
         CustomerType type,
@@ -85,6 +87,7 @@ public class Customer : BaseEntity, ISoftDeletable, IHasDomainEvents
             CorporateDetail = corporateDetail,
             Address = address,
             CommunicationPreference = communicationPreference,
+            CreatedAt = now,
             CreatedBy = createdBy
         };
 
@@ -93,8 +96,8 @@ public class Customer : BaseEntity, ISoftDeletable, IHasDomainEvents
             customer.Number,
             customer.Name,
             customer.Address.Email ?? string.Empty,
-            customer.Type
-    );
+            customer.Type)
+        { OccurredAt = now };
 
         // Step 3: Raise the event on the newly created instance.
         customer.RaiseDomainEvent(domainEvent);
@@ -170,6 +173,7 @@ public class Customer : BaseEntity, ISoftDeletable, IHasDomainEvents
         ArgumentNullException.ThrowIfNull(director);
 
         var totalShares = _directors.Sum(d => d.SharePercentage) + director.SharePercentage;
+
         if (totalShares > 100)
         {
             throw new DomainException(
@@ -197,11 +201,11 @@ public class Customer : BaseEntity, ISoftDeletable, IHasDomainEvents
         _domainEvents.Clear();
     }
 
-    public void MarkAsDeleted(string deletedBy)
+    public void MarkAsDeleted(string deletedBy, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(deletedBy);
         IsDeleted = true;
-        DeletedAt = DateTimeOffset.UtcNow;
+        DeletedAt = now;
         DeletedBy = deletedBy;
 
     }

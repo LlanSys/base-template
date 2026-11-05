@@ -9,20 +9,27 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using BT.Infrastructure.Logging;
+using BT.Infrastructure.Features.IAM.Authorization;
 
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
 internal sealed class UpdateRolePermissions(
     RoleManager<AppRole> roleManager,
     IamDBContext context,
-    ILogger<UpdateRolePermissions> logger)
+    ILogger<UpdateRolePermissions> logger,
+    IamAccessBoundary boundary)
     : IRequestHandler<UpdateRolePermissionsCommand, AppResponse<RolePermissionsResponse>>
 {
-    public async Task<AppResponse<RolePermissionsResponse>> Handle(UpdateRolePermissionsCommand command, CancellationToken cancellationToken)
+    public Task<AppResponse<RolePermissionsResponse>> Handle(UpdateRolePermissionsCommand command, CancellationToken cancellationToken)
+        => IdentityWriteScope.RunAsync(context,
+            () => HandleCore(command, cancellationToken), cancellationToken);
+
+    private async Task<AppResponse<RolePermissionsResponse>> HandleCore(UpdateRolePermissionsCommand command, CancellationToken cancellationToken)
     {
         try
         {
-            var role = await roleManager.FindByIdAsync(command.RoleId).ConfigureAwait(false);
+            var role = await roleManager.Roles.IgnoreQueryFilters().SingleOrDefaultAsync(role => role.Id == command.RoleId && !role.IsDeleted, cancellationToken).ConfigureAwait(false);
+
             if (role is null)
             {
                 return AppResponses.Failure<RolePermissionsResponse>("Role not found.");
@@ -34,6 +41,10 @@ internal sealed class UpdateRolePermissions(
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Order(StringComparer.OrdinalIgnoreCase)
                 .ToList();
+
+            if (!await boundary.CanEditRoleAsync(command.UserId, role, cancellationToken).ConfigureAwait(false)
+                || !await boundary.CanGrantPermissionsAsync(command.UserId, requestedKeys, cancellationToken).ConfigureAwait(false))
+                return AppResponses.Failure<RolePermissionsResponse>(AppError.Forbidden("You cannot change this role or grant permissions outside your delegated access."));
 
             var validKeys = await context.Permissions
                 .AsNoTracking()
@@ -52,31 +63,7 @@ internal sealed class UpdateRolePermissions(
                 return AppResponses.Failure<RolePermissionsResponse>($"Unknown, inactive, or out-of-scope permission(s): {string.Join(", ", invalidKeys)}.");
             }
 
-            var existingClaims = (await roleManager.GetClaimsAsync(role).ConfigureAwait(false))
-                .Where(static claim => claim.Type == "permission")
-                .ToList();
-
-            foreach (var claim in existingClaims.Where(claim => !requestedKeys.Contains(claim.Value, StringComparer.OrdinalIgnoreCase)))
-            {
-                var removeResult = await roleManager.RemoveClaimAsync(role, claim).ConfigureAwait(false);
-                if (!removeResult.Succeeded)
-                {
-                    return AppResponses.Failure<RolePermissionsResponse>(string.Join(", ", removeResult.Errors.Select(static error => error.Description)));
-                }
-            }
-
-            var existingKeys = existingClaims
-                .Select(static claim => claim.Value)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var key in requestedKeys.Where(key => !existingKeys.Contains(key)))
-            {
-                var addResult = await roleManager.AddClaimAsync(role, new Claim("permission", key)).ConfigureAwait(false);
-                if (!addResult.Succeeded)
-                {
-                    return AppResponses.Failure<RolePermissionsResponse>(string.Join(", ", addResult.Errors.Select(static error => error.Description)));
-                }
-            }
+            await boundary.SetRolePermissionsAsync(role, requestedKeys, cancellationToken).ConfigureAwait(false);
 
             return AppResponses.Success(
                 "Role permissions updated.",

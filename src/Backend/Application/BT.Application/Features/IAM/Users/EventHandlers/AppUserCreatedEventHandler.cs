@@ -4,8 +4,11 @@ using BT.Application.Features.HR.Employees.IntegrationEvents;
 using BT.Application.Features.IAM.Users.IntegrationEvents;
 using BT.Application.Utilities;
 using BT.Domain.Features.IAM.Users.Events;
+
 using MediatR;
+
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -27,12 +30,13 @@ internal sealed class AppUserCreatedEventHandler(IIntegrationEventPublisher inte
                 evt.EmployeeId,
                 evt.UserName,
                 evt.FullName,
-                evt.Email);
+                evt.Email)
+            { OccurredAt = evt.OccurredAt };
 
             await integrationEventPublisher.PublishAsync(integrationEvent, cancellationToken).ConfigureAwait(false);
 
             LogDefinitions.LogAppUserCreatedIntegrationPublished(logger, evt.UserId);
-                
+
         }
         catch (Exception ex)
         {

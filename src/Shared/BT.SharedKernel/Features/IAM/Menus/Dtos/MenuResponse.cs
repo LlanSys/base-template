@@ -14,4 +14,5 @@ public sealed record MenuResponse(
     string? RequiredModule,
     int DisplayOrder,
     bool IsActive,
-    IReadOnlyList<MenuResponse> Children);
+    IReadOnlyList<MenuResponse> Children,
+    Guid? AvailableTenantId = null);

@@ -18,30 +18,35 @@ public class SharedDBContext : DbContext, ITenantFilteredDBContext
 {
     private readonly ICurrentTenantProvider? _tenantProvider;
     private readonly ICurrentActorProvider? _actorProvider;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<SharedDBContext>? _logger;
 
     public SharedDBContext(
         DbContextOptions<SharedDBContext> options,
         ICurrentTenantProvider tenantProvider,
         ICurrentActorProvider actorProvider,
-        ILogger<SharedDBContext>? logger = null
+        ILogger<SharedDBContext>? logger = null,
+        TimeProvider? timeProvider = null
     ) : base(options)
     {
         _tenantProvider = tenantProvider;
         _actorProvider = actorProvider;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     protected SharedDBContext(
         DbContextOptions options,
         ICurrentTenantProvider tenantProvider,
         ICurrentActorProvider actorProvider,
-        ILogger<SharedDBContext>? logger = null
+        ILogger<SharedDBContext>? logger = null,
+        TimeProvider? timeProvider = null
     ) : base(options)
     {
         _tenantProvider = tenantProvider;
         _actorProvider = actorProvider;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
     public DbSet<EmailTemplate> EmailTemplates { get; set; }
     public DbSet<FailedMessage> FailedMessages { get; set; }
@@ -63,6 +68,13 @@ public class SharedDBContext : DbContext, ITenantFilteredDBContext
         modelBuilder.AddInboxStateEntity();
         modelBuilder.AddOutboxMessageEntity();
         modelBuilder.AddOutboxStateEntity();
+        // Preserve metadata written by the former v9 model. The single-bus v8
+        // runtime ignores this column; retaining it keeps the version pin non-destructive.
+        modelBuilder.Entity<MassTransit.EntityFrameworkCoreIntegration.OutboxState>(entity =>
+        {
+            entity.Property<string>("BusName").HasMaxLength(256);
+            entity.HasIndex("BusName", "Created");
+        });
 
         modelBuilder.ApplyConfigurationsFromAssembly(
             typeof(SharedDBContext).Assembly,
@@ -71,6 +83,7 @@ public class SharedDBContext : DbContext, ITenantFilteredDBContext
                     !(type.Namespace?.Contains("PostgreSql") == true));
 
         DBContextHelper.ApplyStandardModelConventions(modelBuilder, this);
+        modelBuilder.Entity<AdministrationAuditEntry>().HasQueryFilter(entry => entry.TenantId == CurrentTenantId);
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -79,7 +92,9 @@ public class SharedDBContext : DbContext, ITenantFilteredDBContext
         {
             var domainEvents = DBContextHelper.CollectDomainEvents(ChangeTracker);
             DBContextHelper.ClearDomainEventsFromAggregates(ChangeTracker);
-            DBContextHelper.UpdateAuditAndSoftDelete(ChangeTracker, _actorProvider?.ActorId ?? ICurrentActorProvider.SystemActor, CurrentTenantId);
+            var now = _timeProvider.GetUtcNow();
+            DBContextHelper.UpdateAuditAndSoftDelete(ChangeTracker, _actorProvider?.ActorId ?? ICurrentActorProvider.SystemActor, CurrentTenantId, now);
+            Set<AdministrationAuditEntry>().AddRange(AdministrationAuditCollector.Collect(ChangeTracker, _actorProvider?.ActorId ?? ICurrentActorProvider.SystemActor, CurrentTenantId, now));
             var result = await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             _collectedDomainEvents ??= [];
             _collectedDomainEvents.AddRange(domainEvents);
@@ -90,6 +105,7 @@ public class SharedDBContext : DbContext, ITenantFilteredDBContext
             foreach (var entry in ex.Entries)
             {
                 var entityId = entry.Entity is BaseEntity b ? b.Id.ToString() : "(unknown)";
+
                 if (_logger is not null)
                     PersistenceLogDefinitions.LogConcurrencyConflict(_logger, entry.Entity.GetType().Name, entityId);
                 _ = await entry.GetDatabaseValuesAsync(cancellationToken).ConfigureAwait(false);

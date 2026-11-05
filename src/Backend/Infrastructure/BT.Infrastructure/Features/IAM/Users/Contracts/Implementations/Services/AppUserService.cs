@@ -2,20 +2,23 @@ using BT.Application.Features.IAM.Users.Contracts.Interfaces;
 using BT.Application.Features.Shared.Notifications.Contracts.Interfaces;
 using BT.Domain.Features.IAM.Users.Entities;
 using BT.SharedKernel.Dtos.Common;
+
 using Microsoft.AspNetCore.Identity;
+
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace BT.Infrastructure.Features.IAM.Users.Contracts.Implementations.Services;
 
-internal sealed class AppUserService(UserManager<AppUser> userManager) : IAppUserService
+internal sealed class AppUserService(TimeProvider timeProvider, UserManager<AppUser> userManager) : IAppUserService
 {
     private readonly UserManager<AppUser> _userManager = userManager;
 
     public async Task<(bool Success, string Message)> CreateAsync(AppUser user, string password)
     {
         var result = await _userManager.CreateAsync(user, password).ConfigureAwait(false);
+
         if (result.Succeeded)
         {
             return (true, string.Empty);
@@ -26,18 +29,18 @@ internal sealed class AppUserService(UserManager<AppUser> userManager) : IAppUse
 
     public async Task<bool> DeleteAsync(AppUser appUser)
     {
-        appUser.MarkAsDeleted("System");
+        appUser.MarkAsDeleted("System", timeProvider.GetUtcNow());
         var result = await _userManager.UpdateAsync(appUser).ConfigureAwait(false);
         return result.Succeeded;
     }
 
-    public async Task<AppUser?> FindByEmailAsync(string email) 
+    public async Task<AppUser?> FindByEmailAsync(string email)
         => await _userManager.FindByEmailAsync(email).ConfigureAwait(false);
 
-    public async Task<AppUser?> FindByIdAsync(string appUserId) 
+    public async Task<AppUser?> FindByIdAsync(string appUserId)
         => await _userManager.FindByIdAsync(appUserId).ConfigureAwait(false);
 
-    public async Task<bool> IsInRoleAsync(AppUser appUser, string roleName) 
+    public async Task<bool> IsInRoleAsync(AppUser appUser, string roleName)
         => await _userManager.IsInRoleAsync(appUser, roleName).ConfigureAwait(false);
 
     public async Task<bool> UpdateAsync(AppUser user)

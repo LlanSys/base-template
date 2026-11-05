@@ -17,5 +17,5 @@ public record CustomerCreatedIntegrationEvent(
     string Email,
     string Type) : IIntegrationEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }

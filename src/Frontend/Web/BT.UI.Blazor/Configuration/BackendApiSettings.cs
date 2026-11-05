@@ -9,6 +9,7 @@ internal sealed class BackendApiSettings
     [Required]
     [Url]
     public string BaseUrl { get; init; } = string.Empty;
+    public string PublicBaseUrl { get; init; } = string.Empty;
 
     [Required]
     public string Version { get; init; } = "1";
@@ -52,6 +53,8 @@ internal sealed class IamEndpointSettings
 
 internal sealed class IamAuthEndpointSettings
 {
+    public string AcceptInvitation { get; init; } = "api/v{version}/iam/auth/invitations/accept";
+    public string ExchangeSsoCode { get; init; } = "api/v{version}/iam/auth/sso/exchange";
     public string Login { get; init; } = "api/v{version}/iam/auth/login";
 
     public string RefreshToken { get; init; } = "api/v{version}/iam/auth/refresh-token";
@@ -79,7 +82,7 @@ internal sealed class IamAuthEndpointSettings
     public string PasskeyLoginOptions { get; init; } = "api/v{version}/iam/auth/passkey/login/options";
 
     public string PasskeyLogin { get; init; } = "api/v{version}/iam/auth/passkey/login";
-    
+
     public string Passkeys { get; init; } = "api/v{version}/iam/auth/passkeys";
 }
 

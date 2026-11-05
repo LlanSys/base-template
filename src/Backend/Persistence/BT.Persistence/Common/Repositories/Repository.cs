@@ -11,7 +11,9 @@ using BT.Domain.Features.Banking.Customers.Contracts.Specifications;
 using BT.Domain.Shared.Contracts.Specifications;
 
 using BT.Persistence.Extensions;
+
 using Microsoft.EntityFrameworkCore;
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -73,10 +75,11 @@ public class Repository<T>(DbContext context) : IRepository<T> where T : class
     public async Task<T> SoftDeleteAsync(Guid Id, CancellationToken ct = default)
     {
         var entity = await FindByIdAsync(Id, ct).ConfigureAwait(false) ?? throw new KeyNotFoundException($"Entity with id {Id} not found");
-        if (entity is ISoftDeletable softDeletableEntity) 
+
+        if (entity is ISoftDeletable softDeletableEntity)
         {
             softDeletableEntity.IsDeleted = true;
-            _context.Set<T>().Update(entity); 
+            _context.Set<T>().Update(entity);
         }
         else
         {
@@ -94,12 +97,13 @@ public class Repository<T>(DbContext context) : IRepository<T> where T : class
             throw new ArgumentException("Id must be a valid GUID", nameof(Id));
 
         var entity = await FindByIdAsync(guidId, ct).ConfigureAwait(false);
+
         if (entity == null)
             throw new KeyNotFoundException($"Entity with id {Id} not found");
         _context.Set<T>().Remove(entity);
         return entity;
     }
-    
+
     public async Task<T> SoftDeleteAsync(string Id, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(Id))
@@ -109,10 +113,11 @@ public class Repository<T>(DbContext context) : IRepository<T> where T : class
             throw new ArgumentException("Id must be a valid GUID", nameof(Id));
 
         var entity = await FindByIdAsync(guidId, ct).ConfigureAwait(false) ?? throw new KeyNotFoundException($"Entity with id {Id} not found");
-        if (entity is ISoftDeletable softDeletableEntity) 
+
+        if (entity is ISoftDeletable softDeletableEntity)
         {
             softDeletableEntity.IsDeleted = true;
-            _context.Set<T>().Update(entity); 
+            _context.Set<T>().Update(entity);
         }
         else
         {
@@ -164,7 +169,7 @@ public class Repository<T>(DbContext context) : IRepository<T> where T : class
     {
         var list = await _context.Set<T>().Specify(spec).AsNoTracking().ToListAsync(ct).ConfigureAwait(false);
         //return new Collection<T>(list);
-        return [..list];
+        return [.. list];
     }
 
     public async Task<T> UpdateAsync(T entity, CancellationToken ct = default)
@@ -185,6 +190,7 @@ public class Repository<T>(DbContext context) : IRepository<T> where T : class
                     {
                         var trackedVal = e.Property(pk.Name).CurrentValue;
                         var incomingVal = pk.PropertyInfo?.GetValue(entity);
+
                         if (!Equals(trackedVal, incomingVal))
                         {
                             return false;
@@ -216,5 +222,5 @@ public class Repository<T>(DbContext context) : IRepository<T> where T : class
         return Task.FromResult(entities.Count);
     }
 
-    
+
 }

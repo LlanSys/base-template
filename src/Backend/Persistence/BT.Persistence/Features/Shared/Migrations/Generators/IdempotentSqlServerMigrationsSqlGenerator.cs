@@ -21,7 +21,7 @@ public class IdempotentSqlServerMigrationsSqlGenerator : SqlServerMigrationsSqlG
     {
         var schema = operation.Schema;
         var table = Dependencies.SqlGenerationHelper.DelimitIdentifier(operation.Table, schema);
-        
+
         builder
             .Append($"IF NOT EXISTS(SELECT * FROM sys.indexes WHERE name = '{operation.Name}' AND object_id = OBJECT_ID('{table}'))")
             .AppendLine()
@@ -93,7 +93,7 @@ public class IdempotentSqlServerMigrationsSqlGenerator : SqlServerMigrationsSqlG
     {
         var schema = operation.Schema;
         var table = Dependencies.SqlGenerationHelper.DelimitIdentifier(operation.Table, schema);
-        
+
         builder.AppendLine("BEGIN TRY");
         using (builder.Indent())
         {
@@ -104,15 +104,15 @@ public class IdempotentSqlServerMigrationsSqlGenerator : SqlServerMigrationsSqlG
         builder.AppendLine("BEGIN CATCH");
         using (builder.Indent())
         {
-            builder.AppendLine("PRINT ERROR_MESSAGE();");
-            builder.AppendLine($"PRINT 'Ignoring error during data insertion for {table} (likely idempotent).';");
+            builder.AppendLine("IF ERROR_NUMBER() NOT IN (2601, 2627) THROW;");
+            builder.AppendLine($"PRINT 'Ignoring error during data insertion for {table} (duplicate seed key).';");
             builder.AppendLine($"IF OBJECTPROPERTY(OBJECT_ID('{table}'), 'TableHasIdentity') = 1");
             builder.AppendLine($"BEGIN");
             builder.AppendLine($"    SET IDENTITY_INSERT {table} OFF;");
             builder.AppendLine($"END");
         }
         builder.AppendLine("END CATCH");
-        
+
         if (terminate)
         {
             builder.AppendLine(Dependencies.SqlGenerationHelper.StatementTerminator);

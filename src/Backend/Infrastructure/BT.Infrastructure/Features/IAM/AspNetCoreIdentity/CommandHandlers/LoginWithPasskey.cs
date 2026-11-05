@@ -27,6 +27,8 @@ using System.IdentityModel.Tokens.Jwt;
 
 using Microsoft.Extensions.Caching.Distributed;
 
+using RefreshTokenEntity = BT.Domain.Features.IAM.Users.Entities.RefreshToken;
+
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
 internal sealed class LoginWithPasskey(
@@ -47,7 +49,7 @@ internal sealed class LoginWithPasskey(
     public async Task<AppResponse<LoginResponse>> Handle(LoginWithPasskeyCommand command, CancellationToken cancellationToken)
     {
         var cacheKey = $"Fido2AssertionOptions:{command.CorrelationId}";
-        var originalOptionsStr = await cacheService.GetStringAsync(cacheKey, cancellationToken);
+        var originalOptionsStr = await cacheService.GetStringAsync(cacheKey, cancellationToken).ConfigureAwait(false);
         JsonElement originalOptions = default;
 
         if (string.IsNullOrEmpty(originalOptionsStr))
@@ -60,6 +62,7 @@ internal sealed class LoginWithPasskey(
         }
 
         var assertionIdStr = command.AssertionResponse.GetProperty("id").GetString();
+
         if (string.IsNullOrEmpty(assertionIdStr))
         {
             return AppResponses.Failure<LoginResponse>("Invalid assertion response.");
@@ -68,7 +71,7 @@ internal sealed class LoginWithPasskey(
         var credentialIdBytes = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlDecode(assertionIdStr);
 
         AppUser? user = null;
-        BT.Domain.Features.IAM.Users.Entities.Fido2Credential? credential = null;
+        Fido2Credential? credential = null;
 
         if (!string.IsNullOrWhiteSpace(command.Username))
         {
@@ -77,7 +80,7 @@ internal sealed class LoginWithPasskey(
                 .Include(u => u.Fido2Credentials)
                 .FirstOrDefaultAsync(u => u.NormalizedUserName == normalizedUsername || u.NormalizedEmail == normalizedUsername, cancellationToken)
                 .ConfigureAwait(false);
-                
+
             credential = user?.Fido2Credentials.FirstOrDefault(c => c.CredentialId.SequenceEqual(credentialIdBytes));
         }
         else
@@ -107,7 +110,8 @@ internal sealed class LoginWithPasskey(
 
         try
         {
-            var newSignCount = await passkeyService.MakeAssertionAsync(user, command.AssertionResponse, originalOptions, credential.PublicKey, credential.SignatureCounter, cancellationToken);
+            var newSignCount = await passkeyService.MakeAssertionAsync(user, command.AssertionResponse, originalOptions, credential.PublicKey, credential.SignatureCounter, cancellationToken).ConfigureAwait(false);
+
             if (newSignCount == null)
             {
                 return AppResponses.Failure<LoginResponse>("Passkey assertion failed.");
@@ -119,11 +123,11 @@ internal sealed class LoginWithPasskey(
         }
         catch (Exception ex)
         {
-            ServiceLogDefinitions.LogPasskeyAssertionException(logger, user.UserName, ex);
+            ServiceLogDefinitions.LogPasskeyAssertionException(logger, user.UserName ?? "unknown", ex);
             return AppResponses.Failure<LoginResponse>("Passkey validation failed.");
         }
 
-        await cacheService.RemoveAsync(cacheKey, cancellationToken);
+        await cacheService.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
 
         // Generate session, claims, tokens
         var sessionId = Guid.CreateVersion7();
@@ -141,18 +145,19 @@ internal sealed class LoginWithPasskey(
         }
 
         var activeSessionId = sessionCreationResult.Data;
-        var userClaims = await claimsService.GetUserClaimsAsync(user, activeSessionId).ConfigureAwait(false);
+        var userClaims = await claimsService.GetUserClaimsAsync(user, activeSessionId, cancellationToken).ConfigureAwait(false);
         var tokenResponse = await jwtService.CreateTokenAsync(userClaims).ConfigureAwait(false);
         var refreshToken = jwtService.CreateRefreshToken();
 
-        var refreshTokenEntity = BT.Domain.Features.IAM.Users.Entities.RefreshToken.Create(
+        var refreshTokenEntity = RefreshTokenEntity.Create(
+            timeProvider.GetUtcNow(),
             user.Id,
             refreshToken,
             timeProvider.GetUtcNow().AddHours(_jwtSettings.RefreshTokenExpiryHours),
             user.Id,
             httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString());
 
-        user.RecordSuccessfulLogin();
+        user.RecordSuccessfulLogin(timeProvider.GetUtcNow());
         await userManager.UpdateAsync(user).ConfigureAwait(false);
 
         await iamUnitOfWork.ExecuteInTransactionWithRetryAsync(async () =>
@@ -164,7 +169,7 @@ internal sealed class LoginWithPasskey(
         }).ConfigureAwait(false);
 
         var rolesResponse = await userManager.GetRolesAsync(user).ConfigureAwait(false);
-        
+
         var appUserResponse = new AppUserResponse(
                 user.Id,
                 user.UserName ?? string.Empty,
@@ -181,7 +186,7 @@ internal sealed class LoginWithPasskey(
                 user.RequirePasswordChange,
                 user.CreatedAt,
                 user.LastLoginAt,
-                [..rolesResponse],
+                [.. rolesResponse],
                 user.TenantId,
                 user.EmployeeId,
                 user.CustomerId);

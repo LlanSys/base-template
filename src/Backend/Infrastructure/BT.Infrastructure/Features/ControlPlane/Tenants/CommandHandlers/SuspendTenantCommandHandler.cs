@@ -21,11 +21,15 @@ public class SuspendTenantCommandHandler : IRequestHandler<SuspendTenantCommand,
     private readonly ILogger<SuspendTenantCommandHandler> _logger;
     private readonly ICurrentActorProvider _actorProvider;
 
+    private readonly TimeProvider _timeProvider;
+
     public SuspendTenantCommandHandler(
+        TimeProvider timeProvider,
         IControlPlaneUnitOfWork unitOfWork,
         ILogger<SuspendTenantCommandHandler> logger,
         ICurrentActorProvider actorProvider)
     {
+        _timeProvider = timeProvider;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _actorProvider = actorProvider;
@@ -41,8 +45,10 @@ public class SuspendTenantCommandHandler : IRequestHandler<SuspendTenantCommand,
             return AppResponses.Failure<TenantResponse>("Tenant not found.");
         }
 
+        if (tenant.Status is not (TenantStatus.Active or TenantStatus.Suspended))
+            return AppResponses.Failure<TenantResponse>("Complete KYC and provisioning before suspending this tenant.");
         tenant.Status = TenantStatus.Suspended;
-        tenant.UpdatedAt = DateTimeOffset.UtcNow;
+        tenant.UpdatedAt = _timeProvider.GetUtcNow();
         tenant.UpdatedBy = _actorProvider.ActorId;
 
         await _unitOfWork.Tenants.UpdateAsync(tenant, cancellationToken).ConfigureAwait(false);
@@ -53,6 +59,7 @@ public class SuspendTenantCommandHandler : IRequestHandler<SuspendTenantCommand,
         var dto = new TenantResponse
         {
             Id = tenant.Id,
+            Revision = tenant.Revision,
             Identifier = tenant.Identifier,
             DisplayName = tenant.DisplayName,
             HostName = tenant.HostName,
@@ -64,6 +71,7 @@ public class SuspendTenantCommandHandler : IRequestHandler<SuspendTenantCommand,
             CreatedAt = tenant.CreatedAt,
             UpdatedAt = tenant.UpdatedAt
         };
+
         return AppResponses.Success(dto);
     }
 }

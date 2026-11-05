@@ -9,7 +9,7 @@ namespace BT.Application.Features.IAM.Menus.Commands;
 
 
 
-internal sealed class DeleteMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogger<DeleteMenuCommandHandler> logger)
+internal sealed class DeleteMenuCommandHandler(TimeProvider timeProvider, IIamUnitOfWork unitOfWork, ILogger<DeleteMenuCommandHandler> logger)
     : IRequestHandler<DeleteMenuCommand, AppResponse<bool>>
 {
     public async Task<AppResponse<bool>> Handle(DeleteMenuCommand command, CancellationToken cancellationToken)
@@ -17,6 +17,7 @@ internal sealed class DeleteMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogge
         try
         {
             var menu = await unitOfWork.MenuRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
             if (menu is null)
             {
                 return AppResponses.Failure<bool>($"Menu {command.Id} not found.");
@@ -31,7 +32,7 @@ internal sealed class DeleteMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogge
                 return AppResponses.Failure<bool>("This menu has child menu items. Move or delete the children first.");
             }
 
-            menu.MarkAsDeleted(command.UserId);
+            menu.MarkAsDeleted(command.UserId, timeProvider.GetUtcNow());
             await unitOfWork.MenuRepository.UpdateAsync(menu, cancellationToken).ConfigureAwait(false);
             var saved = await unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false) > 0;
 

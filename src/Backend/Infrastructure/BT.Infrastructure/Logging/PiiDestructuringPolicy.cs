@@ -46,8 +46,9 @@ public class PiiDestructuringPolicy : IDestructuringPolicy
 
     public bool TryDestructure(object value, ILogEventPropertyValueFactory propertyValueFactory, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out LogEventPropertyValue? result)
     {
-        if (value == null) throw new System.ArgumentNullException(nameof(value));
-        if (propertyValueFactory == null) throw new System.ArgumentNullException(nameof(propertyValueFactory));
+        ArgumentNullException.ThrowIfNull(value, nameof(value));
+        ArgumentNullException.ThrowIfNull(propertyValueFactory, nameof(propertyValueFactory));
+
         var type = value.GetType();
 
         // Let Serilog handle primitive types and strings natively

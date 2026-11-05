@@ -1,13 +1,16 @@
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+
 using BT.Application.Contracts.Interfaces.Common;
 using BT.Application.Features.IAM.Users.Commands;
 using BT.Application.Features.IAM.Users.Contracts.Interfaces;
 using BT.Domain.Features.IAM.Contracts;
 using BT.Domain.Features.IAM.Users.Entities;
 using BT.SharedKernel.Dtos.Common;
+
 using MediatR;
+
 using Microsoft.EntityFrameworkCore;
 
 using Microsoft.AspNetCore.Identity;
@@ -41,7 +44,7 @@ internal sealed class RegisterPasskey(
         var cacheKey = $"Fido2RegistrationOptions:{user.Id}";
         var originalOptionsStr = await cacheService.GetStringAsync(cacheKey, cancellationToken).ConfigureAwait(false);
         JsonElement originalOptions = default;
-        
+
         if (string.IsNullOrEmpty(originalOptionsStr))
         {
             return AppResponses.Failure<bool>("Registration options have expired or do not exist.");
@@ -54,7 +57,7 @@ internal sealed class RegisterPasskey(
         try
         {
             var credential = await passkeyService.MakeNewCredentialAsync(user, request.AttestationResponse, originalOptions, cancellationToken).ConfigureAwait(false);
-            
+
             await unitOfWork.Fido2CredentialRepository.CreateAsync(credential, cancellationToken).ConfigureAwait(false);
             await unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
 
@@ -62,7 +65,7 @@ internal sealed class RegisterPasskey(
 
             return AppResponses.Success("Passkey registered successfully.", true);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             return AppResponses.Failure<bool>($"Failed to register passkey: {ex.Message}");
         }

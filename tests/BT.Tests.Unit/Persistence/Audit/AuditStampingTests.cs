@@ -2,6 +2,7 @@ using BT.Domain.Features.HR.Departments.Entities;
 using BT.Domain.Shared.Contracts.Common;
 using BT.Persistence.Features.HR.DataContext;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
 
 namespace BT.Tests.Unit.Persistence.Audit;
 
@@ -12,13 +13,17 @@ public sealed class AuditStampingTests
     [Fact]
     public async Task SaveChangesAsync_Should_Stamp_Current_Actor_And_Tenant_On_Create()
     {
-        await using var context = CreateContext("create-audit", "actor-1");
+        var now = new DateTimeOffset(2026, 11, 5, 9, 0, 0, TimeSpan.Zero);
+        var clock = Substitute.For<TimeProvider>();
+        clock.GetUtcNow().Returns(now);
+        await using var context = CreateContext("create-audit", "actor-1", clock);
 
         var department = Department.Create("qa", "Quality Assurance", "Test department", "initial");
         context.Departments.Add(department);
 
         await context.SaveChangesAsync();
 
+        Assert.Equal(now, department.CreatedAt);
         Assert.Equal("actor-1", department.CreatedBy);
         Assert.Equal(TenantId, department.TenantId);
         Assert.Null(department.UpdatedBy);
@@ -36,7 +41,7 @@ public sealed class AuditStampingTests
 
         await using var updateContext = CreateContext(databaseName, "updater");
         var savedDepartment = await updateContext.Departments.SingleAsync(department => department.Code == "OPS");
-        savedDepartment.Update("ops", "Operations", "Updated", true, "domain");
+        savedDepartment.Update(TimeProvider.System.GetUtcNow(), "ops", "Operations", "Updated", true, "domain");
 
         await updateContext.SaveChangesAsync();
 
@@ -44,7 +49,7 @@ public sealed class AuditStampingTests
         Assert.NotNull(savedDepartment.UpdatedAt);
     }
 
-    private static HrDBContext CreateContext(string databaseName, string actorId)
+    private static HrDBContext CreateContext(string databaseName, string actorId, TimeProvider? clock = null)
     {
         var options = new DbContextOptionsBuilder<HrDBContext>()
             .UseInMemoryDatabase(databaseName)
@@ -53,7 +58,8 @@ public sealed class AuditStampingTests
         return new HrDBContext(
             options,
             new FixedTenantProvider(TenantId),
-            new FixedActorProvider(actorId));
+            new FixedActorProvider(actorId),
+            timeProvider: clock);
     }
 
     private sealed class FixedTenantProvider(Guid tenantId) : ICurrentTenantProvider

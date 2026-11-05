@@ -38,6 +38,7 @@ internal sealed class VerifyPassword(
             }
 
             var isPasswordValid = await userManager.CheckPasswordAsync(user, request.Password).ConfigureAwait(false);
+
             if (!isPasswordValid)
             {
                 await userManager.AccessFailedAsync(user).ConfigureAwait(false);

@@ -15,8 +15,11 @@ using BT.Domain.Features.Banking.Customers.Enums;
 using BT.Domain.Features.Banking.Customers.ValueObjects;
 using BT.SharedKernel.Features.Banking.Customers.Dtos;
 using BT.SharedKernel.Dtos.Common;
+
 using MediatR;
+
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -33,7 +36,7 @@ namespace BT.Application.Features.Banking.Customers.CommandHandlers;
 /// still show stale data even after the list refreshes.
 /// </summary>
 
-public record UpdateCustomerCommand(Guid Id, UpdateCustomerRequest UpdateCustomerRequest, string UserId) 
+public record UpdateCustomerCommand(Guid Id, UpdateCustomerRequest UpdateCustomerRequest, string UserId)
     : IRequest<AppResponse<CustomerResponse>>, ICacheInvalidatorRequest
 {
     public IReadOnlyList<string> DirectInvalidationKeys => [CacheKeys.Entity("customers", Id.ToString())];
@@ -42,6 +45,6 @@ public record UpdateCustomerCommand(Guid Id, UpdateCustomerRequest UpdateCustome
         CacheKeys.GroupVersion("customers"),
         CacheKeys.GroupVersion("dashboard")
     ];
-        
+
 }
 

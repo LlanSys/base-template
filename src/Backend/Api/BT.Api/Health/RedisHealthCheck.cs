@@ -16,12 +16,14 @@ internal sealed class RedisHealthCheck(
         CancellationToken cancellationToken = default)
     {
         var settings = options.Value;
+
         if (IsMemoryCache(settings))
         {
             return HealthCheckResult.Healthy("Redis is not selected for the current cache provider.");
         }
 
         var multiplexer = serviceProvider.GetService<IConnectionMultiplexer>();
+
         if (multiplexer is null)
         {
             return HealthCheckResult.Unhealthy("Redis cache provider is selected but IConnectionMultiplexer is not registered.");

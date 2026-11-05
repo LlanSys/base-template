@@ -3,7 +3,8 @@ using BT.SharedKernel.Features.Shared.Payments.Dtos;
 using BT.UI.Blazor.Configuration;
 using BT.UI.Blazor.Features.Shared.BackendApi;
 using BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces;
-using BT.UI.Rcl.Features.Shared.Payments.Contracts.Interfaces;
+using BT.UI.Blazor.Features.Shared.Payments.Contracts.Interfaces;
+
 using Microsoft.Extensions.Options;
 
 namespace BT.UI.Blazor.Features.Shared.Payments.Contracts.Implementations;
@@ -67,16 +68,24 @@ internal sealed class PaymentCheckoutService(
         CancellationToken cancellationToken = default)
     {
         var queryParams = new Dictionary<string, string>();
-        
+
         if (request.Cursor.HasValue) queryParams["cursor"] = request.Cursor.Value.ToString();
         queryParams["pageSize"] = request.PageSize.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
         if (!string.IsNullOrWhiteSpace(request.SearchTerm)) queryParams["searchTerm"] = request.SearchTerm;
+
         if (!string.IsNullOrWhiteSpace(request.Provider)) queryParams["provider"] = request.Provider;
+
         if (request.ExactAmount.HasValue) queryParams["exactAmount"] = request.ExactAmount.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
         if (request.MinAmount.HasValue) queryParams["minAmount"] = request.MinAmount.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
         if (request.MaxAmount.HasValue) queryParams["maxAmount"] = request.MaxAmount.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
         if (request.StartDate.HasValue) queryParams["startDate"] = request.StartDate.Value.ToString("O");
+
         if (request.EndDate.HasValue) queryParams["endDate"] = request.EndDate.Value.ToString("O");
+
         if (!string.IsNullOrWhiteSpace(request.Status)) queryParams["status"] = request.Status;
 
         return apiClient.SendAsync<PaymentHistoryResponse>(

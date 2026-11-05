@@ -1,0 +1,59 @@
+@inject BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces.IBackendApiClient Client
+@inject IAuthSession AuthSession
+@inject ISnackbar Snackbar
+@using BT.SharedKernel.Features.IAM.Permissions.Dtos
+<MudDialog>
+    <DialogContent>
+        <MudTabs Rounded="true"
+                 Class="bt-catalog-tabs">
+            <MudTabPanel Text="Overview">
+                <MudText Class="pa-3">@Menu.Title</MudText>
+                <MudText Class="pa-3">@Menu.Description</MudText>
+                <MudText Class="pa-3">Route: @Menu.Url</MudText>
+            </MudTabPanel>
+            <MudTabPanel Text="Access">
+                <MudText Class="pa-3">Required permission: @(Menu.RequiredPermissionKey ?? "Accessible child menus")</MudText>
+                <div class="bt-table-scroll">
+                    <MudTable Items="_roles"
+                              Dense="true"
+                              RowsPerPage="20"
+                              Breakpoint="Breakpoint.None">
+                        <HeaderContent>
+                            <MudTh>Role</MudTh>
+                            <MudTh>Scope</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.RoleName</MudTd>
+                            <MudTd>@context.Scope</MudTd>
+                        </RowTemplate>
+                        <PagerContent>
+                            <MudTablePager />
+                        </PagerContent>
+                    </MudTable>
+                </div>
+                <MudText Typo="Typo.caption">Role grants remain subject to tenant entitlement and current user access.</MudText>
+            </MudTabPanel>
+            <MudTabPanel Text="Availability">
+                <MudText Class="pa-3">Module: @(Menu.RequiredModule ?? "Built in")</MudText>
+                <MudText Class="pa-3">Tenant availability: @(Menu.AvailableTenantId?.ToString() ?? "All entitled tenants")</MudText>
+                <MudText Class="pa-3">@(Menu.IsActive ? "Active navigation entry" : "Hidden navigation entry")</MudText>
+            </MudTabPanel>
+        </MudTabs>
+    </DialogContent>
+    <DialogActions>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   OnClick="@(() => Dialog.Close())">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Parameter, EditorRequired] public MenuResponse Menu { get; set; } = default!;
+    private List<RolePermissionUsageResponse> _roles = [];
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Menu.RequiredPermissionKey) || !AuthSession.HasPermission("roles.view")) return;
+        var response = await Client.SendAsync<List<RolePermissionUsageResponse>>(HttpMethod.Get, "api/v1/iam/admin/permission-role-usage/" + Uri.EscapeDataString(Menu.RequiredPermissionKey));
+        if (response.IsSuccess && response.Data is not null) _roles = response.Data.Where(role => role.HasPermission).ToList();
+        else Snackbar.Add(response.Message ?? "Menu access could not be loaded.", Severity.Error);
+    }
+}

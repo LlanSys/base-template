@@ -37,6 +37,8 @@ public class GetDeploymentStampByIdQueryHandler : IRequestHandler<GetDeploymentS
         var response = new DeploymentStampResponse
         {
             Id = stamp.Id,
+            Revision = stamp.Revision,
+            IsActive = stamp.IsActive,
             Name = stamp.Name,
             TargetResourceGroup = stamp.TargetResourceGroup,
             IsolationTier = stamp.IsolationTier.ToDisplayString(),

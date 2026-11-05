@@ -1,0 +1,178 @@
+@page "/control-panel/tenants/{Id:guid}"
+@layout ControlPlaneLayout
+@attribute [Authorize(Policy = "controlplane.view_tenants")]
+@rendermode InteractiveServer
+@inject ITenantService Tenants
+@inject IBackendApiClient Client
+@inject TimeProvider Clock
+@inject IAuthSession AuthSession
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+<MudButton Href="/control-panel/tenants"
+           StartIcon="@Icons.Material.Filled.ArrowBack">Tenants</MudButton>
+@if (_tenant is not null && _details is not null)
+{
+    <PageTitle>@_tenant.DisplayName | Tenant</PageTitle>
+    <MudPaper Class="poc-panel mt-3"
+              Elevation="0">
+        <div class="panel-heading">
+            <h2>@_tenant.DisplayName</h2>
+            <MudChip T="string"
+                     Size="Size.Small">@_tenant.Status</MudChip>
+        </div>
+        <MudTabs Rounded="true"
+                 Class="bt-catalog-tabs">
+            <MudTabPanel Text="Overview">
+                <MudText Class="pa-3">Hostname: @_tenant.HostName</MudText>
+                <MudText Class="pa-3">Plan: @_tenant.SubscriptionTier | Contact: @_tenant.ContactEmail</MudText>
+                <MudText Class="pa-3">Deployment stamp: @_tenant.DeploymentStampId</MudText>
+                <MudText Class="pa-3">@_tenant.AdministratorOnboarding</MudText>
+            </MudTabPanel>
+            <MudTabPanel Text="Modules">
+                @if (AuthSession.HasPermission("controlplane.manage_tenant_modules"))
+                {
+                    <MudButton StartIcon="@Icons.Material.Filled.Apps"
+                               OnClick="ManageModulesAsync"
+                               Class="my-2">Manage modules</MudButton>
+                }
+                <div class="bt-table-scroll">
+                    <MudTable Items="_details.Modules"
+                              Dense="true"
+                              Breakpoint="Breakpoint.None">
+                        <HeaderContent>
+                            <MudTh>Module</MudTh>
+                            <MudTh>Assigned</MudTh>
+                            <MudTh>Effective access</MudTh>
+                            <MudTh>Expiration (UTC)</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Key</MudTd>
+                            <MudTd>@context.Assigned</MudTd>
+                            <MudTd>@(context.Available ? "Available" : "Unavailable")</MudTd>
+                            <MudTd>@(context.ExpiresAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture) ?? "No expiration")</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
+            </MudTabPanel>
+            @if (AuthSession.HasPermission("controlplane.manage_tenant_administrators"))
+            {
+                <MudTabPanel Text="Administrators">
+                    <MudButton StartIcon="@Icons.Material.Filled.PersonAdd"
+                               OnClick="InviteAsync"
+                               Class="my-2">Invite administrator</MudButton>
+                    <div class="bt-table-scroll">
+                        <MudTable Items="_details.Administrators"
+                                  Dense="true"
+                                  Breakpoint="Breakpoint.None">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Email</MudTh>
+                                <MudTh>Active</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@context.Name</MudTd>
+                                <MudTd>@context.Email</MudTd>
+                                <MudTd>@context.IsActive</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </div>
+                    <MudText Typo="Typo.subtitle2"
+                             Class="mt-3">Invitations</MudText>
+                    <MudText Typo="Typo.caption">Pending invitations are delivered after tenant activation. Failed attempts retry automatically.</MudText>
+                    <div class="bt-table-scroll">
+                        <MudTable Items="_details.Invitations"
+                                  Dense="true"
+                                  Breakpoint="Breakpoint.None">
+                            <HeaderContent>
+                                <MudTh>Email</MudTh>
+                                <MudTh>Email delivery</MudTh>
+                                <MudTh>Account setup</MudTh>
+                                <MudTh>Message</MudTh>
+                                <MudTh>Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@context.Email</MudTd>
+                                <MudTd>@context.Status</MudTd>
+                                <MudTd>@AcceptanceLabel(context)</MudTd>
+                                <MudTd>@context.Message</MudTd>
+                                <MudTd>
+                                    @if (context.AcceptanceStatus == "Pending")
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                                       aria-label="Resend invitation"
+                                                       title="Resend invitation"
+                                                       OnClick="@(() => RetryAsync(context))" />
+                                    }
+                                    @if (context.AcceptanceStatus is "Pending" or "SettingUp")
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Block"
+                                                       aria-label="Revoke invitation"
+                                                       title="Revoke invitation"
+                                                       OnClick="@(() => RevokeAsync(context))" />
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </div>
+                </MudTabPanel>
+            }
+            @if (AuthSession.HasPermission("controlplane.view_audit"))
+            {
+                <MudTabPanel Text="Activity">
+                    <AdministrationAudit TenantId="Id" />
+                </MudTabPanel>
+            }
+        </MudTabs>
+    </MudPaper>
+}
+else if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private TenantResponse? _tenant;
+    private TenantAdministrationResponse? _details;
+    private string? _error;
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+    private async Task LoadAsync()
+    {
+        var tenant = await Tenants.GetByIdAsync(Id);
+        var details = await Client.SendAsync<TenantAdministrationResponse>(HttpMethod.Get, $"api/v1/control-plane/tenants/{Id}/administration");
+        if (tenant.IsSuccess && details.IsSuccess) { _tenant = tenant.Data; _details = details.Data; _error = null; }
+        else _error = tenant.Message ?? details.Message ?? "Tenant details could not be loaded.";
+    }
+    private async Task ManageModulesAsync()
+    {
+        var dialog = await Dialogs.ShowAsync<TenantModulesDialog>("Tenant modules", new DialogParameters { ["ExistingTenant"] = _tenant }, new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+        await dialog.Result; await LoadAsync();
+    }
+    private async Task InviteAsync()
+    {
+        var dialog = await Dialogs.ShowAsync<InviteTenantAdministratorDialog>("Invite administrator", new DialogParameters { ["Tenant"] = _tenant }, new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+        await dialog.Result; await LoadAsync();
+    }
+    private async Task RetryAsync(TenantInvitationResponse invitation)
+    {
+        if (await Dialogs.ShowMessageBoxAsync("Retry invitation", $"Queue another invitation for {invitation.Email}?", yesText: "Queue", cancelText: "Cancel") != true) return;
+        var response = await Client.SendAsync<bool>(HttpMethod.Post, $"api/v1/control-plane/tenants/{Id}/administrator-invitations/{invitation.Id}/retry");
+        if (!response.IsSuccess) Snackbar.Add(response.Message ?? "Invitation could not be queued.", Severity.Error);
+        await LoadAsync();
+    }
+    private string AcceptanceLabel(TenantInvitationResponse invitation) => invitation.AcceptanceStatus switch
+    {
+        "SettingUp" => "Security setup in progress", "Accepted" => "Completed", "Revoked" => "Revoked",
+        _ => invitation.ExpiresAt <= Clock.GetUtcNow() ? "Expired" : "Awaiting acceptance"
+    };
+    private async Task RevokeAsync(TenantInvitationResponse invitation)
+    {
+        if (await Dialogs.ShowMessageBoxAsync("Revoke invitation", $"Revoke the invitation for {invitation.Email}? They will no longer be able to use it to join this organization.", yesText: "Revoke", cancelText: "Cancel") != true) return;
+        var response = await Client.SendAsync<bool>(HttpMethod.Post, $"api/v1/control-plane/tenants/{Id}/administrator-invitations/{invitation.Id}/revoke");
+        if (!response.IsSuccess) Snackbar.Add(UserMessageSanitizer.Normalize(response.Message, "Invitation could not be revoked."), Severity.Error);
+        await LoadAsync();
+    }
+}

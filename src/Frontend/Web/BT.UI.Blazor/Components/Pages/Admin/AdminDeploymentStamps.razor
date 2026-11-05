@@ -1,5 +1,6 @@
 @page "/control-panel/stamps"
 @layout ControlPlaneLayout
+@attribute [Authorize(Policy = "controlplane.view_stamps")]
 @rendermode InteractiveServer
 @inject IAuthSession AuthSession
 @inject IDeploymentStampService StampService
@@ -11,56 +12,100 @@
 
 <section class="dashboard-page">
     <div class="mb-4">
-        <MudButton Href="/control-panel" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" Class="px-0">Back to Control Panel</MudButton>
+        <MudButton Href="/control-panel"
+                   Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   Color="Color.Primary"
+                   Class="px-0">Back to Control Panel</MudButton>
     </div>
 
-    <MudPaper Class="poc-panel" Elevation="0">
+    <div class="list-page-actions">
+        @if (AuthSession.HasPermission("controlplane.manage_stamps"))
+        {
+            <MudButton Variant="Variant.Filled"
+                       Size="Size.Small"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="@(() => OpenFormDialogAsync(null))">Create stamp</MudButton>
+        }
+
+    </div>
+    <MudPaper Class="poc-panel"
+              Elevation="0">
         <div class="panel-heading">
             <h2 style="color: var(--bt-moss); font-weight: 700;">Deployment Stamps</h2>
-            <div class="d-flex align-center gap-3">
-                @if (AuthSession.HasPermission("controlplane.manage"))
-                {
-                    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Dns" OnClick="@(() => OpenFormDialogAsync(null))">Create stamp</MudButton>
-                }
-            </div>
+            <MudChip T="string"
+                     Size="Size.Small">@(FilteredStamps.Count()) shown</MudChip>
         </div>
 
+        <div class="list-toolbar">
+            <MudTextField @bind-Value="_search"
+                          Immediate="true"
+                          Placeholder="Search deployment stamps..."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" />
+        </div>
         @if (_isLoading)
         {
-            <MudProgressLinear Color="Color.Success" Indeterminate="true" Class="my-2" />
+            <MudProgressLinear Color="Color.Success"
+                               Indeterminate="true"
+                               Class="my-2" />
         }
 
         @if (!string.IsNullOrWhiteSpace(_message))
         {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Class="my-2">@_message</MudAlert>
+            <MudAlert Severity="Severity.Error"
+                      Variant="Variant.Outlined"
+                      Dense="true"
+                      Class="my-2">@_message</MudAlert>
         }
 
         <div class="bt-table-scroll">
-            <MudTable @ref="_table" Items="_stamps" Dense="true" Hover="true" Elevation="0" FixedHeader="true" RowsPerPage="100" Height="calc(100vh - 25rem)" Style="min-width: 760px;" Breakpoint="Breakpoint.None">
+            <MudTable @ref="_table"
+                      Items="FilteredStamps"
+                      Dense="true"
+                      Hover="true"
+                      Elevation="0"
+                      FixedHeader="true"
+                      RowsPerPage="100"
+                      Height="calc(100vh - 25rem)"
+                      Style="min-width: 760px;"
+                      Breakpoint="Breakpoint.None">
                 <HeaderContent>
                     <MudTh Style="width: 15rem;">Name</MudTh>
                     <MudTh>Resource Group</MudTh>
                     <MudTh Style="width: 10rem;">Tier</MudTh>
+                    <MudTh>Status</MudTh>
                     <MudTh Style="width: 8rem;">Actions</MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Name">@context.Name</MudTd>
                     <MudTd DataLabel="Resource Group">@context.TargetResourceGroup</MudTd>
                     <MudTd DataLabel="Tier">
-                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Color="Color.Primary">
                             @context.IsolationTier
                         </MudChip>
                     </MudTd>
+                    <MudTd DataLabel="Status">@(context.IsActive ? "Active" : "Disabled")</MudTd>
                     <MudTd DataLabel="Actions">
                         <TableRowActions OnEdit="@(() => OpenFormDialogAsync(context))"
-                                         CanEdit="@AuthSession.HasPermission("controlplane.manage")" 
+                                         CanEdit="@AuthSession.HasPermission("controlplane.manage_stamps")"
                                          CanView="true"
-                                         OnView="@(() => Snackbar.Add($"Stamp: {context.Name} ({context.IsolationTier})", Severity.Info))"
-                                         CanDelete="false" />
+                                         OnView="@(() => ViewAsync(context))"
+                                         OnDelete="@(() => ChangeAsync(context, true))"
+                                         CanDelete="@AuthSession.HasPermission("controlplane.manage_stamps")"
+                                         ExtraActions="@(AuthSession.HasPermission("controlplane.manage_stamps") ? new[] {  context.IsActive ? "Disable" : "Enable" }  : Array.Empty<string>())"
+                                         OnExtraAction="@(action => ChangeAsync(context, false))" />
                     </MudTd>
                 </RowTemplate>
                 <NoRecordsContent>
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No records found.</MudAlert>
+                    <MudAlert Severity="Severity.Info"
+                              Variant="Variant.Outlined"
+                              Dense="true">No records found.</MudAlert>
                 </NoRecordsContent>
                 <PagerContent>
                     <GlobalTablePager CurrentPage="(_table?.CurrentPage ?? 0) + 1"
@@ -76,6 +121,28 @@
 </section>
 
 @code {
+    private string _search = string.Empty;
+    private IEnumerable<DeploymentStampResponse> FilteredStamps => _stamps.Where(stamp => string.IsNullOrWhiteSpace(_search)
+        || stamp.Name.Contains(_search, StringComparison.OrdinalIgnoreCase) || stamp.TargetResourceGroup.Contains(_search, StringComparison.OrdinalIgnoreCase));
+    private async Task ViewAsync(DeploymentStampResponse stamp)
+    {
+        await DialogService.ShowAsync<RecordDetailsDialog>(stamp.Name, new DialogParameters
+        {
+            [nameof(RecordDetailsDialog.Fields)] = new KeyValuePair<string, string>[]
+            {
+                new("Name", stamp.Name), new("Resource group", stamp.TargetResourceGroup), new("Isolation tier", stamp.IsolationTier),
+                new("Status", stamp.IsActive ? "Active" : "Disabled"), new("Database provider", stamp.DatabaseProvider ?? "Default")
+            }
+        }, new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+    }
+    private async Task ChangeAsync(DeploymentStampResponse stamp, bool delete)
+    {
+        var action = delete ? "Delete" : stamp.IsActive ? "Disable" : "Enable";
+        if (await DialogService.ShowMessageBoxAsync(action + " stamp", $"{action} {stamp.Name}? This changes the catalog record; infrastructure is managed separately.", yesText: action, cancelText: "Cancel") != true) return;
+        var response = delete ? await StampService.DeleteAsync(stamp.Id) : await StampService.SetAvailabilityAsync(stamp.Id, !stamp.IsActive);
+        if (!response.IsSuccess) Snackbar.Add(response.Message ?? "Stamp could not be changed.", Severity.Error);
+        await LoadStampsAsync();
+    }
     private readonly List<DeploymentStampResponse> _stamps = [];
     private bool _isLoading = true;
     private string? _message;

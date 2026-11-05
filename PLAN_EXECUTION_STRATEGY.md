@@ -1,6 +1,6 @@
 # Base Template - Execution Strategy
 
-> Last updated: 2026-07-03
+> Last updated: 2026-11-05
 >
 > This file explains how to execute `PLAN.md` without jumping between unrelated work.
 > `PLAN.md` defines what the template should become. This file defines sequencing, dependencies, readiness gates, and safe parallel work.
@@ -52,10 +52,15 @@ This is the default execution path unless a blocker forces a dependency detour.
 11. Docker/local developer platform
 12. Azure deployment, Key Vault, monitoring, and APIM
 13. Entra ID SSO
-14. Rich reusable template capabilities: SignalR, reporting, payment abstractions, mobile
+14. Rich reusable template capabilities: SignalR, reporting, payment abstractions
 
 Current near-term focus:
 
+- Follow [release readiness](docs/development/release-readiness.md) for outstanding review/commit, target permission review, dependency hygiene, and production validation. Blazor is the only shipped frontend; solution builds must remain aligned for Any CPU and x64, including database tools.
+
+- Finish BaseTemplate's explicit invitation acceptance and Microsoft/Google sign-in verification before implementing StarterTemplate parity. KYC is mandatory in both repositories. Keep the follow-up checklist in [invitation acceptance and StarterTemplate parity](docs/architecture/invitation-acceptance-and-starter-parity.md); do not silently start modifying both templates together.
+
+- The six-item vendor/tenant administration baseline and explicit invitation/Google follow-up have local verification recorded in [SaaS administration](docs/architecture/saas-administration.md). Preserve the distinction between automated provider/HTTP checks, focused authenticated browser/email checks, formal accessibility certification, and production/cloud-provider gates. Use the recorded StarterTemplate parity checklist for the next repository phase.
 - Keep the local API and Blazor UI runnable from Visual Studio.
 - Treat SaaS stamp configuration as the source of truth for Key Vault, resource groups, ACA/App Service settings, database, cache, storage, and messaging.
 - Certify the IAM/Auth baseline with local browser/email smoke testing.
@@ -286,7 +291,7 @@ Use this register as the working execution checklist. A phase is not considered 
 | Phase 2 - Platform Storage, Cache, Exceptions, Validation, Messaging | In progress | Azure Blob profile storage, Data Protection Blob/Key Vault keys, HybridCache/output cache, ProblemDetails propagation, FluentValidation coverage, MassTransit outbox | Build/test plus targeted smoke for profile upload, error messages, lookup cache, outbox publish |
 | Phase 3 - API Security And Operational Readiness | In progress | security headers, CORS, configurable rate limiting policies, response compression, API version/deprecation headers, deep health checks, PII log masking, correlated tracing, dependency vulnerability hygiene | Health endpoints prove SQL/Redis/storage/Key Vault where enabled; logs are safe; API communicates deprecation/throttling clearly; package advisories are resolved or explicitly risk-accepted |
 | Phase 4 - Deployment And Release Engineering | Implemented | OIDC-authenticated efbundle migration pipeline, Docker Compose, GitHub Actions release, Azure App Service deployment slots, Key Vault wiring, rollback notes | CI builds/test/releases, migration bundle generated, Azure deploy smoke passes |
-| Phase 5 - Template Extensibility | In progress | feature flags, permission-aware dynamic menus, SignalR baseline, reporting abstraction, payment gateway abstractions, Entra SSO, passkeys, RCL consolidation | Feature gates and dynamic menus fail closed; reusable examples exist without domain-specific SACCO logic; passkeys have real flows before being marked complete |
+| Phase 5 - Template Extensibility | In progress | feature flags, permission-aware dynamic menus, SignalR baseline, reporting abstraction, payment gateway abstractions, Microsoft/Google SSO, passkeys, feature-owned Blazor presentation contracts | Feature gates and dynamic menus fail closed; reusable examples exist without domain-specific SACCO logic; passkeys have real flows before being marked complete |
 
 ---
 
@@ -306,4 +311,6 @@ Before we move from one phase to another:
 
 ## StarterTemplate direction approved 2026-10-06
 
-The user selected a new StarterTemplate repository, preserving BaseTemplate as the business-domain reference. The implementation inventory and phase gates are in [domain-neutral-refactor-plan.md](docs/architecture/domain-neutral-refactor-plan.md). Customer-reference gates below describe the existing reference application; they must not require Banking/HR retention in StarterTemplate. Preserve the current architecture and platform infrastructure. Create the new repository from a reviewed baseline before performing business removal.
+StarterTemplate is the existing neutral default for downstream applications. BaseTemplate remains a reference for business-domain implementations, including membership/employment relationships; its Banking/HR features are not requirements for StarterTemplate. StarterTemplate has revised several designs, so inspect its current implementation before proposing transfers. Keep the repositories independent pending the next strategy discussion.
+
+Use BaseTemplate's [database initialization runbook](docs/development/database-initialization.md) for fresh databases and existing upgrades. Browser/email certification uses the existing `cg-basetemplate` Compose group; do not create a parallel local stack or replace its retained volumes.

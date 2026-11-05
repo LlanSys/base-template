@@ -23,12 +23,16 @@ public class UpdateTenantCommandHandler : IRequestHandler<UpdateTenantCommand, A
     private readonly IEncryptionService _encryptionService;
     private readonly ICurrentActorProvider _actorProvider;
 
+    private readonly TimeProvider _timeProvider;
+
     public UpdateTenantCommandHandler(
+        TimeProvider timeProvider,
         IControlPlaneUnitOfWork unitOfWork,
         ILogger<UpdateTenantCommandHandler> logger,
         IEncryptionService encryptionService,
         ICurrentActorProvider actorProvider)
     {
+        _timeProvider = timeProvider;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _encryptionService = encryptionService;
@@ -47,12 +51,16 @@ public class UpdateTenantCommandHandler : IRequestHandler<UpdateTenantCommand, A
 
         var duplicateHostName = await _unitOfWork.Tenants.AnyAsync(t => t.HostName == request.Request.HostName && t.Id != request.Id, cancellationToken).ConfigureAwait(false);
 
+        if (tenant.Revision != request.Request.Revision)
+            return AppResponses.Failure<TenantResponse>("The tenant changed. Reload it before saving.");
+
         if (duplicateHostName)
         {
             return AppResponses.Failure<TenantResponse>("Another tenant with this hostname already exists.");
         }
 
         SubscriptionTier parsedTier;
+
         try
         {
             parsedTier = request.Request.SubscriptionTier.ToEnum<SubscriptionTier>();
@@ -67,7 +75,7 @@ public class UpdateTenantCommandHandler : IRequestHandler<UpdateTenantCommand, A
         tenant.ContactEmail = request.Request.ContactEmail;
         tenant.MaxUsers = request.Request.MaxUsers;
         tenant.SubscriptionTier = parsedTier;
-        
+
         if (request.Request.DatabaseProvider != null)
         {
             tenant.DatabaseProvider = request.Request.DatabaseProvider;
@@ -75,12 +83,12 @@ public class UpdateTenantCommandHandler : IRequestHandler<UpdateTenantCommand, A
 
         if (request.Request.DatabaseConnectionString != null)
         {
-            tenant.DatabaseConnectionString = request.Request.DatabaseConnectionString != "" 
-                ? _encryptionService.Encrypt(request.Request.DatabaseConnectionString) 
+            tenant.DatabaseConnectionString = request.Request.DatabaseConnectionString != ""
+                ? _encryptionService.Encrypt(request.Request.DatabaseConnectionString)
                 : null;
         }
 
-        tenant.UpdatedAt = DateTimeOffset.UtcNow;
+        tenant.UpdatedAt = _timeProvider.GetUtcNow();
         tenant.UpdatedBy = _actorProvider.ActorId;
 
         await _unitOfWork.Tenants.UpdateAsync(tenant, cancellationToken).ConfigureAwait(false);
@@ -91,6 +99,7 @@ public class UpdateTenantCommandHandler : IRequestHandler<UpdateTenantCommand, A
         var dto = new TenantResponse
         {
             Id = tenant.Id,
+            Revision = tenant.Revision,
             Identifier = tenant.Identifier,
             DisplayName = tenant.DisplayName,
             HostName = tenant.HostName,
@@ -104,6 +113,7 @@ public class UpdateTenantCommandHandler : IRequestHandler<UpdateTenantCommand, A
             CreatedAt = tenant.CreatedAt,
             UpdatedAt = tenant.UpdatedAt
         };
+
         return AppResponses.Success(dto);
     }
 }

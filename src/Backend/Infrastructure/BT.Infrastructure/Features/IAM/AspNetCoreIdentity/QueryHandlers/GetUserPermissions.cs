@@ -7,16 +7,21 @@ using Microsoft.AspNetCore.Identity;
 
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.QueryHandlers;
 
-internal sealed class GetUserPermissions(UserManager<AppUser> userManager)
+internal sealed class GetUserPermissions(UserManager<AppUser> userManager,
+    Authorization.IamAccessBoundary boundary)
     : IRequestHandler<GetUserPermissionsQuery, AppResponse<UserPermissionsResponse>>
 {
     public async Task<AppResponse<UserPermissionsResponse>> Handle(GetUserPermissionsQuery request, CancellationToken cancellationToken)
     {
         var user = await userManager.FindByIdAsync(request.UserId).ConfigureAwait(false);
+
         if (user is null)
         {
             return AppResponses.Failure<UserPermissionsResponse>("User not found.");
         }
+
+        if (!await boundary.CanAccessUserAsync(request.RequestedBy, user, cancellationToken).ConfigureAwait(false))
+            return AppResponses.Failure<UserPermissionsResponse>(AppError.Forbidden("User is outside your administrative scope."));
 
         var permissions = (await userManager.GetClaimsAsync(user).ConfigureAwait(false))
             .Where(static claim => claim.Type == "permission")

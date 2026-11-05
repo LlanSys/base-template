@@ -10,6 +10,18 @@ public class CreateTenantCommandValidator : AbstractValidator<CreateTenantComman
 
     public CreateTenantCommandValidator()
     {
+        RuleFor(v => v.Request.InitialAdministrator).NotNull().WithMessage("An initial administrator is required.");
+        When(v => v.Request.InitialAdministrator != null, () =>
+        {
+            RuleFor(v => v.Request.InitialAdministrator!.Email).NotEmpty().EmailAddress().MaximumLength(256);
+            RuleFor(v => v.Request.InitialAdministrator!.FirstName).NotEmpty().MaximumLength(100);
+            RuleFor(v => v.Request.InitialAdministrator!.LastName).NotEmpty().MaximumLength(100);
+        });
+
+        RuleFor(v => v.Request.ModuleKeys).NotEmpty();
+        RuleForEach(v => v.Request.ModuleKeys).Must(BT.SharedKernel.Features.ControlPlane.Modules.ModuleCatalog.IsImplemented)
+            .WithMessage("Select an implemented business module.");
+
         RuleFor(v => v.Request.Identifier)
             .NotEmpty().WithMessage("Identifier is required.")
             .MaximumLength(128).WithMessage("Identifier must not exceed 128 characters.")

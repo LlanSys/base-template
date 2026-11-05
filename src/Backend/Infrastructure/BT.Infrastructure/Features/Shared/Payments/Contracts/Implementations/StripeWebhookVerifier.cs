@@ -13,6 +13,7 @@ using System.Text.Json;
 namespace BT.Infrastructure.Features.Shared.Payments.Contracts.Implementations;
 
 internal sealed class StripeWebhookVerifier(
+    TimeProvider timeProvider,
     IOptions<PaymentSettings> options,
     ILogger<StripeWebhookVerifier> logger) : IPaymentWebhookVerifier
 {
@@ -64,7 +65,7 @@ internal sealed class StripeWebhookVerifier(
     private static bool IsStripe(string provider) =>
         provider.Equals("Stripe", StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsSignatureValid(
+    private bool IsSignatureValid(
         string payload,
         string signatureHeader,
         string signingSecret,
@@ -74,6 +75,7 @@ internal sealed class StripeWebhookVerifier(
 
         var timestamp = GetHeaderValue(signatureHeader, "t");
         var signature = GetHeaderValue(signatureHeader, "v1");
+
         if (string.IsNullOrWhiteSpace(timestamp) || string.IsNullOrWhiteSpace(signature))
         {
             reason = "Missing Stripe timestamp or v1 signature.";
@@ -87,7 +89,8 @@ internal sealed class StripeWebhookVerifier(
         }
 
         var signedAt = DateTimeOffset.FromUnixTimeSeconds(unixTimestamp);
-        var difference = DateTimeOffset.UtcNow - signedAt;
+        var difference = timeProvider.GetUtcNow() - signedAt;
+
         if (difference > SignatureTolerance || difference < -SignatureTolerance)
         {
             reason = "Stripe signature timestamp is outside tolerance.";
@@ -95,6 +98,7 @@ internal sealed class StripeWebhookVerifier(
         }
 
         var expectedSignature = ComputeSignature($"{timestamp}.{payload}", signingSecret);
+
         if (CryptographicOperations.FixedTimeEquals(
                 Encoding.ASCII.GetBytes(expectedSignature),
                 Encoding.ASCII.GetBytes(signature)))

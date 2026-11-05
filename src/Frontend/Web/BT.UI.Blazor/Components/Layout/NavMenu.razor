@@ -1,44 +1,104 @@
 @inject IAuthSession AuthSession
 @inject IIamAdminService IamAdminService
+@implements IDisposable
 
 <div class="side-shell">
     <div class="brand-row">
-        <a class="brand-lockup" href="/dashboard" aria-label="Base Template dashboard">
-            <span class="brand-mark" aria-hidden="true">BT</span>
-            <span class="brand-name">BaseTemplate</span>
+        <a class="brand-lockup"
+           href="/dashboard"
+           aria-label="BaseTemplate dashboard">
+            <span class="brand-mark"
+                  aria-hidden="true">BT</span><span class="brand-name">BaseTemplate</span>
         </a>
     </div>
-
-    <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
+    <input type="checkbox"
+           title="Navigation menu"
+           class="navbar-toggler" />
     <div class="nav-scrollable">
-        <nav class="nav flex-column">
-            @if (_isLoading)
+        <nav class="nav flex-column"
+             aria-label="Main navigation">
+            <NavLink class="nav-link"
+                     href="/dashboard"
+                     Match="NavLinkMatch.All">
+                <MudIcon Icon="@Icons.Material.Filled.Dashboard"
+                         Size="Size.Small" />Dashboard</NavLink>
+            @if (AuthSession.CurrentUser?.IsPlatformStaff == true)
             {
-                <div class="nav-loading">
-                    <MudProgressLinear Color="Color.Success" Indeterminate="true" Class="my-2" Style="opacity: 0.4;" />
-                </div>
-            }
-            else if (_loadError is not null)
-            {
-                <div class="nav-error" style="padding: 0.75rem 1rem; color: var(--bt-muted); font-size: 0.8rem;">
-                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small" Class="me-1" />
-                    @_loadError
-                </div>
+                <AuthorizeView Policy="ControlPlane.Access">
+                    <NavLink class="nav-link"
+                             href="/control-panel"
+                             Match="NavLinkMatch.All">
+                        <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings"
+                                 Size="Size.Small" />Control Panel</NavLink>
+                    <div class="nav-children">
+                        @if (AuthSession.HasPermission("controlplane.view_stamps"))
+                        {
+                            <NavLink class="nav-link"
+                                     href="/control-panel/stamps">Deployment Stamps</NavLink>
+                        }
+                        @if (AuthSession.HasPermission("controlplane.view_tenants"))
+                        {
+                            <NavLink class="nav-link"
+                                     href="/control-panel/tenants">Tenants</NavLink>
+                        }
+                        @if (AuthSession.HasPermission("modules.view"))
+                        {
+                            <NavLink class="nav-link"
+                                     href="/control-panel/modules">Modules</NavLink>
+                        }
+                        @if (AuthSession.HasPermission("menus.view"))
+                        {
+                            <NavLink class="nav-link"
+                                     href="/control-panel/menus">Menus</NavLink>
+                        }
+                        @if (AuthSession.HasAnyPermission("roles.view", "roles.manage_permissions", "users.view"))
+                        {
+                            <NavLink class="nav-link"
+                                     href="/control-panel/access">Roles and Permissions</NavLink>
+                        }
+                        @if (AuthSession.HasPermission("menus.view"))
+                        {
+                            <NavLink class="nav-link"
+                                     href="/control-panel/access-catalog">Access Catalog</NavLink>
+                        }
+                        @if (AuthSession.HasPermission("controlplane.view_audit"))
+                        {
+                            <NavLink class="nav-link"
+                                     href="/control-panel/audit">Audit Log</NavLink>
+                        }
+                    </div>
+                </AuthorizeView>
             }
             else
             {
+                @if (_isLoading)
+                {
+                    <MudProgressLinear Indeterminate="true"
+                                       Class="my-2" />
+                }
+                @if (_loadError is not null)
+                {
+                    <MudText Class="pa-2"
+                             Typo="Typo.caption">@_loadError</MudText>
+                }
                 @foreach (var menu in _menus)
                 {
-                    <section class="nav-group">
-                        @RenderMenu(menu)
-                    </section>
+                    <section class="nav-group">@RenderMenu(menu)</section>
                 }
             }
         </nav>
     </div>
-
-    <UserProfileMenu />
+    @if (AuthSession.CurrentUser?.IsPlatformStaff == false)
+    {
+        <AuthorizeView Policy="Tenant.Administration">
+            <div class="nav-admin-footer">
+                <NavLink class="nav-link"
+                         href="/admin">
+                    <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings"
+                             Size="Size.Small" />Admin Center</NavLink>
+            </div>
+        </AuthorizeView>
+    }
 </div>
 
 @code {
@@ -46,72 +106,39 @@
     private bool _isLoading = true;
     private string? _loadError;
 
+    protected override void OnInitialized() => AuthSession.Changed += OnSessionChangedAsync;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender)
-        {
-            return;
-        }
-
+        if (!firstRender) return;
         await AuthSession.InitializeAsync();
-        if (!AuthSession.IsAuthenticated)
-        {
-            _isLoading = false;
-            StateHasChanged();
-            return;
-        }
+        await LoadMenusAsync();
+    }
 
-        var response = await IamAdminService.GetNavigationMenusAsync("Sidebar");
-        if (response.IsSuccess && response.Data is not null && response.Data.Count > 0)
-        {
-            _menus.Clear();
-            _menus.AddRange(response.Data);
-        }
-        else if (!response.IsSuccess)
-        {
-            _loadError = "Menus unavailable.";
-        }
+    private Task OnSessionChangedAsync() => InvokeAsync(LoadMenusAsync);
 
+    private async Task LoadMenusAsync()
+    {
+        _menus.Clear();
+        _loadError = null;
+        if (AuthSession.IsAuthenticated && AuthSession.CurrentUser?.IsPlatformStaff == false)
+        {
+            var response = await IamAdminService.GetNavigationMenusAsync("Sidebar");
+            if (response.IsSuccess && response.Data is not null)
+                _menus.AddRange(response.Data.Where(menu => menu.Key is not ("dashboard" or "admin-center" or "control-panel" or "solution-overview" or "features")));
+            else if (!response.IsSuccess) _loadError = "Menus unavailable.";
+        }
         _isLoading = false;
         StateHasChanged();
     }
 
-    private RenderFragment RenderMenu(MenuResponse menu) => builder =>
-    {
-        var sequence = 0;
-        builder.OpenComponent<NavLink>(sequence++);
-        builder.AddAttribute(sequence++, "class", "nav-link");
-        builder.AddAttribute(sequence++, "href", menu.Url.TrimStart('/'));
-        if (menu.Key.Equals("dashboard", StringComparison.OrdinalIgnoreCase))
-        {
-            builder.AddAttribute(sequence++, "Match", NavLinkMatch.All);
-        }
+    public void Dispose() => AuthSession.Changed -= OnSessionChangedAsync;
 
-        builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(childBuilder =>
+    private RenderFragment RenderMenu(MenuResponse menu) => @<div>
+        <NavLink class="nav-link" href="@menu.Url"><MudIcon Icon="@MenuIconMapper.Resolve(menu.Icon)" Size="Size.Small" />@menu.Title</NavLink>
+        @if (menu.Children is { Count: > 0 })
         {
-            var childSequence = 0;
-            childBuilder.OpenComponent<MudIcon>(childSequence++);
-            childBuilder.AddAttribute(childSequence++, "Icon", MenuIconMapper.Resolve(menu.Icon));
-            childBuilder.AddAttribute(childSequence++, "Size", Size.Small);
-            childBuilder.CloseComponent();
-            childBuilder.OpenElement(childSequence++, "span");
-            childBuilder.AddContent(childSequence++, menu.Title);
-            childBuilder.CloseElement();
-        }));
-        builder.CloseComponent();
-
-        if (menu.Children is null || menu.Children.Count == 0)
-        {
-            return;
+            <div class="nav-children">@foreach (var child in menu.Children) { @RenderMenu(child) }</div>
         }
-
-        builder.OpenElement(sequence++, "div");
-        builder.AddAttribute(sequence++, "class", "nav-children");
-        foreach (var child in menu.Children)
-        {
-            builder.AddContent(sequence++, RenderMenu(child));
-        }
-        builder.CloseElement();
-    };
+    </div>;
 }
-

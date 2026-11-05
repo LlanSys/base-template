@@ -27,12 +27,14 @@ internal sealed class GetCurrentUserProfilePicture(
         }
 
         var user = await userManager.FindByIdAsync(query.UserId).ConfigureAwait(false);
+
         if (user is null || user.ProfilePictureUrl is null)
         {
             return AppResponses.Failure<ProfilePictureFile>("Profile picture was not found.");
         }
 
         ProfilePictureFile? profilePicture;
+
         try
         {
             profilePicture = await storage

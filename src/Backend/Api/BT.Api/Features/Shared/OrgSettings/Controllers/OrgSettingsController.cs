@@ -34,7 +34,7 @@ public sealed class OrgSettingsController(ISender sender) : BaseController
     }
 
     [HttpPost]
-    [RequirePermission("tenant-settings.create")]
+    [RequirePermission("tenant-settings.update")]
     public async Task<IActionResult> CreateOrgSetting([FromBody] CreateOrgSettingRequest request, CancellationToken ct)
     {
         var response = await sender.Send(new CreateOrgSettingCommand(request, GetUserId()), ct).ConfigureAwait(false);
@@ -50,7 +50,7 @@ public sealed class OrgSettingsController(ISender sender) : BaseController
     }
 
     [HttpDelete("{id:guid}")]
-    [RequirePermission("tenant-settings.delete")]
+    [RequirePermission("tenant-settings.update")]
     public async Task<IActionResult> DeleteOrgSetting(Guid id, CancellationToken ct)
     {
         var response = await sender.Send(new DeleteOrgSettingCommand(id, GetUserId()), ct).ConfigureAwait(false);
@@ -60,6 +60,7 @@ public sealed class OrgSettingsController(ISender sender) : BaseController
     private string GetUserId()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
         if (string.IsNullOrWhiteSpace(userId))
         {
             throw new UnauthorizedAccessException("User context is not available.");

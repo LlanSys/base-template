@@ -212,7 +212,7 @@ For local callback testing, use a tunnel such as ngrok or Cloudflare Tunnel. The
 
 When Azure is disabled:
 
-- Backend, frontend, mobile, full-solution, and architecture workflows can still run.
+- Backend, frontend, full-solution, and architecture workflows can still run.
 - Azure deployment does not run unless someone explicitly dispatches `deploy-azure.yml`.
 - Container publish jobs can still build and publish images to GHCR without deploying to Azure.
 - The non-Azure deployment workflow can deploy to DigitalOcean, Heroku, or hand off GHCR images to a generic Docker host when manually dispatched.

@@ -10,5 +10,5 @@ public sealed record PaymentCompletedEvent(
     string Provider,
     Money Amount) : IDomainEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }

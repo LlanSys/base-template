@@ -10,11 +10,14 @@ using BT.Persistence.Features.ControlPlane;
 using BT.Persistence.Features.ControlPlane.DataContext;
 using BT.Persistence.Features.ControlPlane.Tenants.Repositories;
 using BT.Persistence.Features.Shared.DataContext;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Xunit;
 
 namespace BT.Tests.Integration;
@@ -53,13 +56,13 @@ public class TenantConnectionResolverIntegrationTests
         var dbName = "ControlPlaneDB_" + Guid.NewGuid();
         services.AddDbContext<ControlPlaneDBContext>(options =>
             options.UseInMemoryDatabase(dbName));
-        
+
         services.AddScoped<ICurrentActorProvider, TestActorProvider>();
 
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<IDeploymentStampRepository, DeploymentStampRepository>();
         // Add fake impersonation repo just to satisfy UnitOfWork
-        var impersonationMock = NSubstitute.Substitute.For<BT.Domain.Features.ControlPlane.Auditing.Contracts.Repositories.IImpersonationRecordRepository>();
+        var impersonationMock = NSubstitute.Substitute.For<Domain.Features.ControlPlane.Auditing.Contracts.Repositories.IImpersonationRecordRepository>();
         services.AddScoped(_ => impersonationMock);
 
         services.AddScoped<IControlPlaneUnitOfWork, ControlPlaneUnitOfWork>();
@@ -68,7 +71,7 @@ public class TenantConnectionResolverIntegrationTests
         services.AddMemoryCache();
         var tenantProviderMock = new TestTenantProvider { TenantId = tenantId };
         services.AddScoped<ICurrentTenantProvider>(_ => tenantProviderMock);
-        
+
         var encryptionMock = new FakeEncryptionService();
         services.AddScoped<IEncryptionService>(_ => encryptionMock);
 
@@ -81,7 +84,7 @@ public class TenantConnectionResolverIntegrationTests
         using (var scope = serviceProvider.CreateScope())
         {
             var uow = scope.ServiceProvider.GetRequiredService<IControlPlaneUnitOfWork>();
-            
+
             var stamp = new DeploymentStamp
             {
                 Id = stampId,
@@ -91,8 +94,9 @@ public class TenantConnectionResolverIntegrationTests
                 DatabaseConnectionString = encryptionMock.Encrypt(distinctConnectionString), // Encrypted!
                 TargetResourceGroup = "TestRG"
             };
+
             await uow.DeploymentStamps.CreateAsync(stamp);
-            
+
             var tenant = new Tenant
             {
                 Id = tenantId,
@@ -104,6 +108,7 @@ public class TenantConnectionResolverIntegrationTests
                 CreatedBy = "System",
                 SubscriptionTier = SubscriptionTier.Enterprise
             };
+
             await uow.Tenants.CreateAsync(tenant);
             await uow.CompleteAsync();
         }
@@ -120,14 +125,14 @@ public class TenantConnectionResolverIntegrationTests
         builder.AddInterceptors(new TenantConnectionInterceptor(serviceProvider));
 
         using var context = new SharedDBContext(builder.Options, tenantProviderMock, new TestActorProvider());
-        
+
         // This will trigger the interceptor, which calls the resolver, which hits the cache + swap
         var connection = context.Database.GetDbConnection();
         var ex = await Record.ExceptionAsync(async () => await context.Database.OpenConnectionAsync());
-        
+
         // Assert
         Assert.NotNull(ex); // Fails to connect because it's a dummy connection string, but...
-        
+
         // The connection string MUST have been updated to the decrypted value from the ControlPlane DB!
         Assert.Contains(distinctDatabaseName, connection.ConnectionString);
     }

@@ -5,9 +5,9 @@ namespace BT.Api.Logging;
 public static class TenantMetrics
 {
     public const string MeterName = "BT.TenantMetrics";
-    
+
     public static readonly Meter Meter = new(MeterName, "1.0.0");
-    
+
     // Tracks the number of API requests processed per tenant
     public static readonly Counter<long> ApiRequestCounter = Meter.CreateCounter<long>(
         "tenant_api_requests_total",

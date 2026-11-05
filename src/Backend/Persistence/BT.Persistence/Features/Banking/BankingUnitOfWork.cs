@@ -15,11 +15,12 @@ using Microsoft.Extensions.Logging;
 namespace BT.Persistence.Features.Banking;
 
 public sealed class BankingUnitOfWork(
+    TimeProvider timeProvider,
     BankingDBContext context,
     ICustomerRepository customerRepository,
     IPublisher publisher,
     ILogger<BankingUnitOfWork> logger
-) : BaseUnitOfWork<BankingDBContext>(context, publisher, logger), IBankingUnitOfWork
+) : BaseUnitOfWork<BankingDBContext>(context, publisher, logger, timeProvider), IBankingUnitOfWork
 {
     public ICustomerRepository CustomerRepository { get; } = customerRepository;
 }

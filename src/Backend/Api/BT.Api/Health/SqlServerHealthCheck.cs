@@ -10,6 +10,7 @@ internal sealed class SqlServerHealthCheck(IConfiguration configuration) : IHeal
         CancellationToken cancellationToken = default)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection");
+
         if (string.IsNullOrWhiteSpace(connectionString) ||
             connectionString.Contains("REPLACE_", StringComparison.OrdinalIgnoreCase))
         {

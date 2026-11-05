@@ -34,7 +34,7 @@ public sealed class Department : BaseEntity, ISoftDeletable
         };
     }
 
-    public void Update(string code, string name, string description, bool isActive, string updatedBy)
+    public void Update(DateTimeOffset now, string code, string name, string description, bool isActive, string updatedBy)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -45,17 +45,17 @@ public sealed class Department : BaseEntity, ISoftDeletable
         Name = name.Trim();
         Description = description.Trim();
         IsActive = isActive;
-        SetUpdatedInfo(updatedBy);
+        SetUpdatedInfo(now, updatedBy);
     }
 
-    public void MarkAsDeleted(string deletedBy)
+    public void MarkAsDeleted(string deletedBy, DateTimeOffset now)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(deletedBy);
 
         IsDeleted = true;
         IsActive = false;
-        DeletedAt = DateTimeOffset.UtcNow;
+        DeletedAt = now;
         DeletedBy = deletedBy.Trim();
-        SetUpdatedInfo(deletedBy);
+        SetUpdatedInfo(now, deletedBy);
     }
 }

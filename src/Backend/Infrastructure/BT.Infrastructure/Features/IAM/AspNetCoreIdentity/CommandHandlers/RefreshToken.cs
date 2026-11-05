@@ -23,6 +23,8 @@ using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using BT.SharedKernel.Extensions;
+using BT.Application.Features.IAM.Authorization;
+using RefreshTokenEntity = BT.Domain.Features.IAM.Users.Entities.RefreshToken;
 
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
@@ -34,7 +36,7 @@ internal sealed class RefreshToken(
     ISessionService sessionService,
     IHttpContextAccessor httpContextAccessor,
     IOptions<JwtSettings> jwtSettings,
-    ILogger<RefreshToken> logger) : IRequestHandler<RefreshTokenCommand, AppResponse<RefreshTokenResponse>>
+    ILogger<RefreshToken> logger, TimeProvider timeProvider) : IRequestHandler<RefreshTokenCommand, AppResponse<RefreshTokenResponse>>
 {
     private readonly JwtSettings _jwtSettings = jwtSettings.Value;
 
@@ -45,6 +47,7 @@ internal sealed class RefreshToken(
         try
         {
             var principal = jwtService.GetPrincipalFromToken(request.AccessToken, false);
+
             if (principal == null)
             {
                 SecurityLogDefinitions.LogSecurityEvent(logger, "InvalidAccessTokenFormat", string.Empty, "Invalid access token format provided for refresh");
@@ -52,6 +55,7 @@ internal sealed class RefreshToken(
             }
 
             var userId = principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
             if (string.IsNullOrWhiteSpace(userId))
             {
                 SecurityLogDefinitions.LogSecurityEvent(logger, "InvalidAccessTokenFormat", string.Empty, "No user ID found in access token");
@@ -59,6 +63,7 @@ internal sealed class RefreshToken(
             }
 
             var user = await userManager.FindByIdAsync(userId).ConfigureAwait(false);
+
             if (user == null)
             {
                 SecurityLogDefinitions.LogSecurityEvent(logger, "UserNotFoundForRefresh", userId, "User not found for refresh token");
@@ -72,9 +77,11 @@ internal sealed class RefreshToken(
             }
 
             var sessionId = principal.FindFirstValue("session_id");
+
             if (!string.IsNullOrWhiteSpace(sessionId))
             {
                 var sessionValidation = await sessionService.IsSessionValidAsync(sessionId, userId, cancellationToken).ConfigureAwait(false);
+
                 if (!sessionValidation.IsSuccess)
                 {
                     SecurityLogDefinitions.LogSecurityEvent(logger, "InvalidSessionRefreshAttempt", userId, sessionValidation.Message ?? "Invalid session");
@@ -83,13 +90,14 @@ internal sealed class RefreshToken(
             }
 
             var storedRefreshToken = await iamUnitOfWork.TokenRepository.GetRefreshTokenAsync(request.RefreshToken, userId).ConfigureAwait(false);
+
             if (storedRefreshToken == null)
             {
                 SecurityLogDefinitions.LogSecurityEvent(logger, "RefreshTokenNotFound", userId, "Refresh token not found for user");
                 return AppResponses.Failure<RefreshTokenResponse>("Invalid refresh token");
             }
 
-            if (storedRefreshToken.ExpiresAt <= DateTimeOffset.UtcNow)
+            if (storedRefreshToken.ExpiresAt <= timeProvider.GetUtcNow())
             {
                 SecurityLogDefinitions.LogSecurityEvent(logger, "ExpiredRefreshToken", userId, "Expired refresh token used");
                 await iamUnitOfWork.ExecuteInTransactionWithRetryAsync(async () =>
@@ -128,14 +136,17 @@ internal sealed class RefreshToken(
             }
 
             Guid? activeSessionId = Guid.TryParse(sessionId, out var parsedSessionId) ? parsedSessionId : null;
-            var userClaims = await claimsService.GetUserClaimsAsync(user, activeSessionId).ConfigureAwait(false);
+            var userClaims = await claimsService.GetUserClaimsAsync(user, activeSessionId, cancellationToken).ConfigureAwait(false);
+
             if (!userClaims.Any())
             {
                 ServiceLogDefinitions.LogFailedToGetUserClaims(logger, userId);
                 return AppResponses.Failure<RefreshTokenResponse>("Could not retrieve user claims");
             }
 
+            MfaSessionClaims.PreserveVerifiedSession(principal, userClaims);
             var newAccessTokenResponse = await jwtService.CreateTokenAsync(userClaims).ConfigureAwait(false);
+
             if (string.IsNullOrWhiteSpace(newAccessTokenResponse))
             {
                 ServiceLogDefinitions.LogFailedToGenerateAccessToken(logger, userId);
@@ -143,6 +154,7 @@ internal sealed class RefreshToken(
             }
 
             var newRefreshTokenResponse = jwtService.CreateRefreshToken();
+
             if (string.IsNullOrWhiteSpace(newRefreshTokenResponse))
             {
                 ServiceLogDefinitions.LogFailedToGenerateRefreshToken(logger, userId);
@@ -150,19 +162,22 @@ internal sealed class RefreshToken(
             }
 
             var tokenExpiry = jwtService.GetTokenExpiry(newAccessTokenResponse);
+
             if (tokenExpiry == default)
             {
                 ServiceLogDefinitions.LogFailedToGetTokenExpiry(logger, userId);
                 return AppResponses.Failure<RefreshTokenResponse>("Could not determine token expiry");
             }
 
-            var newRefreshTokenEntity = BT.Domain.Features.IAM.Users.Entities.RefreshToken.Create(
+            var newRefreshTokenEntity = RefreshTokenEntity.Create(
+                timeProvider.GetUtcNow(),
                 userId,
                 newRefreshTokenResponse,
-                DateTimeOffset.UtcNow.AddHours(_jwtSettings.RefreshTokenExpiryHours),
+                timeProvider.GetUtcNow().AddHours(_jwtSettings.RefreshTokenExpiryHours),
                 userId,
                 httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString(),
                 storedRefreshToken.TokenFamily);
+
             var refreshTokenExpiresAt = newRefreshTokenEntity.ExpiresAt;
 
             await iamUnitOfWork.ExecuteInTransactionWithRetryAsync(async () =>
@@ -174,7 +189,7 @@ internal sealed class RefreshToken(
                 return true;
             }).ConfigureAwait(false);
 
-            user.MarkUpdated(user.Id);
+            user.MarkUpdated(timeProvider.GetUtcNow(), user.Id);
             await userManager.UpdateAsync(user).ConfigureAwait(false);
 
             var roles = await userManager.GetRolesAsync(user).ConfigureAwait(false);

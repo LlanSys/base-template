@@ -9,6 +9,7 @@ BaseTemplate uses a hybrid deployment-stamp SaaS model.
 - A tenant is a customer organization, business unit, or client workspace served by a product built from BaseTemplate.
 - A deployment stamp is an isolated runtime and resource boundary. A stamp can host one tenant or a controlled pool of tenants.
 - The same Docker image and codebase can be deployed many times with different stamp-scoped configuration.
+- One shared codebase is mandatory. Tenant-specific capabilities are implemented in that codebase and made available through explicit vendor-controlled availability and tenant entitlements, with approved configuration for supported behavior. Deployment stamps do not create tenant source forks.
 - Resource groups, Key Vaults, databases, storage accounts, caches, and messaging resources are provisioned by infrastructure code, not by copying portal settings manually.
 
 This gives us a low-cost pooled path for early tenants and an isolated premium/compliance path for clients that need stronger separation.
@@ -41,6 +42,8 @@ The data plane serves normal product traffic:
 - Applies tenant filters and authorization to business data.
 - Reads only the stamp-scoped configuration injected into the host.
 - Does not know about unrelated tenant resource groups, Key Vaults, or databases.
+
+Authorization and administration follow [SaaS administration](saas-administration.md). Roles group permissions; tenant entitlements constrain functionality; rollout flags can further restrict availability. Role names, navigation visibility, and feature flags cannot grant platform authority or override a missing entitlement.
 
 ## Configuration Rules
 

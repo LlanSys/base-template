@@ -16,13 +16,20 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 
+using BT.Domain.Shared.Contracts.Settings;
+using BT.Application.Features.IAM.Authorization;
+using BT.SharedKernel.Features.ControlPlane.Modules;
+using BT.SharedKernel.Features.Shared.OrgSettings;
+
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
 internal sealed class GetCurrentUser(
     IHttpContextAccessor httpContextAccessor,
     UserManager<AppUser> userManager,
     IOptions<MfaSettings> mfaSettings,
-    ILogger<GetCurrentUser> logger) : IRequestHandler<GetCurrentUserCommand, AppResponse<CurrentUserResponse>>
+    ILogger<GetCurrentUser> logger,
+    IOrgSettingsProvider settings,
+    IEffectiveAccessService accessService) : IRequestHandler<GetCurrentUserCommand, AppResponse<CurrentUserResponse>>
 {
     private readonly MfaSettings _mfaSettings = mfaSettings.Value;
 
@@ -31,10 +38,12 @@ internal sealed class GetCurrentUser(
         try
         {
             var userId = httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
             if (string.IsNullOrWhiteSpace(userId))
                 return AppResponses.Failure<CurrentUserResponse>("User not found.");
 
             var appUser = await userManager.FindByIdAsync(userId).ConfigureAwait(false);
+
             if (appUser == null)
                 return AppResponses.Failure<CurrentUserResponse>("User not found.");
 
@@ -48,6 +57,7 @@ internal sealed class GetCurrentUser(
             var lastLoginClaim = httpContextAccessor.HttpContext?.User?.FindFirst("LastLogin");
 
             DateTimeOffset? lastLoginAt = null;
+
             if (lastLoginClaim?.Value != null && DateTimeOffset.TryParse(lastLoginClaim.Value, out var lastLogin))
             {
                 lastLoginAt = lastLogin;
@@ -63,7 +73,17 @@ internal sealed class GetCurrentUser(
                 .ToList() ?? [];
 
             var sessionId = httpContextAccessor.HttpContext?.User.FindFirstValue("session_id");
-            var mfaEnrollmentRequired = IsMfaEnrollmentRequired(twoFactorEnabled, rolesList);
+            var mfaEnrollmentRequired = appUser.RequiresOnboarding || IsMfaEnrollmentRequired(twoFactorEnabled, rolesList)
+                || (_mfaSettings.Enabled && _mfaSettings.EnforceEnrollment && !twoFactorEnabled
+                    && permissions.Any(ModuleCatalog.IsAdministrativePermission));
+
+            var access = await accessService.GetAsync(userId, cancellationToken).ConfigureAwait(false);
+            var preferences = appUser.IsPlatformStaff ? OrganizationSettingCatalog.Defaults
+                : new OrganizationPreferences(
+                    await settings.GetSettingAsync("Organization.Name", cancellationToken).ConfigureAwait(false) ?? "BaseTemplate",
+                    await settings.GetSettingAsync("Organization.TimeZone", cancellationToken).ConfigureAwait(false) ?? "UTC",
+                    await settings.GetSettingAsync("Organization.Culture", cancellationToken).ConfigureAwait(false) ?? "en-KE",
+                    await settings.GetSettingAsync("Organization.DateFormat", cancellationToken).ConfigureAwait(false) ?? "dd/MM/yyyy");
 
             return AppResponses.Success("CurrentUser", new CurrentUserResponse(
                 userId,
@@ -84,7 +104,8 @@ internal sealed class GetCurrentUser(
                 permissions,
                 sessionId,
                 mfaEnrollmentRequired,
-                ProfilePictureUrlMapping.ToCurrentUserRoute(appUser.ProfilePictureUrl)));
+                ProfilePictureUrlMapping.ToCurrentUserRoute(appUser.ProfilePictureUrl),
+                appUser.IsPlatformStaff, preferences, access.Modules.ToArray()));
         }
         catch (Exception ex)
         {

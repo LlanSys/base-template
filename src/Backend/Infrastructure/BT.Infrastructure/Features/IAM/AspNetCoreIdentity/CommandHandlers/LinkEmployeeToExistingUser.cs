@@ -23,6 +23,7 @@ using Microsoft.EntityFrameworkCore;
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
 internal sealed class LinkEmployeeToExistingUser(
+    TimeProvider timeProvider,
     IHrUnitOfWork hrUnitOfWork,
     UserManager<AppUser> userManager,
     IEmployeeNumberGenerator employeeNumberGenerator)
@@ -68,7 +69,7 @@ internal sealed class LinkEmployeeToExistingUser(
         {
             await hrUnitOfWork.EmployeeRepository.CreateAsync(employee, ct).ConfigureAwait(false);
 
-            existingUser.LinkToEmployee(employee.Id);
+            existingUser.LinkToEmployee(timeProvider.GetUtcNow(), employee.Id);
 
             await userManager.UpdateAsync(existingUser).ConfigureAwait(false);
             await userManager.AddToRoleAsync(existingUser, Roles.Employee.ToDisplayString()).ConfigureAwait(false);

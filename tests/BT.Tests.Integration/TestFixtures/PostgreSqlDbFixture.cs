@@ -30,6 +30,6 @@ public class PostgreSqlDbFixture : DbFixture
 
     public override async Task DisposeAsync()
     {
-        await _dbContainer.StopAsync();
+        await _dbContainer.DisposeAsync().ConfigureAwait(false);
     }
 }

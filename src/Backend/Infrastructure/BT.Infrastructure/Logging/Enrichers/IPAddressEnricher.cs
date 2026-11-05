@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Http;
+
 using Serilog.Core;
 using Serilog.Events;
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -33,8 +35,9 @@ internal sealed class IPAddressEnricher : ILogEventEnricher
         logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty("IPAddress", ip));
 
         var forwarded = context?.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+
         if (!string.IsNullOrEmpty(forwarded))
             logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty("X-Forwarded-For", forwarded));
-      }
+    }
 }
 

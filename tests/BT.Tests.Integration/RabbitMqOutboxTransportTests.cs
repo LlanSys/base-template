@@ -24,8 +24,8 @@ public sealed class RabbitMqOutboxTransportTests
         var messageId = Guid.CreateVersion7();
 
         var builder = Host.CreateApplicationBuilder();
-        builder.Services.AddSingleton<BT.Domain.Shared.Contracts.Common.ICurrentTenantProvider, TestTenantProvider>();
-        builder.Services.AddSingleton<BT.Domain.Shared.Contracts.Common.ICurrentActorProvider, TestActorProvider>();
+        builder.Services.AddSingleton<Domain.Shared.Contracts.Common.ICurrentTenantProvider, TestTenantProvider>();
+        builder.Services.AddSingleton<Domain.Shared.Contracts.Common.ICurrentActorProvider, TestActorProvider>();
         builder.Services.AddSingleton<RabbitMqDeliveryProbe>();
         builder.Services.AddDbContext<SharedDBContext>(options => options.UseSqlite(connectionString));
         builder.Services.AddMassTransit(configurator =>
@@ -45,6 +45,7 @@ public sealed class RabbitMqOutboxTransportTests
                     host.Username(username);
                     host.Password(password);
                 });
+
                 rabbit.ReceiveEndpoint(queueName, endpoint =>
                 {
                     endpoint.AutoDelete = true;
@@ -83,6 +84,7 @@ public sealed class RabbitMqOutboxTransportTests
         {
             await host.StopAsync();
             host.Dispose();
+
             if (File.Exists(databasePath))
             {
                 File.Delete(databasePath);
@@ -97,6 +99,7 @@ public sealed class RabbitMqOutboxTransportTests
     private static async Task<bool> WaitForOutboxToDrainAsync(SharedDBContext db, TimeSpan timeout)
     {
         var expiresAt = DateTimeOffset.UtcNow.Add(timeout);
+
         while (DateTimeOffset.UtcNow < expiresAt)
         {
             if (!await db.Set<OutboxMessage>().AnyAsync())
@@ -131,6 +134,7 @@ internal sealed class RabbitMqDeliveryProbe
     public Task<RabbitMqCertificationEvent> ExpectAsync(Guid messageId)
     {
         var completion = new TaskCompletionSource<RabbitMqCertificationEvent>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         if (!_deliveries.TryAdd(messageId, completion))
         {
             throw new InvalidOperationException($"A delivery expectation already exists for '{messageId}'.");
@@ -142,6 +146,7 @@ internal sealed class RabbitMqDeliveryProbe
     public void Delivered(RabbitMqCertificationEvent message)
     {
         ArgumentNullException.ThrowIfNull(message);
+
         if (_deliveries.TryRemove(message.MessageId, out var completion))
         {
             completion.TrySetResult(message);
@@ -163,12 +168,12 @@ internal sealed class RabbitMqFactAttribute : FactAttribute
     }
 }
 
-internal sealed class TestTenantProvider : BT.Domain.Shared.Contracts.Common.ICurrentTenantProvider
+internal sealed class TestTenantProvider : Domain.Shared.Contracts.Common.ICurrentTenantProvider
 {
     public Guid TenantId => Guid.Empty;
 }
 
-internal sealed class TestActorProvider : BT.Domain.Shared.Contracts.Common.ICurrentActorProvider
+internal sealed class TestActorProvider : Domain.Shared.Contracts.Common.ICurrentActorProvider
 {
     public string ActorId => "System";
 }

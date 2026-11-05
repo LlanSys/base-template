@@ -17,7 +17,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -26,6 +26,9 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AvailableTenantId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -130,187 +133,58 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                     b.HasData(
                         new
                         {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10301"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Architecture and solution overview.",
-                            DisplayOrder = 1,
-                            Icon = "AutoStories",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "solution-overview",
-                            Placement = "Sidebar",
-                            RequiredModule = "showcase",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Solution Overview",
-                            Url = "/overview"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10101"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Operations dashboard.",
-                            DisplayOrder = 2,
-                            Icon = "Dashboard",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "dashboard",
-                            Placement = "Sidebar",
-                            RequiredModule = "core",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Dashboard",
-                            Url = "/dashboard"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10201"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Administrative workspace.",
-                            DisplayOrder = 3,
-                            Icon = "AdminPanelSettings",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-center",
-                            Placement = "Sidebar",
-                            RequiredModule = "core",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Admin Center",
-                            Url = "/admin"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10501"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Platform management.",
-                            DisplayOrder = 4,
-                            Icon = "Dns",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "control-panel",
-                            Placement = "Sidebar",
-                            RequiredPermissionKey = "controlplane.manage",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Control Panel",
-                            Url = "/control-panel"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c30101"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Manage SaaS tenants.",
-                            DisplayOrder = 10,
-                            Icon = "Business",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "control-panel-tenants",
-                            ParentId = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10501"),
-                            Placement = "ControlPanel",
-                            RequiredPermissionKey = "controlplane.manage",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Tenants",
-                            Url = "/control-panel/tenants"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c30102"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Deployment stamps.",
-                            DisplayOrder = 20,
-                            Icon = "Dns",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "control-panel-stamps",
-                            ParentId = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10501"),
-                            Placement = "ControlPanel",
-                            RequiredPermissionKey = "controlplane.manage",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Stamps",
-                            Url = "/control-panel/stamps"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10401"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Reusable platform capability showcases.",
-                            DisplayOrder = 4,
-                            Icon = "MenuOpen",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "features",
-                            Placement = "Sidebar",
-                            RequiredModule = "showcase",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Features",
-                            Url = "/features"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10402"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Test card and mobile-money payment flows.",
-                            DisplayOrder = 10,
-                            Icon = "CreditCard",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "features-payments",
-                            ParentId = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10401"),
-                            Placement = "Features",
-                            RequiredModule = "showcase",
-                            RequiredPermissionKey = "payments.view",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Payments",
-                            Url = "/features/payments"
-                        },
-                        new
-                        {
                             Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c20101"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Customer records and onboarding.",
+                            CreatedBy = "00000000-0000-0000-0000-000000000001",
+                            Description = "Customer management.",
                             DisplayOrder = 10,
                             Icon = "Business",
                             IsActive = true,
                             IsDeleted = false,
-                            Key = "admin-customers",
-                            ParentId = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10201"),
-                            Placement = "AdminCenter",
-                            RequiredModule = "core",
+                            Key = "banking",
+                            Placement = "Sidebar",
+                            RequiredModule = "banking",
+                            RequiredPermissionKey = "customers.view",
                             RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Customers",
+                            TenantId = new Guid("00000000-0000-0000-0000-000000000000"),
+                            Title = "Banking",
                             Url = "/admin/customers"
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c20401"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "00000000-0000-0000-0000-000000000001",
+                            Description = "Staff and departments.",
+                            DisplayOrder = 20,
+                            Icon = "Badge",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "hr",
+                            Placement = "Sidebar",
+                            RequiredModule = "hr",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("00000000-0000-0000-0000-000000000000"),
+                            Title = "Human Resources",
+                            Url = ""
                         },
                         new
                         {
                             Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c20102"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Department catalog and staff grouping.",
-                            DisplayOrder = 20,
+                            CreatedBy = "00000000-0000-0000-0000-000000000001",
+                            Description = "Department catalog.",
+                            DisplayOrder = 10,
                             Icon = "AccountTree",
                             IsActive = true,
                             IsDeleted = false,
-                            Key = "admin-departments",
-                            ParentId = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10201"),
-                            Placement = "AdminCenter",
-                            RequiredModule = "core",
+                            Key = "departments",
+                            ParentId = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c20401"),
+                            Placement = "Sidebar",
+                            RequiredModule = "hr",
+                            RequiredPermissionKey = "departments.view",
                             RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
+                            TenantId = new Guid("00000000-0000-0000-0000-000000000000"),
                             Title = "Departments",
                             Url = "/admin/departments"
                         },
@@ -318,96 +192,40 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                         {
                             Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c20103"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Staff records and system access.",
-                            DisplayOrder = 30,
+                            CreatedBy = "00000000-0000-0000-0000-000000000001",
+                            Description = "Staff records and access.",
+                            DisplayOrder = 20,
                             Icon = "Badge",
                             IsActive = true,
                             IsDeleted = false,
-                            Key = "admin-employees",
-                            ParentId = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10201"),
-                            Placement = "AdminCenter",
-                            RequiredModule = "core",
+                            Key = "employees",
+                            ParentId = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c20401"),
+                            Placement = "Sidebar",
+                            RequiredModule = "hr",
+                            RequiredPermissionKey = "employees.view",
                             RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
+                            TenantId = new Guid("00000000-0000-0000-0000-000000000000"),
                             Title = "Employees",
                             Url = "/admin/employees"
                         },
                         new
                         {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c20104"),
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10402"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Navigation catalog and menu visibility.",
-                            DisplayOrder = 40,
-                            Icon = "MenuOpen",
+                            CreatedBy = "00000000-0000-0000-0000-000000000001",
+                            Description = "Payments and provider operations.",
+                            DisplayOrder = 30,
+                            Icon = "CreditCard",
                             IsActive = true,
                             IsDeleted = false,
-                            Key = "admin-menus",
-                            ParentId = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10201"),
-                            Placement = "AdminCenter",
-                            RequiredModule = "core",
+                            Key = "payments",
+                            Placement = "Sidebar",
+                            RequiredModule = "payments",
+                            RequiredPermissionKey = "payments.view",
                             RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Menus",
-                            Url = "/admin/menus"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c20107"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Tenant-specific configuration surface.",
-                            DisplayOrder = 50,
-                            Icon = "Settings",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-org-settings",
-                            ParentId = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10201"),
-                            Placement = "AdminCenter",
-                            RequiredModule = "core",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Org Settings",
-                            Url = "/admin/org-settings"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c20111"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Manage users, roles, permissions, and trusted devices.",
-                            DisplayOrder = 60,
-                            Icon = "Group",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-iam",
-                            ParentId = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10201"),
-                            Placement = "AdminCenter",
-                            RequiredModule = "iam",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Identity & Access",
-                            Url = "/admin/iam"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c20110"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Source-of-truth permission and menu reference data.",
-                            DisplayOrder = 70,
-                            Icon = "LockPerson",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-access-catalog",
-                            ParentId = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9c10201"),
-                            Placement = "AdminCenter",
-                            RequiredModule = "iam",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Title = "Access Catalog",
-                            Url = "/admin/access-catalog"
+                            TenantId = new Guid("00000000-0000-0000-0000-000000000000"),
+                            Title = "Payments",
+                            Url = "/payments"
                         });
                 });
 
@@ -421,6 +239,9 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                         .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
+
+                    b.Property<Guid?>("AvailableTenantId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Context")
                         .IsRequired()
@@ -456,10 +277,17 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsTenantDelegatable")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasMaxLength(160)
                         .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("RequiredModule")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
 
                     b.Property<string>("Resource")
                         .IsRequired()
@@ -504,6 +332,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "View application users.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "users.view",
                             Resource = "users",
                             RowVersion = new byte[0],
@@ -519,6 +348,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Create application users.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "users.create",
                             Resource = "users",
                             RowVersion = new byte[0],
@@ -534,6 +364,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Update application users.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "users.edit",
                             Resource = "users",
                             RowVersion = new byte[0],
@@ -549,6 +380,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Deactivate application users.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "users.deactivate",
                             Resource = "users",
                             RowVersion = new byte[0],
@@ -564,6 +396,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Manage user role assignments.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "users.manage_roles",
                             Resource = "users",
                             RowVersion = new byte[0],
@@ -579,6 +412,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Manage direct user permissions.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "users.manage_permissions",
                             Resource = "users",
                             RowVersion = new byte[0],
@@ -594,6 +428,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "View platform roles.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "roles.view",
                             Resource = "roles",
                             RowVersion = new byte[0],
@@ -609,6 +444,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Create platform roles.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "roles.create",
                             Resource = "roles",
                             RowVersion = new byte[0],
@@ -624,6 +460,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Update platform roles.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "roles.edit",
                             Resource = "roles",
                             RowVersion = new byte[0],
@@ -639,6 +476,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Delete platform roles.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "roles.delete",
                             Resource = "roles",
                             RowVersion = new byte[0],
@@ -654,6 +492,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Manage role permission assignments.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "roles.manage_permissions",
                             Resource = "roles",
                             RowVersion = new byte[0],
@@ -669,6 +508,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "View departments.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "departments.view",
                             Resource = "departments",
                             RowVersion = new byte[0],
@@ -684,6 +524,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Create departments.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "departments.create",
                             Resource = "departments",
                             RowVersion = new byte[0],
@@ -699,6 +540,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Update departments.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "departments.edit",
                             Resource = "departments",
                             RowVersion = new byte[0],
@@ -714,6 +556,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Delete departments.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "departments.delete",
                             Resource = "departments",
                             RowVersion = new byte[0],
@@ -729,6 +572,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "View employees.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "employees.view",
                             Resource = "employees",
                             RowVersion = new byte[0],
@@ -744,6 +588,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Create employees.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "employees.create",
                             Resource = "employees",
                             RowVersion = new byte[0],
@@ -759,6 +604,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Update employees.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "employees.edit",
                             Resource = "employees",
                             RowVersion = new byte[0],
@@ -774,6 +620,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Delete employees.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "employees.delete",
                             Resource = "employees",
                             RowVersion = new byte[0],
@@ -789,6 +636,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "View customers.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "customers.view",
                             Resource = "customers",
                             RowVersion = new byte[0],
@@ -804,6 +652,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Create customers.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "customers.create",
                             Resource = "customers",
                             RowVersion = new byte[0],
@@ -819,6 +668,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Update customers.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "customers.edit",
                             Resource = "customers",
                             RowVersion = new byte[0],
@@ -834,6 +684,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Delete customers.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "customers.delete",
                             Resource = "customers",
                             RowVersion = new byte[0],
@@ -849,6 +700,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "View menu catalog.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = false,
                             Key = "menus.view",
                             Resource = "menus",
                             RowVersion = new byte[0],
@@ -864,6 +716,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Create menu items.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = false,
                             Key = "menus.create",
                             Resource = "menus",
                             RowVersion = new byte[0],
@@ -879,6 +732,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Update menu items.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = false,
                             Key = "menus.edit",
                             Resource = "menus",
                             RowVersion = new byte[0],
@@ -894,6 +748,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Delete menu items.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = false,
                             Key = "menus.delete",
                             Resource = "menus",
                             RowVersion = new byte[0],
@@ -909,6 +764,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "View payment history and provider readiness.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "payments.view",
                             Resource = "payments",
                             RowVersion = new byte[0],
@@ -924,6 +780,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Initiate payment checkout flows.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "payments.create",
                             Resource = "payments",
                             RowVersion = new byte[0],
@@ -939,6 +796,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Manage M-Pesa payment administration actions.",
                             IsActive = true,
                             IsDeleted = false,
+                            IsTenantDelegatable = true,
                             Key = "payments.admin",
                             Resource = "payments",
                             RowVersion = new byte[0],
@@ -946,16 +804,289 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                         },
                         new
                         {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b10801"),
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b10802"),
+                            Action = "create_tenants",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Create tenants. Platform administrators only.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "controlplane.create_tenants",
+                            Resource = "controlplane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b10803"),
+                            Action = "create",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Register implemented business modules.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "modules.create",
+                            Resource = "modules",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b10804"),
                             Action = "manage",
                             Context = "ControlPlane",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             CreatedBy = "System",
-                            Description = "Manage Control Plane Tenants and Stamps.",
+                            Description = "Manage module definitions and availability.",
                             IsActive = true,
                             IsDeleted = false,
-                            Key = "controlplane.manage",
+                            IsTenantDelegatable = false,
+                            Key = "modules.manage",
+                            Resource = "modules",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b10805"),
+                            Action = "manage",
+                            Context = "Platform",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Manage implemented permission definitions.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "permissions.manage",
+                            Resource = "permissions",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b11001"),
+                            Action = "view_tenants",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "View tenants.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "controlplane.view_tenants",
                             Resource = "controlplane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b11002"),
+                            Action = "edit_tenants",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Edit tenants.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "controlplane.edit_tenants",
+                            Resource = "controlplane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b11003"),
+                            Action = "delete_tenants",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Delete tenants.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "controlplane.delete_tenants",
+                            Resource = "controlplane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b11004"),
+                            Action = "manage_tenant_modules",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Manage tenant modules.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "controlplane.manage_tenant_modules",
+                            Resource = "controlplane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b11005"),
+                            Action = "manage_tenant_administrators",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Manage tenant administrators.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "controlplane.manage_tenant_administrators",
+                            Resource = "controlplane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b11006"),
+                            Action = "manage_tenant_lifecycle",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Manage tenant lifecycle.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "controlplane.manage_tenant_lifecycle",
+                            Resource = "controlplane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b11007"),
+                            Action = "migrate_tenants",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Migrate tenants.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "controlplane.migrate_tenants",
+                            Resource = "controlplane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b11008"),
+                            Action = "view_stamps",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "View stamps.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "controlplane.view_stamps",
+                            Resource = "controlplane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b11009"),
+                            Action = "manage_stamps",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Manage stamps.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "controlplane.manage_stamps",
+                            Resource = "controlplane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b11010"),
+                            Action = "view_audit",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "View audit.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "controlplane.view_audit",
+                            Resource = "controlplane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b11011"),
+                            Action = "impersonate",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Impersonate.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "controlplane.impersonate",
+                            Resource = "controlplane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b11012"),
+                            Action = "view",
+                            Context = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "View module definitions and readiness.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = false,
+                            Key = "modules.view",
+                            Resource = "modules",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b10901"),
+                            Action = "view",
+                            Context = "Shared",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "View organization settings.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = true,
+                            Key = "tenant-settings.view",
+                            Resource = "tenant-settings",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9b10902"),
+                            Action = "update",
+                            Context = "Shared",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Change supported organization settings.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsTenantDelegatable = true,
+                            Key = "tenant-settings.update",
+                            Resource = "tenant-settings",
                             RowVersion = new byte[0],
                             TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
                         });
@@ -1400,60 +1531,15 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                     b.HasData(
                         new
                         {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10601"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "dashboard",
-                            Label = "Dashboard",
-                            PlacementKey = "Sidebar",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/dashboard"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10602"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-center",
-                            Label = "Admin Center",
-                            PlacementKey = "Sidebar",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/admin"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10603"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "solution-overview",
-                            Label = "Solution Overview",
-                            PlacementKey = "Sidebar",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/overview"
-                        },
-                        new
-                        {
                             Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10604"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             CreatedBy = "System",
                             Description = "Approved application route.",
                             IsActive = true,
                             IsDeleted = false,
-                            Key = "admin-customers",
+                            Key = "customers",
                             Label = "Customers",
-                            PlacementKey = "AdminCenter",
+                            PlacementKey = "Sidebar",
                             RowVersion = new byte[0],
                             TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
                             Url = "/admin/customers"
@@ -1466,9 +1552,9 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Approved application route.",
                             IsActive = true,
                             IsDeleted = false,
-                            Key = "admin-departments",
+                            Key = "departments",
                             Label = "Departments",
-                            PlacementKey = "AdminCenter",
+                            PlacementKey = "Sidebar",
                             RowVersion = new byte[0],
                             TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
                             Url = "/admin/departments"
@@ -1481,132 +1567,12 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Approved application route.",
                             IsActive = true,
                             IsDeleted = false,
-                            Key = "admin-employees",
+                            Key = "employees",
                             Label = "Employees",
-                            PlacementKey = "AdminCenter",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/admin/employees"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10607"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-menus",
-                            Label = "Menus",
-                            PlacementKey = "AdminCenter",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/admin/menus"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10608"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-permissions",
-                            Label = "Permissions",
-                            PlacementKey = "AdminCenter",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/admin/permissions"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10609"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-roles",
-                            Label = "Roles",
-                            PlacementKey = "AdminCenter",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/admin/roles"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10610"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-settings",
-                            Label = "Settings",
-                            PlacementKey = "AdminCenter",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/admin/settings"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10611"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-user-devices",
-                            Label = "User Devices",
-                            PlacementKey = "AdminCenter",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/admin/user-devices"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10612"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-users",
-                            Label = "Users",
-                            PlacementKey = "AdminCenter",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/admin/users"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10613"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-access-catalog",
-                            Label = "Access Catalog",
-                            PlacementKey = "AdminCenter",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/admin/access-catalog"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10614"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "features",
-                            Label = "Features",
                             PlacementKey = "Sidebar",
                             RowVersion = new byte[0],
                             TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/features"
+                            Url = "/admin/employees"
                         },
                         new
                         {
@@ -1616,87 +1582,12 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Description = "Approved application route.",
                             IsActive = true,
                             IsDeleted = false,
-                            Key = "features-payments",
+                            Key = "payments",
                             Label = "Payments",
                             PlacementKey = "Sidebar",
                             RowVersion = new byte[0],
                             TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/features/payments"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10616"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "control-panel",
-                            Label = "Control Panel",
-                            PlacementKey = "Sidebar",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/control-panel"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10617"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "control-panel-tenants",
-                            Label = "Tenants",
-                            PlacementKey = "ControlPanel",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/control-panel/tenants"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10618"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "control-panel-stamps",
-                            Label = "Stamps",
-                            PlacementKey = "ControlPanel",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/control-panel/stamps"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10619"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-org-settings",
-                            Label = "Org Settings",
-                            PlacementKey = "AdminCenter",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/admin/org-settings"
-                        },
-                        new
-                        {
-                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10620"),
-                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Approved application route.",
-                            IsActive = true,
-                            IsDeleted = false,
-                            Key = "admin-iam",
-                            Label = "Identity & Access",
-                            PlacementKey = "AdminCenter",
-                            RowVersion = new byte[0],
-                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001"),
-                            Url = "/admin/iam"
+                            Url = "/payments"
                         });
                 });
 
@@ -1869,6 +1760,188 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Label = "Administer",
                             RowVersion = new byte[0],
                             TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10309"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Update organization preferences.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "update",
+                            Label = "Update",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10310"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Manage vendor catalogs.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "manage",
+                            Label = "Manage",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10311"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Provision tenant records.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "create_tenants",
+                            Label = "Create tenants",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10312"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor operation.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "view_tenants",
+                            Label = "View tenants",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10313"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor operation.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "edit_tenants",
+                            Label = "Edit tenants",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10314"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor operation.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "delete_tenants",
+                            Label = "Delete tenants",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10315"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor operation.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "manage_tenant_modules",
+                            Label = "Manage tenant modules",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10316"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor operation.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "manage_tenant_administrators",
+                            Label = "Manage tenant administrators",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10317"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor operation.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "manage_tenant_lifecycle",
+                            Label = "Manage tenant lifecycle",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10318"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor operation.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "migrate_tenants",
+                            Label = "Migrate tenants",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10319"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor operation.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "view_stamps",
+                            Label = "View stamps",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10320"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor operation.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "manage_stamps",
+                            Label = "Manage stamps",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10321"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor operation.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "view_audit",
+                            Label = "View audit",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10322"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor operation.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "impersonate",
+                            Label = "Impersonate",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
                         });
                 });
 
@@ -1995,11 +2068,24 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10105"),
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             CreatedBy = "System",
-                            Description = "Cross-cutting platform services and reusable capability showcases.",
+                            Description = "Cross-cutting application services.",
                             IsActive = true,
                             IsDeleted = false,
                             Key = "Shared",
                             Label = "Shared",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10106"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor administration.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "ControlPlane",
+                            Label = "Control Plane",
                             RowVersion = new byte[0],
                             TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
                         });
@@ -2138,7 +2224,7 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                         new
                         {
                             Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10205"),
-                            ContextKey = "IAM",
+                            ContextKey = "Platform",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             CreatedBy = "System",
                             Description = "Permission catalog and assignment surface.",
@@ -2190,6 +2276,48 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                             Label = "Payments",
                             RowVersion = new byte[0],
                             TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10209"),
+                            ContextKey = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Business module definitions.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "modules",
+                            Label = "Modules",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10210"),
+                            ContextKey = "ControlPlane",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Vendor operations.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "controlplane",
+                            Label = "Control Plane",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("018fd81d-2c94-7ad0-a4a3-f1edb9d10211"),
+                            ContextKey = "Shared",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "System",
+                            Description = "Supported organization preferences.",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "tenant-settings",
+                            Label = "Organization Settings",
+                            RowVersion = new byte[0],
+                            TenantId = new Guid("0194f700-0000-7000-8000-000000000001")
                         });
                 });
 
@@ -2202,6 +2330,10 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("DefinitionKey")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -2212,8 +2344,23 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                     b.Property<Guid?>("DepartmentId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("IsPlatformRole")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModuleKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
@@ -2223,7 +2370,14 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("DefinitionKey")
+                        .IsUnique()
+                        .HasFilter("[DefinitionKey] IS NOT NULL");
 
                     b.HasIndex("DepartmentId")
                         .HasDatabaseName("IX_AspNetRoles_DepartmentId");
@@ -2232,8 +2386,10 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                         .HasDatabaseName("IX_AspNetRoles_IsDeleted");
 
                     b.HasIndex("NormalizedName")
+                        .HasDatabaseName("RoleNameIndex");
+
+                    b.HasIndex("TenantId", "NormalizedName")
                         .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("Roles", (string)null);
@@ -2318,6 +2474,9 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsPlatformStaff")
+                        .HasColumnType("bit");
+
                     b.Property<DateTimeOffset?>("LastFailedLoginAt")
                         .HasColumnType("datetimeoffset");
 
@@ -2347,6 +2506,12 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset?>("OnboardingCompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("OnboardingInvitationId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
@@ -2902,6 +3067,32 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                     b.ToTable("RefreshTokens", (string)null);
                 });
 
+            modelBuilder.Entity("BT.Domain.Features.IAM.Users.Entities.SsoAuthorizationCode", b =>
+                {
+                    b.Property<string>("Hash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Hash");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SsoAuthorizationCodes", (string)null);
+                });
+
             modelBuilder.Entity("BT.Domain.Features.IAM.Users.Entities.TempTotpSecret", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2961,6 +3152,50 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                         .HasDatabaseName("IX_TempTotpSecrets_UserId_IsDeleted_ExpiresAt");
 
                     b.ToTable("TempTotpSecrets", (string)null);
+                });
+
+            modelBuilder.Entity("BT.Domain.Shared.Entities.AdministrationAuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ChangedFields")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "OccurredAt");
+
+                    b.ToTable("IamAdministrationAudit", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -3139,6 +3374,15 @@ namespace BT.Persistence.Features.IAM.Migrations.SqlServer
                         .IsRequired();
 
                     b.Navigation("AppUser");
+                });
+
+            modelBuilder.Entity("BT.Domain.Features.IAM.Users.Entities.SsoAuthorizationCode", b =>
+                {
+                    b.HasOne("BT.Domain.Features.IAM.Users.Entities.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("BT.Domain.Features.IAM.Users.Entities.TempTotpSecret", b =>

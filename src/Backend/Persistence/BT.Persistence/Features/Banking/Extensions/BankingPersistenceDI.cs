@@ -24,6 +24,9 @@ public static class BankingPersistenceDI
 {
     public static IServiceCollection AddBankingPersistence(this IServiceCollection services, IConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(services, nameof(services));
+        ArgumentNullException.ThrowIfNull(configuration, nameof(configuration));
+
         var connectionString = configuration.GetConnectionString("BankingConnection")
             ?? configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("BankingConnection (or DefaultConnection) not found.");
@@ -55,7 +58,7 @@ public static class BankingPersistenceDI
                     sqlOptions.MigrationsHistoryTable("__EFMigrationsHistory_Banking");
                 }).ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsSqlGenerator, IdempotentSqlServerMigrationsSqlGenerator>();
             }
-            
+
             options.AddInterceptors(provider.GetRequiredService<TenantConnectionInterceptor>());
         }
 

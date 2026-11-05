@@ -10,7 +10,7 @@ using BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces;
 
 namespace BT.UI.Blazor.Features.ControlPlane.Tenants.Implementations;
 
-internal class TenantService(IBackendApiClient client) : ITenantService
+internal sealed class TenantService(IBackendApiClient client) : ITenantService
 {
     private const string BasePath = "api/v1/control-plane/tenants";
 
@@ -106,4 +106,10 @@ internal class TenantService(IBackendApiClient client) : ITenantService
             unavailableMessage: "Unable to remove module.",
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
+
+    public Task<AppResponse<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+        => client.SendAsync<bool>(HttpMethod.Delete, $"{BasePath}/{id}", requiresAuthentication: true, cancellationToken: cancellationToken);
+
+    public Task<AppResponse<bool>> SetModulesAsync(Guid id, SetTenantModulesRequest request, CancellationToken cancellationToken = default)
+        => client.SendAsync<bool>(HttpMethod.Put, $"{BasePath}/{id}/modules", request: request, requiresAuthentication: true, cancellationToken: cancellationToken);
 }

@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using BT.UI.Rcl.Features.IAM.Users.Contracts.Interfaces;
+using BT.UI.Blazor.Features.IAM.Users.Contracts.Interfaces;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace BT.UI.Blazor.Components.Security;
@@ -10,21 +10,24 @@ namespace BT.UI.Blazor.Components.Security;
 /// <c>[Authorize]</c>, and <c>&lt;AuthorizeView&gt;</c> work against the existing
 /// session-backed identity without duplicating token handling.
 /// </summary>
-internal sealed class CustomAuthenticationStateProvider(IAuthSession authSession) : AuthenticationStateProvider
+internal sealed class CustomAuthenticationStateProvider : AuthenticationStateProvider, IDisposable
 {
+    private readonly IAuthSession authSession;
+
+    public CustomAuthenticationStateProvider(IAuthSession authSession)
+    {
+        this.authSession = authSession;
+        authSession.Changed += OnSessionChangedAsync;
+    }
+
     private static readonly AuthenticationState AnonymousState =
         new(new ClaimsPrincipal(new ClaimsIdentity()));
 
-    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
+    public override Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        if (!authSession.IsInitialized)
-        {
-            await authSession.InitializeAsync().ConfigureAwait(false);
-        }
-
         if (!authSession.IsAuthenticated || authSession.CurrentUser is null)
         {
-            return AnonymousState;
+            return Task.FromResult(AnonymousState);
         }
 
         var user = authSession.CurrentUser;
@@ -42,6 +45,8 @@ internal sealed class CustomAuthenticationStateProvider(IAuthSession authSession
             claims.Add(new Claim("session_id", user.SessionId));
         }
 
+        if (user.IsPlatformStaff) claims.Add(new Claim("platform_staff", "true"));
+
         foreach (var role in user.Roles)
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
@@ -56,7 +61,7 @@ internal sealed class CustomAuthenticationStateProvider(IAuthSession authSession
         }
 
         var identity = new ClaimsIdentity(claims, authenticationType: "BaseTemplate.Session");
-        return new AuthenticationState(new ClaimsPrincipal(identity));
+        return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
     }
 
     /// <summary>
@@ -67,4 +72,12 @@ internal sealed class CustomAuthenticationStateProvider(IAuthSession authSession
     {
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
+
+    private Task OnSessionChangedAsync()
+    {
+        NotifyAuthenticationStateChanged();
+        return Task.CompletedTask;
+    }
+
+    public void Dispose() => authSession.Changed -= OnSessionChangedAsync;
 }

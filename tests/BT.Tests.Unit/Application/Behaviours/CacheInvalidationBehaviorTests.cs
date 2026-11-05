@@ -16,6 +16,7 @@ public sealed class CacheInvalidationBehaviorTests
     {
         var cache = new RecordingCacheService();
         var behavior = new CacheInvalidationBehavior<TestInvalidationRequest, string>(
+            TimeProvider.System,
             cache,
             new FixedTenantProvider(TenantId),
             NullLogger<CacheInvalidationBehavior<TestInvalidationRequest, string>>.Instance);

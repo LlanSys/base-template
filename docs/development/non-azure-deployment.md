@@ -1,5 +1,7 @@
 # Non-Azure Deployment Configuration
 
+Google and Microsoft identity-provider settings remain supported outside Azure hosting. The API's public HTTPS origin owns the registered OAuth callbacks; use `GoogleSso__Enabled`, `GoogleSso__ClientId`, `GoogleSso__ClientSecret` and the existing `EntraId__*` settings through the host's secret manager. Set Blazor `BackendApi__PublicBaseUrl` to that public origin independently of the internal API address. See [Google and Microsoft SSO](google-and-microsoft-sso.md). KYC and administrator MFA remain required regardless of hosting or sign-in provider.
+
 This guide covers the non-Azure deployment paths for BaseTemplate and cloned products. Azure remains the preferred enterprise path when the subscription is active, but the template also supports container deployment to DigitalOcean, Heroku, and generic Docker hosts.
 
 ## Platform Equivalents

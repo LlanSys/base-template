@@ -14,7 +14,6 @@ using BT.Domain.Shared.Contracts.Common;
 using BT.Domain.Features.Banking.Customers.Enums;
 using BT.SharedKernel.Features.Banking.Customers.Dtos;
 using BT.SharedKernel.Dtos.Common;
-using BT.SharedKernel.Extensions;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using System;
@@ -62,6 +61,7 @@ internal sealed class SearchCustomerListQueryHandler(IBankingUnitOfWork _banking
             var customerEntities = await _bankingUnitOfWork.CustomerRepository.SearchAsync(spec, ct).ConfigureAwait(false);
 
             bool hasNextPage = customerEntities.Count > pageSize;
+
             if (hasNextPage)
                 customerEntities.RemoveAt(customerEntities.Count - 1);
 

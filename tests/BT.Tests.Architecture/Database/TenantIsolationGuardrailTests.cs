@@ -11,14 +11,14 @@ public class TenantIsolationGuardrailTests
     [Fact]
     public void TenantFilteredDBContexts_MustHaveCorrespondingIntegrationTest()
     {
-        var persistenceAssembly = typeof(BT.Persistence.Features.Shared.DataContext.SharedDBContext).Assembly;
+        var persistenceAssembly = typeof(Persistence.Features.Shared.DataContext.SharedDBContext).Assembly;
         var tenantFilteredInterface = persistenceAssembly.GetTypes().FirstOrDefault(t => t.Name == "ITenantFilteredDBContext");
-        
+
         tenantFilteredInterface.Should().NotBeNull("ITenantFilteredDBContext must exist in BT.Persistence.Common");
 
         var tenantContexts = persistenceAssembly.GetTypes()
-            .Where(t => t.IsClass 
-                     && !t.IsAbstract 
+            .Where(t => t.IsClass
+                     && !t.IsAbstract
                      && tenantFilteredInterface!.IsAssignableFrom(t)
                      && !t.Name.Contains("SqlServer", StringComparison.OrdinalIgnoreCase)
                      && !t.Name.Contains("PostgreSql", StringComparison.OrdinalIgnoreCase))
@@ -26,14 +26,16 @@ public class TenantIsolationGuardrailTests
 
         // Path to the Integration Tests project
         var integrationTestsDir = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "tests", "BT.Tests.Integration");
-        
+
         if (!Directory.Exists(integrationTestsDir))
         {
             var currentDir = new DirectoryInfo(Directory.GetCurrentDirectory());
+
             while (currentDir != null && currentDir.Name != "BaseTemplate")
             {
                 currentDir = currentDir.Parent;
             }
+
             if (currentDir != null)
             {
                 integrationTestsDir = Path.Combine(currentDir.FullName, "tests", "BT.Tests.Integration");
@@ -49,7 +51,7 @@ public class TenantIsolationGuardrailTests
         foreach (var contextType in tenantContexts)
         {
             var expectedTestClassName = contextType.Name.Replace("DBContext", "") + "TenantIsolationTests";
-            
+
             var hasTestFile = testFiles.Contains(expectedTestClassName);
 
             hasTestFile.Should().BeTrue(

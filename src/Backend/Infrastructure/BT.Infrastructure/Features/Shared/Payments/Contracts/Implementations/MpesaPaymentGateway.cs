@@ -16,6 +16,7 @@ using System.Text.Json;
 namespace BT.Infrastructure.Features.Shared.Payments.Contracts.Implementations;
 
 internal sealed class MpesaPaymentGateway(
+    TimeProvider timeProvider,
     IHttpClientFactory httpClientFactory,
     IOptions<PaymentSettings> options,
     ILogger<MpesaPaymentGateway> logger) : IPaymentGateway, IMpesaC2BService
@@ -44,13 +45,14 @@ internal sealed class MpesaPaymentGateway(
         try
         {
             var accessToken = await GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+
             if (string.IsNullOrWhiteSpace(accessToken))
             {
                 return AppResponses.Failure<PaymentInitiationResponse>(
                     "M-Pesa authentication failed. Please try again.");
             }
 
-            var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+            var timestamp = timeProvider.GetUtcNow().ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
             var password = Convert.ToBase64String(
                 Encoding.UTF8.GetBytes($"{_settings.ShortCode}{_settings.PassKey}{timestamp}"));
 
@@ -58,6 +60,7 @@ internal sealed class MpesaPaymentGateway(
             var accountRef = string.IsNullOrWhiteSpace(record.CustomerReference)
                 ? _settings.AccountReference
                 : record.CustomerReference;
+
             var transactionDesc = string.IsNullOrWhiteSpace(record.Description)
                 ? "Payment"
                 : record.Description;
@@ -98,6 +101,7 @@ internal sealed class MpesaPaymentGateway(
             using var stream = await response.Content
                 .ReadAsStreamAsync(cancellationToken)
                 .ConfigureAwait(false);
+
             var providerResponse = await JsonSerializer
                 .DeserializeAsync<MpesaStkPushResponse>(stream, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
@@ -141,15 +145,17 @@ internal sealed class MpesaPaymentGateway(
         try
         {
             var accessToken = await GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+
             if (string.IsNullOrWhiteSpace(accessToken))
             {
                 return AppResponses.Failure<PaymentStatusResponse>(
                     "M-Pesa authentication failed. Please try again.");
             }
 
-            var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+            var timestamp = timeProvider.GetUtcNow().ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
             var password = Convert.ToBase64String(
                 Encoding.UTF8.GetBytes($"{_settings.ShortCode}{_settings.PassKey}{timestamp}"));
+
             var providerRequest = new MpesaStkQueryRequest(
                 _settings.ShortCode,
                 password,
@@ -178,6 +184,7 @@ internal sealed class MpesaPaymentGateway(
             using var stream = await response.Content
                 .ReadAsStreamAsync(cancellationToken)
                 .ConfigureAwait(false);
+
             var providerResponse = await JsonSerializer
                 .DeserializeAsync<MpesaStkQueryResponse>(stream, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
@@ -211,6 +218,7 @@ internal sealed class MpesaPaymentGateway(
         try
         {
             var accessToken = await GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+
             if (string.IsNullOrWhiteSpace(accessToken))
             {
                 return AppResponses.Failure<string>("M-Pesa authentication failed.");
@@ -259,6 +267,7 @@ internal sealed class MpesaPaymentGateway(
         try
         {
             var accessToken = await GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+
             if (string.IsNullOrWhiteSpace(accessToken))
             {
                 return AppResponses.Failure<string>("M-Pesa authentication failed.");
@@ -300,6 +309,7 @@ internal sealed class MpesaPaymentGateway(
         using var httpClient = httpClientFactory.CreateClient("Payments.Mpesa.Auth");
         var credentials = Convert.ToBase64String(
             Encoding.UTF8.GetBytes($"{_settings.ConsumerKey}:{_settings.ConsumerSecret}"));
+
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
 
         using var response = await httpClient
@@ -320,6 +330,7 @@ internal sealed class MpesaPaymentGateway(
         using var stream = await response.Content
             .ReadAsStreamAsync(cancellationToken)
             .ConfigureAwait(false);
+
         var providerResponse = await JsonSerializer
             .DeserializeAsync<MpesaAccessTokenResponse>(stream, cancellationToken: cancellationToken)
             .ConfigureAwait(false);

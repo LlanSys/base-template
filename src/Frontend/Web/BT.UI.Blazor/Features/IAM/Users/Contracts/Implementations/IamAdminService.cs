@@ -6,7 +6,7 @@ using BT.SharedKernel.Features.IAM.Users.Dtos;
 using BT.UI.Blazor.Configuration;
 using BT.UI.Blazor.Features.Shared.BackendApi;
 using BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces;
-using BT.UI.Rcl.Features.IAM.Users.Contracts.Interfaces;
+using BT.UI.Blazor.Features.IAM.Users.Contracts.Interfaces;
 using Microsoft.Extensions.Options;
 
 namespace BT.UI.Blazor.Features.IAM.Users.Contracts.Implementations;

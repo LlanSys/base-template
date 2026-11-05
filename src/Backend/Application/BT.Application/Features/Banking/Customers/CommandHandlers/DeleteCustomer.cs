@@ -30,12 +30,14 @@ internal sealed class DeleteCustomerCommandHandler(IBankingUnitOfWork _unitOfWor
         try
         {
             var customer = await _unitOfWork.CustomerRepository.FindByIdAsync(command.CustomerId, ct).ConfigureAwait(false);
+
             if (customer is null)
                 return AppResponses.Failure<bool>($"Customer {command.CustomerId} not found.");
 
             await _unitOfWork.CustomerRepository.SoftDeleteAsync(command.CustomerId, ct).ConfigureAwait(false);
 
             var saved = await _unitOfWork.CompleteAsync(ct).ConfigureAwait(false) > 0;
+
             if (!saved)
                 return AppResponses.Failure<bool>("Failed to delete customer.");
             return AppResponses.Success(true);

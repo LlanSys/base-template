@@ -9,7 +9,7 @@ using System.Text.Json;
 
 namespace BT.Api.Middleware;
 
-internal sealed class SessionValidationMiddleware(RequestDelegate next, ILogger<SessionValidationMiddleware> logger)
+internal sealed class SessionValidationMiddleware(TimeProvider timeProvider, RequestDelegate next, ILogger<SessionValidationMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context, ISessionService sessionService)
     {
@@ -38,6 +38,7 @@ internal sealed class SessionValidationMiddleware(RequestDelegate next, ILogger<
 
         // Now, we have an authenticated user with a session ID. Let's validate the session.
         var sessionValidation = await sessionService.IsSessionValidAsync(sessionId, userId, context.RequestAborted).ConfigureAwait(false);
+
         if (!sessionValidation.IsSuccess)
         {
             MiddlewareLogDefinitions.LogInvalidSession(logger, sessionId, userId, sessionValidation.Message); //
@@ -153,7 +154,7 @@ internal sealed class SessionValidationMiddleware(RequestDelegate next, ILogger<
                 message = "Your session has expired or you have been signed in from another location.",
                 code = "SESSION_INVALID",
                 reason = reason,
-                timestamp = DateTimeOffset.UtcNow,
+                timestamp = timeProvider.GetUtcNow(),
                 redirectUrl = "/Auth/SignIn?sessionExpired=true&reason=session_conflict"
             };
 

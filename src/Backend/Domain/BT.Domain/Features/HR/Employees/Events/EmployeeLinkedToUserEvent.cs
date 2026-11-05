@@ -11,6 +11,6 @@ namespace BT.Domain.Features.HR.Employees.Events;
 
 public sealed record EmployeeLinkedToUserEvent(string Id, Guid EmployeeId) : IDomainEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }
 

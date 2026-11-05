@@ -36,7 +36,7 @@ internal sealed class GetPasskeys(
         }
 
         var passkeys = user.Fido2Credentials
-            .Select(c => new PasskeyResponse(c.Id, "Passkey - " + c.RegDate.ToString("MMM dd, yyyy"), c.RegDate))
+            .Select(c => new PasskeyResponse(c.Id, "Passkey - " + c.RegDate.ToString("MMM dd, yyyy", System.Globalization.CultureInfo.CurrentCulture), c.RegDate))
             .ToList();
 
         return AppResponses.Success<IReadOnlyList<PasskeyResponse>>(passkeys);

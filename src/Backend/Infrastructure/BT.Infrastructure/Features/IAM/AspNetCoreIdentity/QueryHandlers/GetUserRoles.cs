@@ -7,16 +7,21 @@ using Microsoft.AspNetCore.Identity;
 
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.QueryHandlers;
 
-internal sealed class GetUserRoles(UserManager<AppUser> userManager)
+internal sealed class GetUserRoles(UserManager<AppUser> userManager,
+    Authorization.IamAccessBoundary boundary)
     : IRequestHandler<GetUserRolesQuery, AppResponse<UserRolesResponse>>
 {
     public async Task<AppResponse<UserRolesResponse>> Handle(GetUserRolesQuery request, CancellationToken cancellationToken)
     {
         var user = await userManager.FindByIdAsync(request.UserId).ConfigureAwait(false);
+
         if (user is null)
         {
             return AppResponses.Failure<UserRolesResponse>("User not found.");
         }
+
+        if (!await boundary.CanAccessUserAsync(request.RequestedBy, user, cancellationToken).ConfigureAwait(false))
+            return AppResponses.Failure<UserRolesResponse>(AppError.Forbidden("User is outside your administrative scope."));
 
         var roles = (await userManager.GetRolesAsync(user).ConfigureAwait(false))
             .Order(StringComparer.OrdinalIgnoreCase)

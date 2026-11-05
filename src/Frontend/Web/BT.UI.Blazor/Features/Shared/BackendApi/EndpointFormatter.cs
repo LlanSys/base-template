@@ -11,6 +11,7 @@ internal static class EndpointFormatter
         ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
 
         var formatted = endpoint.Replace("{version}", version, StringComparison.OrdinalIgnoreCase);
+
         if (parameters is not null)
         {
             foreach (var parameter in parameters)

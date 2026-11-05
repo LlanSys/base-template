@@ -21,11 +21,15 @@ public class ActivateTenantCommandHandler : IRequestHandler<ActivateTenantComman
     private readonly ILogger<ActivateTenantCommandHandler> _logger;
     private readonly ICurrentActorProvider _actorProvider;
 
+    private readonly TimeProvider _timeProvider;
+
     public ActivateTenantCommandHandler(
+        TimeProvider timeProvider,
         IControlPlaneUnitOfWork unitOfWork,
         ILogger<ActivateTenantCommandHandler> logger,
         ICurrentActorProvider actorProvider)
     {
+        _timeProvider = timeProvider;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _actorProvider = actorProvider;
@@ -42,8 +46,10 @@ public class ActivateTenantCommandHandler : IRequestHandler<ActivateTenantComman
             return AppResponses.Failure<TenantResponse>("Tenant not found.");
         }
 
+        if (tenant.Status is not (TenantStatus.Active or TenantStatus.Suspended or TenantStatus.Provisioning))
+            return AppResponses.Failure<TenantResponse>("Complete onboarding and provisioning before activating this tenant.");
         tenant.Status = TenantStatus.Active;
-        tenant.UpdatedAt = DateTimeOffset.UtcNow;
+        tenant.UpdatedAt = _timeProvider.GetUtcNow();
         tenant.UpdatedBy = _actorProvider.ActorId;
 
         await _unitOfWork.Tenants.UpdateAsync(tenant, cancellationToken).ConfigureAwait(false);
@@ -54,6 +60,7 @@ public class ActivateTenantCommandHandler : IRequestHandler<ActivateTenantComman
         var dto = new TenantResponse
         {
             Id = tenant.Id,
+            Revision = tenant.Revision,
             Identifier = tenant.Identifier,
             DisplayName = tenant.DisplayName,
             HostName = tenant.HostName,
@@ -65,6 +72,7 @@ public class ActivateTenantCommandHandler : IRequestHandler<ActivateTenantComman
             CreatedAt = tenant.CreatedAt,
             UpdatedAt = tenant.UpdatedAt
         };
+
         return AppResponses.Success(dto);
     }
 }

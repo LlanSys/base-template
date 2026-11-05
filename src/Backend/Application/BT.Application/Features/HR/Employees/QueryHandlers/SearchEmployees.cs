@@ -72,6 +72,7 @@ internal sealed class SearchEmployeesQueryHandler(IHrUnitOfWork unitOfWork, ILog
             var page = await unitOfWork.EmployeeRepository.ListAsync(ApplyPaging, cancellationToken).ConfigureAwait(false);
 
             var hasNextPage = page.Count > pageSize;
+
             if (hasNextPage)
             {
                 page.RemoveAt(page.Count - 1);
@@ -84,6 +85,7 @@ internal sealed class SearchEmployeesQueryHandler(IHrUnitOfWork unitOfWork, ILog
                 .Select(static managerId => managerId!.Value)
                 .Distinct()
                 .ToArray();
+
             var departmentRows = await unitOfWork.DepartmentRepository
                 .ListAsync(
                     departments => departments
@@ -91,6 +93,7 @@ internal sealed class SearchEmployeesQueryHandler(IHrUnitOfWork unitOfWork, ILog
                         .Select(static department => new { department.Id, department.Name }),
                     cancellationToken)
                 .ConfigureAwait(false);
+
             var departments = departmentRows.ToDictionary(static department => department.Id, static department => department.Name);
             var managers = managerIds.Length == 0
                 ? new Dictionary<Guid, string>()

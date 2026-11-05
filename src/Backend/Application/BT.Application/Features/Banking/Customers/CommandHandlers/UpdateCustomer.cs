@@ -47,6 +47,7 @@ internal sealed class UpdateCustomerCommandHandler(
         {
             var req = command.UpdateCustomerRequest;
             var customer = await _bankingUnitOfWork.CustomerRepository.FindByIdAsync(req.Id, ct).ConfigureAwait(false);
+
             if (customer is null)
                 return AppResponses.Failure<CustomerResponse>($"Customer {req.Id} not found.");
 

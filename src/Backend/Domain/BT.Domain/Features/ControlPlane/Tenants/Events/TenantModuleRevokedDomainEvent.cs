@@ -7,5 +7,5 @@ public record TenantModuleRevokedDomainEvent(
     Guid TenantId,
     string ModuleKey) : IDomainEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }

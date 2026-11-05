@@ -1,5 +1,6 @@
 using BT.Domain.Features.Banking.Customers.Contracts.Specifications;
 using BT.Domain.Shared.Contracts.Specifications;
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,7 +18,7 @@ public class Specification<T, TCursor> : ISpecification<T, TCursor>
     public Expression<Func<T, object>>? OrderBy { get; private set; }
     public Expression<Func<T, object>>? OrderByDescending { get; private set; }
     public TCursor? Cursor { get; private set; }
-    public string? CursorProperty { get; private set; } 
+    public string? CursorProperty { get; private set; }
     public int Take { get; private set; } = 50;
     public bool UseSplitQuery { get; private set; }
     public bool AsNoTracking { get; private set; } = true;

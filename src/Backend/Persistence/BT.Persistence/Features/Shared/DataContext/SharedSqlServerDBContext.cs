@@ -12,13 +12,15 @@ public class SharedSqlServerDBContext : SharedDBContext
         DbContextOptions<SharedSqlServerDBContext> options,
         ICurrentTenantProvider tenantProvider,
         ICurrentActorProvider actorProvider,
-        Microsoft.Extensions.Logging.ILogger<SharedDBContext>? logger = null)
-        : base(options, tenantProvider, actorProvider, logger)
+        Microsoft.Extensions.Logging.ILogger<SharedDBContext>? logger = null,
+        TimeProvider? timeProvider = null)
+        : base(options, tenantProvider, actorProvider, logger, timeProvider)
     {
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(
             typeof(SharedSqlServerDBContext).Assembly,

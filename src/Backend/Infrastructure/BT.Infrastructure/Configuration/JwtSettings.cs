@@ -1,7 +1,9 @@
 using Microsoft.IdentityModel.Tokens;
+
 using System.Text;
 
 namespace BT.Infrastructure.Configuration;
+
 public class JwtSettings
 {
     public const string SectionName = "JwtSettings";

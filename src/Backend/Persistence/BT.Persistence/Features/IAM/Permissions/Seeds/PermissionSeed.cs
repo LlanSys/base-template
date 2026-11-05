@@ -39,14 +39,35 @@ internal static class PermissionSeed
         Create("018fd81d-2c94-7ad0-a4a3-f1edb9b10701", "Shared", "payments", "view", "View payment history and provider readiness."),
         Create("018fd81d-2c94-7ad0-a4a3-f1edb9b10702", "Shared", "payments", "create", "Initiate payment checkout flows."),
         Create("018fd81d-2c94-7ad0-a4a3-f1edb9b10703", "Shared", "payments", "admin", "Manage M-Pesa payment administration actions."),
-        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b10801", "ControlPlane", "controlplane", "manage", "Manage Control Plane Tenants and Stamps.")
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b10802", "ControlPlane", "controlplane", "create_tenants", "Create tenants. Platform administrators only."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b10803", "ControlPlane", "modules", "create", "Register implemented business modules."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b10804", "ControlPlane", "modules", "manage", "Manage module definitions and availability."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b10805", "Platform", "permissions", "manage", "Manage implemented permission definitions."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b11001", "ControlPlane", "controlplane", "view_tenants", "View tenants."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b11002", "ControlPlane", "controlplane", "edit_tenants", "Edit tenants."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b11003", "ControlPlane", "controlplane", "delete_tenants", "Delete tenants."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b11004", "ControlPlane", "controlplane", "manage_tenant_modules", "Manage tenant modules."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b11005", "ControlPlane", "controlplane", "manage_tenant_administrators", "Manage tenant administrators."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b11006", "ControlPlane", "controlplane", "manage_tenant_lifecycle", "Manage tenant lifecycle."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b11007", "ControlPlane", "controlplane", "migrate_tenants", "Migrate tenants."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b11008", "ControlPlane", "controlplane", "view_stamps", "View stamps."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b11009", "ControlPlane", "controlplane", "manage_stamps", "Manage stamps."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b11010", "ControlPlane", "controlplane", "view_audit", "View audit."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b11011", "ControlPlane", "controlplane", "impersonate", "Impersonate."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b11012", "ControlPlane", "modules", "view", "View module definitions and readiness."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b10901", "Shared", "tenant-settings", "view", "View organization settings."),
+        Create("018fd81d-2c94-7ad0-a4a3-f1edb9b10902", "Shared", "tenant-settings", "update", "Change supported organization settings.")
     ];
+
     private static Permission Create(string id, string context, string resource, string action, string description)
     {
         var permission = Permission.Create(null, context, resource, action, description, "System");
         permission.Id = Guid.Parse(id);
         permission.TenantId = SeedTenantId;
         permission.CreatedAt = SeedCreatedAt;
+        permission.IsTenantDelegatable = !string.Equals(context, "Platform", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(context, "ControlPlane", StringComparison.OrdinalIgnoreCase);
+
         return permission;
     }
 }

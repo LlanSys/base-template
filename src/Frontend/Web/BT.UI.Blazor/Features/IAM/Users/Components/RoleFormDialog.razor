@@ -1,21 +1,42 @@
 @inject IIamAdminService IamAdminService
 @inject IDepartmentService DepartmentService
 @inject ISnackbar Snackbar
+@inject IAuthSession AuthSession
 
 <MudDialog>
     <DialogContent>
-        <MudTextField @bind-Value="_name" Label="Role name" Margin="Margin.Dense" Variant="Variant.Outlined" Required />
-        <MudSelect T="Guid?" @bind-Value="_departmentId" Label="Department scope" Margin="Margin.Dense" Variant="Variant.Outlined" Clearable="true" Class="mt-2">
-            <MudSelectItem T="Guid?" Value="null">Global</MudSelectItem>
+        <MudTextField @bind-Value="_name"
+                      Label="Role name"
+                      Margin="Margin.Dense"
+                      Variant="Variant.Outlined"
+                      Required />
+        <MudSelect T="Guid?"
+                   @bind-Value="_departmentId"
+                   Label="Department scope"
+                   Margin="Margin.Dense"
+                   Variant="Variant.Outlined"
+                   Clearable="true"
+                   Class="mt-2">
+            <MudSelectItem T="Guid?"
+                           Value="null">Global</MudSelectItem>
             @foreach (var department in _departments)
             {
-                <MudSelectItem T="Guid?" Value="@department.Id">@department.Name</MudSelectItem>
+                <MudSelectItem T="Guid?"
+                               Value="@department.Id">@department.Name</MudSelectItem>
             }
         </MudSelect>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="@(ExistingRole is null ? Color.Primary : Color.Success)" Disabled="_isSaving" OnClick="SaveAsync">@(_isSaving ? "Saving..." : ExistingRole is null ? "Create" : "Save")</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   Variant="Variant.Text"
+                   Size="Size.Small"
+                   OnClick="Cancel">Cancel</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Save"
+                   Variant="Variant.Filled"
+                   Size="Size.Small"
+                   Color="@(ExistingRole is null ? Color.Primary : Color.Success)"
+                   Disabled="_isSaving"
+                   OnClick="SaveAsync">@(_isSaving ? "Saving..." : ExistingRole is null ? "Create" : "Save")</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -30,12 +51,13 @@
 
     [Parameter]
     public AdminRoleListResponse? ExistingRole { get; set; }
+    [Parameter] public string? ModuleKey { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         _name = ExistingRole?.Name ?? string.Empty;
         _departmentId = ExistingRole?.DepartmentId;
-        await LoadDepartmentsAsync();
+        if (AuthSession.HasPermission("departments.view")) await LoadDepartmentsAsync();
     }
 
     private async Task LoadDepartmentsAsync()
@@ -60,8 +82,8 @@
 
         _isSaving = true;
         var response = ExistingRole is null
-            ? await IamAdminService.CreateRoleAsync(new CreateRoleRequest(_name.Trim(), _departmentId))
-            : await IamAdminService.UpdateRoleAsync(ExistingRole.Id, new UpdateRoleRequest(_name.Trim(), _departmentId));
+            ? await IamAdminService.CreateRoleAsync(new CreateRoleRequest(_name.Trim(), _departmentId, ModuleKey, AuthSession.CurrentUser?.IsPlatformStaff == true && ModuleKey is not null))
+            : await IamAdminService.UpdateRoleAsync(ExistingRole.Id, new UpdateRoleRequest(_name.Trim(), _departmentId, ExistingRole.IsActive));
         _isSaving = false;
 
         if (!response.IsSuccess)

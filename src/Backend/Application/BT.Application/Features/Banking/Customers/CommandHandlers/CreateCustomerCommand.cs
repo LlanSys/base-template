@@ -19,9 +19,12 @@ using BT.Domain.Features.Banking.Customers.Enums;
 using BT.Domain.Features.Banking.Customers.ValueObjects;
 using BT.SharedKernel.Features.Banking.Customers.Dtos;
 using BT.SharedKernel.Dtos.Common;
+
 using MediatR;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -35,7 +38,7 @@ namespace BT.Application.Features.Banking.Customers.CommandHandlers;
 /// Versioned list entries are orphaned in O(1).
 /// </summary>
 
-public sealed record CreateCustomerCommand(CreateCustomerRequest CreateCustomerRequest, string UserId) 
+public sealed record CreateCustomerCommand(CreateCustomerRequest CreateCustomerRequest, string UserId)
     : IRequest<AppResponse<CustomerResponse>>, ICacheInvalidatorRequest
 {
     // No direct keys — new entity, nothing cached yet.
@@ -46,7 +49,7 @@ public sealed record CreateCustomerCommand(CreateCustomerRequest CreateCustomerR
         CacheKeys.GroupVersion("customers"),
         CacheKeys.GroupVersion("dashboard")
     ];
-        
+
 
 }
 

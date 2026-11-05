@@ -12,4 +12,6 @@ public record GetAllDeploymentStampsQuery : IRequest<AppResponse<List<Deployment
     public string Discriminator => "all";
     public string? CacheUserId => null;
     public bool IsVersioned => true;
+
+    public bool BypassCache => true;
 }

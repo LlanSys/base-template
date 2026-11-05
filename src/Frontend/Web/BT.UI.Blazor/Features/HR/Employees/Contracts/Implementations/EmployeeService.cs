@@ -3,7 +3,7 @@ using BT.SharedKernel.Features.HR.Employees.Dtos;
 using BT.UI.Blazor.Configuration;
 using BT.UI.Blazor.Features.Shared.BackendApi;
 using BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces;
-using BT.UI.Rcl.Features.HR.Employees.Contracts.Interfaces;
+using BT.UI.Blazor.Features.HR.Employees.Contracts.Interfaces;
 using Microsoft.Extensions.Options;
 
 namespace BT.UI.Blazor.Features.HR.Employees.Contracts.Implementations;

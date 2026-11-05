@@ -20,7 +20,7 @@ namespace BT.Application.Features.Shared.Dashboard.QueryHandlers;
 
 
 
-internal sealed class GetDashboardSummaryQueryHandler(IBankingUnitOfWork _bankingUnitOfWork, ILogger<GetDashboardSummaryQueryHandler> _logger)
+internal sealed class GetDashboardSummaryQueryHandler(TimeProvider timeProvider, IBankingUnitOfWork _bankingUnitOfWork, ILogger<GetDashboardSummaryQueryHandler> _logger)
     : IRequestHandler<GetDashboardSummaryQuery, AppResponse<DashboardSummaryResponse>>
 {
     // Standard capacity per RM — configurable via IAM settings in a future iteration
@@ -31,7 +31,7 @@ internal sealed class GetDashboardSummaryQueryHandler(IBankingUnitOfWork _bankin
 
         try
         {
-            var now = DateTimeOffset.UtcNow;
+            var now = timeProvider.GetUtcNow();
 
             var rows = await _bankingUnitOfWork.CustomerRepository
                 .ListAsync(

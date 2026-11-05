@@ -1,0 +1,69 @@
+@page "/control-panel/audit"
+@layout ControlPlaneLayout
+@attribute [Authorize(Policy = "controlplane.view_audit")]
+@rendermode InteractiveServer
+@using BT.SharedKernel.Features.ControlPlane.Auditing.Dtos
+@inject BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces.IBackendApiClient Client
+@inject ISnackbar Snackbar
+<PageTitle>Audit Log | BaseTemplate</PageTitle>
+<section class="dashboard-page">
+    <MudPaper Class="poc-panel"
+              Elevation="0">
+        <div class="panel-heading">
+            <h2>Audit Log</h2>
+            <MudChip T="string"
+                     Size="Size.Small">Latest @_entries.Count changes</MudChip>
+        </div>
+        <div class="list-toolbar">
+            <MudTextField @bind-Value="_search"
+                          Label="Search audit log"
+                          Immediate="true"
+                          Placeholder="Search actor, area, action..."
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Margin="Margin.Dense"
+                          Variant="Variant.Outlined" />
+        </div>
+        <div class="bt-table-scroll">
+            <MudTable Items="Filtered"
+                      Dense="true"
+                      Hover="true"
+                      RowsPerPage="50"
+                      Breakpoint="Breakpoint.None">
+                <HeaderContent>
+                    <MudTh>Time (UTC)</MudTh>
+                    <MudTh>Actor</MudTh>
+                    <MudTh>Area</MudTh>
+                    <MudTh>Action</MudTh>
+                    <MudTh>Fields changed</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.OccurredAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)</MudTd>
+                    <MudTd>@context.Actor</MudTd>
+                    <MudTd>@context.Area</MudTd>
+                    <MudTd>@context.Action</MudTd>
+                    <MudTd>@context.ChangedFields</MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager />
+                </PagerContent>
+            </MudTable>
+        </div>
+    </MudPaper>
+</section>
+@code {
+    [Parameter] public Guid? TenantId { get; set; }
+    private List<AdministrationAuditResponse> _entries = [];
+    private string _search = string.Empty;
+    private IEnumerable<AdministrationAuditResponse> Filtered => _entries.Where(entry => string.IsNullOrWhiteSpace(_search)
+        || entry.Actor.Contains(_search, StringComparison.OrdinalIgnoreCase) || entry.Area.Contains(_search, StringComparison.OrdinalIgnoreCase)
+        || entry.Action.Contains(_search, StringComparison.OrdinalIgnoreCase));
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        var response = await Client.SendAsync<List<AdministrationAuditResponse>>(HttpMethod.Get, "api/v1/control-plane/audit/changes" + (TenantId is null ? string.Empty : "?tenantId=" + TenantId.Value));
+        if (response.IsSuccess && response.Data is not null) _entries = response.Data;
+        else Snackbar.Add(response.Message ?? "Audit log could not be loaded.", Severity.Error);
+        StateHasChanged();
+    }
+}

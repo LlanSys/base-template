@@ -1,4 +1,5 @@
 using BT.Domain.Features.Shared.Contracts;
+using BT.Domain.Features.Shared.Payments.Entities;
 using BT.SharedKernel.Dtos.Common;
 using BT.SharedKernel.Features.Shared.Payments.Dtos;
 
@@ -18,7 +19,7 @@ internal sealed class GetPaymentHistoryHandler(ISharedUnitOfWork sharedUnitOfWor
         var pageSize = Math.Clamp(request.PageSize, 1, 50);
         var repository = sharedUnitOfWork.PaymentRecordRepository;
 
-        Expression<Func<BT.Domain.Features.Shared.Payments.Entities.PaymentRecord, bool>> filterExpression = record =>
+        Expression<Func<PaymentRecord, bool>> filterExpression = record =>
             (string.IsNullOrWhiteSpace(request.SearchTerm) || record.CustomerReference.Contains(request.SearchTerm) || (record.ProviderReference != null && record.ProviderReference.Contains(request.SearchTerm))) &&
             (string.IsNullOrWhiteSpace(request.Provider) || record.Provider == request.Provider) &&
             (!request.ExactAmount.HasValue || record.Amount.Amount == request.ExactAmount.Value) &&
@@ -43,8 +44,8 @@ internal sealed class GetPaymentHistoryHandler(ISharedUnitOfWork sharedUnitOfWor
 
                 if (cursorRecord != null)
                 {
-                    q = (System.Linq.IOrderedQueryable<BT.Domain.Features.Shared.Payments.Entities.PaymentRecord>)q.Where(record => 
-                        record.CreatedAt < cursorRecord.CreatedAt || 
+                    q = (IOrderedQueryable<PaymentRecord>)q.Where(record =>
+                        record.CreatedAt < cursorRecord.CreatedAt ||
                         (record.CreatedAt == cursorRecord.CreatedAt && record.Id.CompareTo(cursorRecord.Id) < 0));
                 }
 
@@ -53,6 +54,7 @@ internal sealed class GetPaymentHistoryHandler(ISharedUnitOfWork sharedUnitOfWor
             cancellationToken).ConfigureAwait(false);
 
         var hasNextPage = records.Count > pageSize;
+
         if (hasNextPage)
         {
             records.RemoveAt(records.Count - 1);

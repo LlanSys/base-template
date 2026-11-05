@@ -1,9 +1,12 @@
 using FluentAssertions;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+
 using System.IO;
 using System.Linq;
+
 using Xunit;
 
 namespace BT.Tests.Architecture.Database;
@@ -18,15 +21,17 @@ public class SyncDatabaseMethodsGuardrailTests
 
         // Path to the Backend source code
         var backendDir = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "src", "Backend");
-        
+
         // As a fallback for tests run from different directories (e.g., CI vs local VS test runner)
         if (!Directory.Exists(backendDir))
         {
             var currentDir = new DirectoryInfo(Directory.GetCurrentDirectory());
+
             while (currentDir != null && currentDir.Name != "BaseTemplate")
             {
                 currentDir = currentDir.Parent;
             }
+
             if (currentDir != null)
             {
                 backendDir = Path.Combine(currentDir.FullName, "src", "Backend");

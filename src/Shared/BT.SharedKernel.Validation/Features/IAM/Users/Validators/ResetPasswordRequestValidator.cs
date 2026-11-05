@@ -18,6 +18,7 @@ public sealed class ResetPasswordRequestValidator : Validator<ResetPasswordReque
             .Matches("[a-z]").WithMessage("Password must contain a lowercase letter.")
             .Matches("[0-9]").WithMessage("Password must contain a digit.")
             .Matches("[^a-zA-Z0-9]").WithMessage("Password must contain a non-alphanumeric character.");
+
         RuleFor(request => request.ConfirmPassword)
             .Equal(request => request.NewPassword ?? request.Password)
             .WithMessage("Password confirmation must match.");

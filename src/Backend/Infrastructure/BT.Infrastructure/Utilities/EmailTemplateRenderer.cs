@@ -11,6 +11,7 @@ public static class EmailTemplateRenderer
     {
         ArgumentNullException.ThrowIfNull(template, nameof(template));
         ArgumentNullException.ThrowIfNull(parameters, nameof(parameters));
+
         foreach (var (key, value) in parameters)
         {
             template = template.Replace(

@@ -42,9 +42,9 @@ internal sealed class RequestPasskeyRegistrationOptions(
         // Cache the options for 5 minutes to verify against the response in the next step
         var cacheKey = $"Fido2RegistrationOptions:{user.Id}";
         await cacheService.SetStringAsync(
-            cacheKey, 
-            JsonSerializer.Serialize(options), 
-            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) }, 
+            cacheKey,
+            JsonSerializer.Serialize(options),
+            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) },
             cancellationToken).ConfigureAwait(false);
 
         return AppResponses.Success("Registration options generated.", options);

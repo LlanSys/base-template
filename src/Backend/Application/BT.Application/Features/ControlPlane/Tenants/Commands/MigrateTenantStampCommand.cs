@@ -20,15 +20,18 @@ public record MigrateTenantStampCommand(
 
 internal sealed partial class MigrateTenantStampCommandHandler : IRequestHandler<MigrateTenantStampCommand, AppResponse<bool>>
 {
+    private readonly TimeProvider _timeProvider;
     private readonly IControlPlaneUnitOfWork _unitOfWork;
     private readonly IEncryptionService _encryptionService;
     private readonly ILogger<MigrateTenantStampCommandHandler> _logger;
 
     public MigrateTenantStampCommandHandler(
+        TimeProvider timeProvider,
         IControlPlaneUnitOfWork unitOfWork,
         IEncryptionService encryptionService,
         ILogger<MigrateTenantStampCommandHandler> logger)
     {
+        _timeProvider = timeProvider;
         _unitOfWork = unitOfWork;
         _encryptionService = encryptionService;
         _logger = logger;
@@ -42,6 +45,7 @@ internal sealed partial class MigrateTenantStampCommandHandler : IRequestHandler
         LogMigratingTenantStamp(request.TenantId, request.NewDeploymentStampId);
 
         var tenant = await _unitOfWork.Tenants.FindByIdAsync(request.TenantId, cancellationToken).ConfigureAwait(false);
+
         if (tenant == null)
         {
             return AppResponses.Failure<bool>("Tenant not found.");
@@ -53,10 +57,10 @@ internal sealed partial class MigrateTenantStampCommandHandler : IRequestHandler
         tenant.DatabaseConnectionString = _encryptionService.Encrypt(request.NewDatabaseConnectionString);
 
         // Raise domain event so that sessions/caches for this tenant can be invalidated
-        tenant.RaiseDomainEvent(new TenantStampChangedDomainEvent(tenant.Id, oldStampId, request.NewDeploymentStampId));
+        tenant.RaiseDomainEvent(new TenantStampChangedDomainEvent(tenant.Id, oldStampId, request.NewDeploymentStampId) { OccurredAt = _timeProvider.GetUtcNow() });
 
         await _unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
 
-        return AppResponses.Success<bool>("Tenant stamp migration completed successfully.", true);
+        return AppResponses.Success("Tenant stamp migration completed successfully.", true);
     }
 }

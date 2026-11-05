@@ -11,7 +11,7 @@ namespace BT.SharedKernel.Validation.Features.Banking.Customers.Validators;
 
 public class UpdateCustomerRequestValidator : Validator<UpdateCustomerRequest>
 {
-    public UpdateCustomerRequestValidator()
+    public UpdateCustomerRequestValidator(TimeProvider timeProvider)
     {
         RuleLevelCascadeMode = CascadeMode.Stop;
         ClassLevelCascadeMode = CascadeMode.Stop;
@@ -33,7 +33,7 @@ public class UpdateCustomerRequestValidator : Validator<UpdateCustomerRequest>
             x.FaxNo, x.LandMark, x.EmailId,
             x.CanSendGreetings, x.CanSendAssociateSpecialOffer,
             x.CanSendOurSpecialOffers, x.StatementOnline, x.MobileAlert))
-            .SetValidator(new CreateCustomerRequestValidator());
+            .SetValidator(new CreateCustomerRequestValidator(timeProvider));
     }
 }
 

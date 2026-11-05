@@ -16,8 +16,9 @@ public sealed record GetPermissionByIdQuery(Guid Id, string UserId) : IRequest<A
 
     public string Discriminator => CacheKeys.Entity("permissions", Id.ToString());
 
-    public string? CacheUserId => null;
+    public string? CacheUserId => UserId;
 
     public bool IsVersioned => true;
+    public bool BypassCache => true;
 }
 

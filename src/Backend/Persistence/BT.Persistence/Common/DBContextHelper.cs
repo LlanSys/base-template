@@ -4,9 +4,11 @@ using BT.Domain.Features.IAM.Contracts;
 using BT.Domain.Shared.Contracts;
 using BT.Domain.Shared.Contracts.Common;
 using BT.Domain.Shared.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
+
 using System.Linq.Expressions;
 
 namespace BT.Persistence.Common;
@@ -29,6 +31,7 @@ internal static class DBContextHelper
             if (((DbContext)context).Database.IsNpgsql())
             {
                 var rowVersionProp = entityType.FindProperty(nameof(BaseEntity.RowVersion));
+
                 if (rowVersionProp != null)
                 {
                     rowVersionProp.SetDefaultValue(Array.Empty<byte>());
@@ -37,10 +40,12 @@ internal static class DBContextHelper
                 foreach (var index in entityType.GetIndexes())
                 {
                     var filter = index.GetFilter();
+
                     if (!string.IsNullOrEmpty(filter))
                     {
                         var newFilter = filter.Replace("[", "\"").Replace("]", "\"")
                             .Replace(" = 0", " = false").Replace(" = 1", " = true");
+
                         index.SetFilter(newFilter);
                     }
                 }
@@ -51,7 +56,7 @@ internal static class DBContextHelper
                 if (property.ClrType.IsEnum)
                 {
                     property.SetProviderClrType(typeof(string));
-                    
+
                     if (property.GetMaxLength() == null)
                     {
                         property.SetMaxLength(100);
@@ -64,11 +69,9 @@ internal static class DBContextHelper
         }
     }
 
-    public static void UpdateAuditAndSoftDelete(ChangeTracker changeTracker, string userId, Guid tenantId)
+    public static void UpdateAuditAndSoftDelete(ChangeTracker changeTracker, string userId, Guid tenantId, DateTimeOffset now)
     {
         StampTenantIds(changeTracker, tenantId);
-
-        var now = DateTimeOffset.UtcNow;
 
         foreach (var entry in changeTracker.Entries<IAuditable>())
         {
@@ -107,6 +110,7 @@ internal static class DBContextHelper
     public static List<IDomainEvent> CollectDomainEvents(ChangeTracker changeTracker)
     {
         var events = new List<IDomainEvent>();
+
         foreach (var entry in changeTracker.Entries<IHasDomainEvents>())
             if (entry.Entity.DomainEvents.Any())
                 events.AddRange(entry.Entity.DomainEvents);
@@ -128,6 +132,7 @@ internal static class DBContextHelper
             [typeof(bool)],
             parameter,
             Expression.Constant(nameof(ISoftDeletable.IsDeleted)));
+
         var comparison = Expression.Equal(property, Expression.Constant(false));
         return Expression.Lambda(comparison, parameter);
     }
@@ -145,13 +150,13 @@ internal static class DBContextHelper
             queryFilter = CombineFilters(entityClrType, queryFilter, CreateSoftDeleteFilter(entityClrType));
         }
 
-        if (HasTenantId(entityType))
+        if (HasTenantId(entityType) && !typeof(IPlatformCatalogEntity).IsAssignableFrom(entityClrType))
         {
             var tenantFilter = (LambdaExpression)typeof(DBContextHelper)
                 .GetMethod(nameof(CreateTenantFilter), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
                 .MakeGenericMethod(entityClrType, typeof(TContext))
                 .Invoke(null, [context])!;
-                
+
             queryFilter = CombineFilters(entityClrType, queryFilter, tenantFilter);
         }
 
@@ -203,6 +208,11 @@ internal static class DBContextHelper
     {
         foreach (var entry in changeTracker.Entries().Where(static entry => entry.State == EntityState.Added))
         {
+            if (entry.Entity is IPlatformCatalogEntity or IOptionalTenantScope { IsGlobalDefinition: true })
+            {
+                continue;
+            }
+
             var tenantProperty = entry.Properties.FirstOrDefault(static property =>
                 property.Metadata.Name == nameof(BaseEntity.TenantId) &&
                 property.Metadata.ClrType == typeof(Guid));

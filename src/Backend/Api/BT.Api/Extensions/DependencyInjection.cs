@@ -70,6 +70,7 @@ internal static partial class DependencyInjection
                 policy.RequireClaim("roles", "Provisioner");
             });
         });
+
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
         services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddApiVersioning(config =>
@@ -87,7 +88,7 @@ internal static partial class DependencyInjection
 
         services.AddValidatorsFromAssembly(assembly);
 
-        services.AddHostedService<BT.Api.Features.Shared.Payments.Workers.PaymentReconciliationWorker>();
+        services.AddHostedService<Features.Shared.Payments.Workers.PaymentReconciliationWorker>();
 
         return services;
     }
@@ -95,6 +96,7 @@ internal static partial class DependencyInjection
     private static void ConfigureHttpResilience(IServiceCollection services, IConfiguration configuration)
     {
         var resilienceSettings = configuration.GetSection(ResilienceSettings.SectionName).Get<ResilienceSettings>() ?? new ResilienceSettings();
+
         if (!resilienceSettings.Enabled)
         {
             return;
@@ -144,6 +146,7 @@ internal static partial class DependencyInjection
             dataProtectionBuilder.PersistKeysToStackExchangeRedis(
                 () => ConnectionMultiplexer.Connect(dpSettings.RedisKeyRingConnectionString).GetDatabase(),
                 key);
+
             ConfigureDataProtectionKeyEncryption(dataProtectionBuilder, dpSettings);
             return;
         }
@@ -262,6 +265,7 @@ internal static partial class DependencyInjection
             .Find(System.Security.Cryptography.X509Certificates.X509FindType.FindByThumbprint, thumbprint, validOnly: false)
             .OfType<System.Security.Cryptography.X509Certificates.X509Certificate2>()
             .FirstOrDefault();
+
         store.Close();
 
         if (cert is null)
@@ -335,7 +339,7 @@ internal static partial class DependencyInjection
                 options.OnRejected = async (context, token) =>
                 {
                     context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-                    
+
                     var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue)
                         ? retryAfterValue.TotalSeconds.ToString(CultureInfo.InvariantCulture)
                         : "60";
@@ -349,6 +353,7 @@ internal static partial class DependencyInjection
                         Detail = $"Rate limit exceeded. Try again in {retryAfter} seconds.",
                         Instance = context.HttpContext.Request.Path
                     };
+
                     problemDetails.Extensions["retryAfter"] = retryAfter;
                     problemDetails.Extensions["error"] = "rate_limit_exceeded";
 
@@ -358,7 +363,7 @@ internal static partial class DependencyInjection
                         {
                             HttpContext = context.HttpContext,
                             ProblemDetails = problemDetails
-                        });
+                        }).ConfigureAwait(false);
                     }
                     else
                     {
@@ -368,7 +373,7 @@ internal static partial class DependencyInjection
                     }
                 };
 
-        });
+            });
     }
 
     private static void AddFixedWindowPolicy(
@@ -386,8 +391,8 @@ internal static partial class DependencyInjection
 
             // Partition by TenantId if available, otherwise by IP address, otherwise global.
             var tenantClaim = context.User?.FindFirst("tenant_id")?.Value;
-            var partitionKey = !string.IsNullOrEmpty(tenantClaim) 
-                ? $"Tenant_{tenantClaim}" 
+            var partitionKey = !string.IsNullOrEmpty(tenantClaim)
+                ? $"Tenant_{tenantClaim}"
                 : context.Connection.RemoteIpAddress?.ToString() ?? "Global";
 
             return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ =>
@@ -423,12 +428,14 @@ internal static partial class DependencyInjection
     public static IServiceCollection ConfigureOutBoxMessagingWithGlobalRetry(this IServiceCollection services, IConfiguration configuration)
     {
         var messagingSettings = configuration.GetSection(MessagingSettings.SectionName).Get<MessagingSettings>() ?? new MessagingSettings();
+
         if (!messagingSettings.Enabled)
         {
             return services;
         }
 
         var assembly = typeof(IntegrationEventEmailConsumer<>).Assembly;
+        var outboxProvider = GetOutboxDatabaseProvider(configuration);
 
         services.Configure<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckPublisherOptions>(options =>
         {
@@ -441,7 +448,12 @@ internal static partial class DependencyInjection
             // EF Outbox
             x.AddEntityFrameworkOutbox<SharedDBContext>(o =>
             {
-                o.UseSqlServer();
+                switch (outboxProvider)
+                {
+                    case OutboxDatabaseProvider.SqlServer: o.UseSqlServer(); break;
+                    case OutboxDatabaseProvider.PostgreSql: o.UsePostgres(); break;
+                    default: throw new InvalidOperationException("The outbox database provider is unsupported.");
+                }
                 o.UseBusOutbox();
                 o.DuplicateDetectionWindow = TimeSpan.FromHours(24);
                 o.QueryDelay = TimeSpan.FromSeconds(30);
@@ -453,12 +465,14 @@ internal static partial class DependencyInjection
 
             // Global retry configuration
             var messagingTransport = GetMessagingTransport(messagingSettings);
+
             switch (messagingTransport)
             {
                 case MessagingTransport.AzureServiceBus:
                     x.UsingAzureServiceBus((context, cfg) =>
                     {
                         var connectionString = messagingSettings.AzureServiceBus.ConnectionString;
+
                         if (string.IsNullOrWhiteSpace(connectionString))
                             throw new InvalidOperationException("Messaging:AzureServiceBus:ConnectionString is required when Messaging:Transport is AzureServiceBus");
 
@@ -542,6 +556,19 @@ internal static partial class DependencyInjection
         return services;
     }
 
+    private static OutboxDatabaseProvider GetOutboxDatabaseProvider(IConfiguration configuration)
+    {
+        var provider = configuration["DatabaseSettings:Provider"];
+
+        if (string.IsNullOrWhiteSpace(provider)) return OutboxDatabaseProvider.SqlServer;
+        return provider.Trim() switch
+        {
+            var value when value.Equals("SqlServer", StringComparison.OrdinalIgnoreCase) => OutboxDatabaseProvider.SqlServer,
+            var value when value.Equals("PostgreSql", StringComparison.OrdinalIgnoreCase) => OutboxDatabaseProvider.PostgreSql,
+            _ => throw new InvalidOperationException("DatabaseSettings:Provider must be SqlServer or PostgreSql for the messaging outbox.")
+        };
+    }
+
     private static MessagingTransport GetMessagingTransport(MessagingSettings settings)
     {
         if (string.IsNullOrWhiteSpace(settings.Transport))
@@ -581,8 +608,8 @@ internal static partial class DependencyInjection
                 context.Response.Headers.Append("X-API-Version", "1.0");
                 context.Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
 
-            await next().ConfigureAwait(false);
-        });
+                await next().ConfigureAwait(false);
+            });
     }
 
     private enum KeyEncryptionMode
@@ -600,4 +627,6 @@ internal static partial class DependencyInjection
         AzureServiceBus,
         Invalid
     }
+
+    private enum OutboxDatabaseProvider { SqlServer, PostgreSql }
 }

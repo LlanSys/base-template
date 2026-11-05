@@ -6,4 +6,8 @@ public sealed record AdminRoleListResponse(
     string NormalizedName,
     Guid? DepartmentId,
     string DepartmentName,
-    int UserCount);
+    int UserCount,
+    bool IsDefault = false,
+    bool IsActive = true,
+    bool IsPlatformRole = false,
+    string? ModuleKey = null);

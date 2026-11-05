@@ -10,12 +10,13 @@ public class IamSqlServerDBContextFactory : IDesignTimeDbContextFactory<IamSqlSe
     {
         var configuration = DesignTimeConfigurationFactory.Create();
         var optionsBuilder = new DbContextOptionsBuilder<IamSqlServerDBContext>();
-        var connectionString = DesignTimeConfigurationFactory.GetConnectionString(configuration, "IamConnection");
+        var connectionString = DesignTimeConfigurationFactory.GetConnectionString(configuration, "IamConnection", fallbackConnectionName: "DefaultSqlConnection");
 
         optionsBuilder.UseSqlServer(
             connectionString,
             sqlOptions => DesignTimeConfigurationFactory.ConfigureSqlServer(sqlOptions, "__EFMigrationsHistory_IAM"))
-            .ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsSqlGenerator, BT.Persistence.Features.Shared.Migrations.Generators.IdempotentSqlServerMigrationsSqlGenerator>();
+            .ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsSqlGenerator, Shared.Migrations.Generators.IdempotentSqlServerMigrationsSqlGenerator>();
+
         return new IamSqlServerDBContext(optionsBuilder.Options);
     }
 }

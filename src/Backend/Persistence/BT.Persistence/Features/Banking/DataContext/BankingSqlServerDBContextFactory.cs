@@ -14,7 +14,8 @@ public class BankingSqlServerDBContextFactory : IDesignTimeDbContextFactory<Bank
 
         optionsBuilder.UseSqlServer(
             connectionString,
-            sqlOptions => DesignTimeConfigurationFactory.ConfigureSqlServer(sqlOptions, "__EFMigrationsHistory_Banking")).ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsSqlGenerator, BT.Persistence.Features.Shared.Migrations.Generators.IdempotentSqlServerMigrationsSqlGenerator>();
+            sqlOptions => DesignTimeConfigurationFactory.ConfigureSqlServer(sqlOptions, "__EFMigrationsHistory_Banking")).ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsSqlGenerator, Shared.Migrations.Generators.IdempotentSqlServerMigrationsSqlGenerator>();
+
         return new BankingSqlServerDBContext(optionsBuilder.Options);
     }
 }

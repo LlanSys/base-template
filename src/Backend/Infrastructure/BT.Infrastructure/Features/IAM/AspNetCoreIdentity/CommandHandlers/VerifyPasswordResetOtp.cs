@@ -15,6 +15,7 @@ internal sealed class VerifyPasswordResetOtp(UserManager<AppUser> userManager, I
         CancellationToken ct)
     {
         var user = await userManager.FindByEmailAsync(command.Request.Email).ConfigureAwait(false);
+
         if (user is null || !user.IsActive || user.IsDeleted)
         {
             return AppResponses.Failure<PasswordResetOtpVerificationResponse>("The recovery code is invalid or expired.");

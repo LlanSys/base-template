@@ -72,9 +72,20 @@ public class BaseTemplateWebApplicationFactory : WebApplicationFactory<Program>,
         // set the environment to "Development" here to guarantee that guard is bypassed,
         // even if the CI pipeline sets ASPNETCORE_ENVIRONMENT=Production.
         builder.UseEnvironment("Development");
+        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["PlatformCatalog:InitializeDefaults"] = "false",
+            ["DevelopmentSeed:Enabled"] = "false",
+            ["Serilog:MinimumLevel:Default"] = "Warning"
+        }));
 
         builder.ConfigureTestServices(services =>
         {
+            // API tests own their database. Do not start broker, scheduler or reconciliation workers.
+            foreach (var registration in services.Where(service => service.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService)
+                && service.ImplementationType is { } type
+                && !type.FullName!.StartsWith("Microsoft.AspNetCore.Hosting.", StringComparison.Ordinal)).ToArray())
+                services.Remove(registration);
             // ── 1. Auth: replace real JWT/Cookie stack with test-header-based handler ──
             services.AddAuthentication(options =>
             {
@@ -111,6 +122,7 @@ public class BaseTemplateWebApplicationFactory : WebApplicationFactory<Program>,
                 d.ServiceType == typeof(DbContextOptions<TContext>)
              || d.ServiceType == typeof(DbContextOptions<TSqlServerContext>))
             .ToList();
+
         foreach (var d in descriptorsToRemove)
             services.Remove(d);
 
@@ -120,6 +132,7 @@ public class BaseTemplateWebApplicationFactory : WebApplicationFactory<Program>,
                 (d.ServiceType == typeof(TContext) && d.ImplementationType == typeof(TSqlServerContext))
              || d.ServiceType == typeof(TSqlServerContext))
             .ToList();
+
         foreach (var d in concreteToRemove)
             services.Remove(d);
 

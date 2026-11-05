@@ -14,13 +14,15 @@ public class BankingPostgreSqlDBContext : BankingDBContext
         DbContextOptions<BankingPostgreSqlDBContext> options,
         ICurrentTenantProvider? tenantProvider = null,
         ICurrentActorProvider? actorProvider = null,
-        ILogger<BankingDBContext>? logger = null)
-        : base(options, tenantProvider, actorProvider, logger)
+        ILogger<BankingDBContext>? logger = null,
+        TimeProvider? timeProvider = null)
+        : base(options, tenantProvider, actorProvider, logger, timeProvider)
     {
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ArgumentNullException.ThrowIfNull(modelBuilder, nameof(modelBuilder));
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfigurationsFromAssembly(

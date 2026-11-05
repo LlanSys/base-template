@@ -43,14 +43,14 @@ public class IdempotentMigrationsGuardrailTests
         services.AddIamPersistence(config, env);
         services.AddControlPlanePersistence(config, env);
         services.AddBankingPersistence(config);
-        
+
         services.AddScoped<ICurrentTenantProvider, DummyTenantProvider>();
         services.AddScoped<ICurrentActorProvider, DummyActorProvider>();
         services.AddLogging();
-        
+
         using var provider = services.BuildServiceProvider();
         using var context = (DbContext)provider.GetRequiredService(contextType);
-        
+
         var generator = context.Database.GetService<IMigrationsSqlGenerator>();
         Assert.IsType(expectedGeneratorType, generator);
     }
@@ -73,14 +73,14 @@ public class IdempotentMigrationsGuardrailTests
         services.AddIamPersistence(config, env);
         services.AddControlPlanePersistence(config, env);
         services.AddBankingPersistence(config);
-        
+
         services.AddScoped<ICurrentTenantProvider, DummyTenantProvider>();
         services.AddScoped<ICurrentActorProvider, DummyActorProvider>();
         services.AddLogging();
-        
+
         using var provider = services.BuildServiceProvider();
         using var context = (DbContext)provider.GetRequiredService(contextType);
-        
+
         var generator = context.Database.GetService<IMigrationsSqlGenerator>();
         Assert.IsType(expectedGeneratorType, generator);
     }
@@ -95,7 +95,7 @@ public class IdempotentMigrationsGuardrailTests
             })
             .Build();
     }
-    
+
     private sealed class DummyHostEnvironment : IHostEnvironment
     {
         public string EnvironmentName { get; set; } = "Development";
@@ -103,12 +103,12 @@ public class IdempotentMigrationsGuardrailTests
         public string ContentRootPath { get; set; } = "";
         public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } = null!;
     }
-    
+
     private sealed class DummyTenantProvider : ICurrentTenantProvider
     {
         public Guid TenantId => Guid.Empty;
     }
-    
+
     private sealed class DummyActorProvider : ICurrentActorProvider
     {
         public string ActorId => "System";

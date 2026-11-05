@@ -12,16 +12,25 @@
 
 <section class="dashboard-page">
     <div class="mb-4">
-        <MudButton Href="/admin" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" Class="px-0">Back to Admin Center</MudButton>
+        <MudButton Href="/admin"
+                   Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   Color="Color.Primary"
+                   Class="px-0">Back to Admin Center</MudButton>
     </div>
 
-    <MudPaper Class="poc-panel" Elevation="0">
+    <MudPaper Class="poc-panel"
+              Elevation="0">
         <div class="panel-heading">
             <h2 style="color: var(--bt-moss); font-weight: 700;">Employees</h2>
             <div class="d-flex align-center gap-3">
                 @if (AuthSession.HasPermission("employees.create"))
                 {
-                    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Badge" OnClick="@(() => OpenFormDialogAsync(null))">Create employee</MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Size="Size.Small"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Badge"
+                               OnClick="@(() => OpenFormDialogAsync(null))">Create employee</MudButton>
                 }
             </div>
         </div>
@@ -37,30 +46,55 @@
                           DebounceInterval="400"
                           OnDebounceIntervalElapsed="ApplyFiltersAsync"
                           OnKeyDown="HandleSearchKeyDown" />
-            <MudIconButton Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" Color="@(_showFilters ? Color.Success : Color.Default)" OnClick="ToggleFilters" title="Advanced filters" />
+            <MudIconButton Icon="@Icons.Material.Filled.FilterList"
+                           Size="Size.Small"
+                           Color="@(_showFilters ? Color.Success : Color.Default)"
+                           OnClick="ToggleFilters"
+                           title="Advanced filters" />
             @if (HasActiveFilters)
             {
-                <MudIconButton Icon="@Icons.Material.Filled.FilterAltOff" Size="Size.Small" Color="Color.Error" OnClick="ClearFiltersAsync" title="Clear filters" />
+                <MudIconButton Icon="@Icons.Material.Filled.FilterAltOff"
+                               Size="Size.Small"
+                               Color="Color.Error"
+                               OnClick="ClearFiltersAsync"
+                               title="Clear filters" />
             }
         </div>
 
         @if (_showFilters)
         {
             <MudDivider Class="my-2" />
-            <MudGrid Spacing="2" Class="mb-2">
-                <MudItem xs="12" sm="6">
-                    <MudSelect T="Guid?" Value="_departmentFilter" ValueChanged="@(async (Guid? val) => { _departmentFilter = val; await ApplyFiltersAsync(); })" Label="Department" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+            <MudGrid Spacing="2"
+                     Class="mb-2">
+                <MudItem xs="12"
+                         sm="6">
+                    <MudSelect T="Guid?"
+                               Value="_departmentFilter"
+                               ValueChanged="@(async (Guid? val) => { _departmentFilter = val; await ApplyFiltersAsync(); })"
+                               Label="Department"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Clearable="true">
                         @foreach (var item in _departments)
                         {
-                            <MudSelectItem T="Guid?" Value="@((Guid?)item.Id)">@item.Name</MudSelectItem>
+                            <MudSelectItem T="Guid?"
+                                           Value="@((Guid? )item.Id)">@item.Name</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudSelect T="Guid?" Value="_managerFilter" ValueChanged="@(async (Guid? val) => { _managerFilter = val; await ApplyFiltersAsync(); })" Label="Manager" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                <MudItem xs="12"
+                         sm="6">
+                    <MudSelect T="Guid?"
+                               Value="_managerFilter"
+                               ValueChanged="@(async (Guid? val) => { _managerFilter = val; await ApplyFiltersAsync(); })"
+                               Label="Manager"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Clearable="true">
                         @foreach (var item in ManagerOptions)
                         {
-                            <MudSelectItem T="Guid?" Value="@((Guid?)item.Id)">@item.Name</MudSelectItem>
+                            <MudSelectItem T="Guid?"
+                                           Value="@((Guid? )item.Id)">@item.Name</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
@@ -69,16 +103,29 @@
 
         @if (_isLoading)
         {
-            <MudProgressLinear Color="Color.Success" Indeterminate="true" Class="my-2" />
+            <MudProgressLinear Color="Color.Success"
+                               Indeterminate="true"
+                               Class="my-2" />
         }
 
         @if (!string.IsNullOrWhiteSpace(_message))
         {
-            <MudAlert Severity="@_messageSeverity" Variant="Variant.Outlined" Dense="true" Class="my-2">@_message</MudAlert>
+            <MudAlert Severity="@_messageSeverity"
+                      Variant="Variant.Outlined"
+                      Dense="true"
+                      Class="my-2">@_message</MudAlert>
         }
 
         <div class="bt-table-scroll">
-            <MudTable Items="_employees" Dense="true" Hover="true" Elevation="0" FixedHeader="true" RowsPerPage="PageSize" Height="calc(100vh - 25rem)" Style="min-width: 960px;" Breakpoint="Breakpoint.None">
+            <MudTable Items="_employees"
+                      Dense="true"
+                      Hover="true"
+                      Elevation="0"
+                      FixedHeader="true"
+                      RowsPerPage="PageSize"
+                      Height="calc(100vh - 25rem)"
+                      Style="min-width: 960px;"
+                      Breakpoint="Breakpoint.None">
                 <HeaderContent>
                     <MudTh>Employee No.</MudTh>
                     <MudTh>Name</MudTh>
@@ -105,7 +152,9 @@
                     </MudTd>
                 </RowTemplate>
                 <NoRecordsContent>
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No records found.</MudAlert>
+                    <MudAlert Severity="Severity.Info"
+                              Variant="Variant.Outlined"
+                              Dense="true">No records found.</MudAlert>
                 </NoRecordsContent>
                 <PagerContent>
                     <GlobalTablePager CurrentPage="_currentPage"

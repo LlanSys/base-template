@@ -1,4 +1,4 @@
-using BT.UI.Rcl.Features.IAM.Users.Contracts.Interfaces;
+using BT.UI.Blazor.Features.IAM.Users.Contracts.Interfaces;
 
 namespace BT.UI.Blazor.Features.IAM.Users.Contracts.Interfaces;
 

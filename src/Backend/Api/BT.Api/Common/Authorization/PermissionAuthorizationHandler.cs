@@ -11,8 +11,7 @@ internal sealed class PermissionAuthorizationHandler : AuthorizationHandler<Perm
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(requirement);
 
-        if (context.User.IsInRole(PermissionAuthorizationConstants.SystemAdministratorRole)
-            || context.User.Claims.Any(claim =>
+        if (context.User.Claims.Any(claim =>
                 string.Equals(claim.Type, PermissionAuthorizationConstants.ClaimType, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(claim.Value, requirement.Permission, StringComparison.OrdinalIgnoreCase)))
         {

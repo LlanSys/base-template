@@ -852,3 +852,19 @@ h1:focus {
 .auth-recovery-link:focus {
     text-decoration: underline;
 }
+
+/* Application foundations: profile in the top bar; tenant administration at the sidebar foot. */
+.nav-admin-footer { border-top: 1px solid rgba(255,255,255,.15); padding: .65rem .55rem; }
+.list-page-actions { display: flex; justify-content: flex-end; margin-bottom: .75rem; gap: .5rem; }
+.topbar-profile { position: relative; color: #17211b; }
+.topbar-profile .profile-card { border: 0; border-radius: .5rem; color: inherit; position: relative; }
+.topbar-profile summary { display: flex; align-items: center; gap: .6rem; cursor: pointer; list-style: none; padding: .3rem; }
+.topbar-profile summary::-webkit-details-marker { display: none; }
+.topbar-profile .profile-copy { display: grid; max-width: 14rem; }
+.topbar-profile .profile-copy strong { font-size: .8rem; overflow: hidden; text-overflow: ellipsis; }
+.topbar-profile .profile-copy small { color: #607067; font-size: .7rem; }
+.topbar-profile .profile-actions { position: absolute; top: calc(100% + .5rem); right: 0; min-width: 12rem; background: #fff; border: 1px solid #dce1dc; border-radius: .5rem; padding: .35rem; box-shadow: 0 .5rem 1.5rem #17211b20; z-index: 20; }
+.topbar-profile .profile-actions a, .topbar-profile .profile-actions button { display: flex; align-items: center; gap: .5rem; width: 100%; padding: .6rem; background: transparent; border: 0; border-radius: .3rem; color: inherit; font-size: .8rem; text-decoration: none; text-align: left; }
+.topbar-profile .profile-actions a:hover, .topbar-profile .profile-actions button:hover { background: #f1f5f1; }
+.topbar-profile .sign-in-card { display: flex; align-items: center; gap: .5rem; }
+@media (max-width: 600px) { .topbar-profile .profile-copy { display: none; } }

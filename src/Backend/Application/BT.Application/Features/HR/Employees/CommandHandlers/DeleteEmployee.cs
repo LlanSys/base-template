@@ -17,6 +17,7 @@ internal sealed class DeleteEmployeeCommandHandler(IHrUnitOfWork unitOfWork, ILo
         try
         {
             var employee = await unitOfWork.EmployeeRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
             if (employee is null)
             {
                 return AppResponses.Failure<bool>($"Employee {command.Id} not found.");

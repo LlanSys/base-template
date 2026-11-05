@@ -5,7 +5,8 @@
     <DialogContent>
         @if (_isLoading)
         {
-            <MudProgressLinear Color="Color.Success" Indeterminate="true" />
+            <MudProgressLinear Color="Color.Success"
+                               Indeterminate="true" />
         }
         else
         {
@@ -14,7 +15,8 @@
                     Grant system access to <strong>@Employee.FullName</strong>. Select at least one role.
                 </MudText>
 
-                <MudPaper Elevation="0" Class="poc-panel compact-dialog-panel">
+                <MudPaper Elevation="0"
+                          Class="poc-panel compact-dialog-panel">
                     @foreach (var role in _roles)
                     {
                         <MudCheckBox T="bool"
@@ -29,8 +31,14 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(_isLoading || _selectedRoles.Count == 0)" OnClick="Confirm">Grant access</MudButton>
+        <MudButton Variant="Variant.Text"
+                   Size="Size.Small"
+                   OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Size="Size.Small"
+                   Color="Color.Primary"
+                   Disabled="@(_isLoading || _selectedRoles.Count == 0)"
+                   OnClick="Confirm">Grant access</MudButton>
     </DialogActions>
 </MudDialog>
 

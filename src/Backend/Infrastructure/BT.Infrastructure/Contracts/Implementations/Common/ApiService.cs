@@ -24,8 +24,11 @@ internal sealed class ApiService : IApiService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public ApiService(HttpClient httpClient, IOptions<ApiSettings> appSettings, ILogger<ApiService> logger, IHttpContextAccessor httpContextAccessor, JsonSerializerOptions jsonOptions)
+    private readonly TimeProvider _timeProvider;
+
+    public ApiService(TimeProvider timeProvider, HttpClient httpClient, IOptions<ApiSettings> appSettings, ILogger<ApiService> logger, IHttpContextAccessor httpContextAccessor, JsonSerializerOptions jsonOptions)
     {
+        _timeProvider = timeProvider;
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _apiSettings = appSettings.Value ?? throw new ArgumentNullException(nameof(appSettings));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -46,6 +49,7 @@ internal sealed class ApiService : IApiService
     public async Task<AppResponse<TResponse?>> DeleteAsync<TResponse>(string endpoint, CancellationToken cancellationToken = default)
     {
         var responseMessage = string.Empty;
+
         try
         {
 
@@ -57,6 +61,7 @@ internal sealed class ApiService : IApiService
             SetAuthorizationHeader();
 
             var apiResponse = await _httpClient.DeleteAsync(endpoint, cancellationToken).ConfigureAwait(false);
+
             if (!apiResponse.IsSuccessStatusCode)
             {
                 var content = await apiResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -72,6 +77,7 @@ internal sealed class ApiService : IApiService
             }
 
             var response = await apiResponse.Content.ReadFromJsonAsync<AppResponse<TResponse>>(cancellationToken: cancellationToken).ConfigureAwait(false);
+
             if (response == null)
             {
                 responseMessage = "Response content is null";
@@ -101,6 +107,7 @@ internal sealed class ApiService : IApiService
             SetAuthorizationHeader();
 
             var apiResponse = await _httpClient.GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
+
             if (!apiResponse.IsSuccessStatusCode)
             {
                 var content = await apiResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -121,7 +128,7 @@ internal sealed class ApiService : IApiService
 
             return response == null
                 ? AppResponses.Failure<TResponse?>("Response content is null")
-                : AppResponses.Success<TResponse?>(response.Message ?? "Operation completed.", response.Data);
+                : AppResponses.Success(response.Message ?? "Operation completed.", response.Data);
         }
         catch (Exception ex)
         {
@@ -133,6 +140,7 @@ internal sealed class ApiService : IApiService
     public async Task<AppResponse<TResponse?>> GetAsync<TResponse>(string endpoint, CancellationToken cancellationToken = default)
     {
         string responseMessage = string.Empty;
+
         try
         {
             if (string.IsNullOrWhiteSpace(endpoint))
@@ -143,6 +151,7 @@ internal sealed class ApiService : IApiService
             SetAuthorizationHeader();
 
             var apiResponse = await _httpClient.GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
+
             if (!apiResponse.IsSuccessStatusCode)
             {
                 var errorContent = await apiResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -254,6 +263,7 @@ internal sealed class ApiService : IApiService
             using var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
             var apiResponse = await _httpClient.PutAsync(endpoint, content, cancellationToken).ConfigureAwait(false);
+
             if (!apiResponse.IsSuccessStatusCode)
             {
                 var errorContent = await apiResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -276,7 +286,7 @@ internal sealed class ApiService : IApiService
                 { IsSuccess: false } or { Data: null }
                     => AppResponses.Failure<TResponse?>(response.Message ?? "Update operation failed"),
 
-                _ => AppResponses.Success<TResponse?>(
+                _ => AppResponses.Success(
                         response.Message ?? "Resource updated successfully",
                         response.Data)
             };
@@ -292,11 +302,13 @@ internal sealed class ApiService : IApiService
     public async Task<AppResponse<PagedResponse<TResponse, TCursor>>> GetPagedAsync<TResponse, TCursor>(string endpoint, CancellationToken cancellationToken = default)
     {
         string content = string.Empty;
+
         try
         {
             SetAuthorizationHeader();
 
             var apiResponse = await _httpClient.GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
+
             if (!apiResponse.IsSuccessStatusCode)
             {
                 content = await apiResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -329,6 +341,7 @@ internal sealed class ApiService : IApiService
             SetAuthorizationHeader();
 
             var apiResponse = await _httpClient.GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
+
             if (!apiResponse.IsSuccessStatusCode)
             {
                 var errorContent = await apiResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -359,11 +372,13 @@ internal sealed class ApiService : IApiService
     public async Task<AppResponse<TResponse>> PatchAsync<TRequest, TResponse>(string endpoint, TRequest kpi, CancellationToken cancellationToken = default)
     {
         string responseMessage = string.Empty;
+
         try
         {
             SetAuthorizationHeader();
 
             var apiResponse = await _httpClient.PatchAsJsonAsync(endpoint, kpi, cancellationToken).ConfigureAwait(false);
+
             if (!apiResponse.IsSuccessStatusCode)
             {
                 var content = await apiResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -376,12 +391,14 @@ internal sealed class ApiService : IApiService
 
             }
             var response = await apiResponse.Content.ReadFromJsonAsync<AppResponse<TResponse>>(cancellationToken: cancellationToken).ConfigureAwait(false);
+
             if (response == null)
             {
                 responseMessage = "Response content is null";
                 return AppResponses.Failure<TResponse>("Response content is null");
 
             }
+
             if (!response.IsSuccess || response.Data == null)
             {
                 responseMessage = response.Message ?? "Patch operation failed";
@@ -406,9 +423,11 @@ internal sealed class ApiService : IApiService
     private void SetAuthorizationHeader()
     {
         var httpContext = _httpContextAccessor.HttpContext;
+
         if (httpContext == null) return;
 
         var token = httpContext.Request.Cookies["auth_token"];
+
         if (string.IsNullOrWhiteSpace(token))
         {
             token = httpContext.Session.GetString("auth_token");
@@ -417,9 +436,10 @@ internal sealed class ApiService : IApiService
         if (!string.IsNullOrWhiteSpace(token))
         {
             var (isValid, expiry) = IsTokenValid(token);
+
             if (!isValid)
             {
-                HttpClientLogDefinitions.LogTokenExpired(_logger, expiry ?? DateTime.UtcNow);
+                HttpClientLogDefinitions.LogTokenExpired(_logger, expiry ?? _timeProvider.GetUtcNow().UtcDateTime);
                 _httpClient.DefaultRequestHeaders.Authorization = null;
             }
             else
@@ -435,6 +455,7 @@ internal sealed class ApiService : IApiService
         // ALWAYS include session ID if available
         _httpClient.DefaultRequestHeaders.Remove("X-Session-Id");
         var sessionId = httpContext.Request.Cookies["session_id"];
+
         if (!string.IsNullOrEmpty(sessionId))
         {
             _httpClient.DefaultRequestHeaders.Add("X-Session-Id", sessionId);
@@ -447,6 +468,7 @@ internal sealed class ApiService : IApiService
         try
         {
             var tokenHandler = new JwtSecurityTokenHandler();
+
             if (!tokenHandler.CanReadToken(token))
             {
                 HttpClientLogDefinitions.LogExternalApiError(_logger, "Token Validation", "Invalid token format", new InvalidOperationException());
@@ -455,7 +477,7 @@ internal sealed class ApiService : IApiService
 
             var jwtToken = tokenHandler.ReadJwtToken(token);
             var expiry = jwtToken.ValidTo;
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
 
             if (expiry <= now)
             {
@@ -481,6 +503,7 @@ internal sealed class ApiService : IApiService
         try
         {
             using var doc = JsonDocument.Parse(content);
+
             if (TryExtractMessage(doc.RootElement, out var message) && !string.IsNullOrEmpty(message))
             {
                 return message;
@@ -522,11 +545,13 @@ internal sealed class ApiService : IApiService
         if (root.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array)
         {
             var errorList = new List<string>();
+
             foreach (var err in errors.EnumerateArray())
             {
                 if (err.ValueKind == JsonValueKind.String)
                 {
                     var str = err.GetString();
+
                     if (!string.IsNullOrEmpty(str))
                         errorList.Add(str);
                 }

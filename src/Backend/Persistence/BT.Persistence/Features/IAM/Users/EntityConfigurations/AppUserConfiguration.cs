@@ -12,6 +12,7 @@ internal sealed class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
     public void Configure(EntityTypeBuilder<AppUser> builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
+        builder.Ignore(user => user.RequiresOnboarding);
 
         builder.Property(u => u.NationalId)
             .HasMaxLength(100);

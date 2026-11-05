@@ -7,9 +7,6 @@ public class UpdateOrgSettingCommandValidator : AbstractValidator<UpdateOrgSetti
 {
     public UpdateOrgSettingCommandValidator()
     {
-        RuleFor(x => x.Request.Id)
-            .NotEmpty().WithMessage("Id is required.");
-
         RuleFor(x => x.Request.Key)
             .NotEmpty().WithMessage("Key is required.")
             .MaximumLength(100).WithMessage("Key must not exceed 100 characters.");

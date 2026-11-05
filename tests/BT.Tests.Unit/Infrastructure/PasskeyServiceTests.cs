@@ -9,10 +9,10 @@ namespace BT.Tests.Unit.Infrastructure;
 
 public sealed class PasskeyServiceTests
 {
-    private static PasskeyService CreateService() => new(new Fido2(new Fido2Configuration
+    private static PasskeyService CreateService() => new(TimeProvider.System, new Fido2(new Fido2Configuration
     {
-        ServerDomain = "localhost",
-        ServerName = "Test",
+        RPID = "localhost",
+        RPName = "Test",
         Origins = new HashSet<string> { "https://localhost" }
     }));
 
@@ -23,6 +23,7 @@ public sealed class PasskeyServiceTests
         var credentialId = new byte[] { 1, 2, 3 };
         var json = await CreateService().RequestNewCredentialAsync(user,
             [new Fido2Credential { CredentialId = credentialId, CreatedBy = user.Id }]);
+
         var options = json.Deserialize<CredentialCreateOptions>();
         Assert.NotNull(options);
         Assert.Equal(Encoding.UTF8.GetBytes(user.Id), options.User.Id);

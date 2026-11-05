@@ -11,5 +11,5 @@ namespace BT.Domain.Features.IAM.Users.Events;
 
 public sealed record TotpEnabledEvent(string UserId) : IDomainEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }

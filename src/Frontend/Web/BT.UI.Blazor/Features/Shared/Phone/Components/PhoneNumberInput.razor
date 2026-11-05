@@ -1,6 +1,7 @@
 
 <MudGrid Spacing="2">
-    <MudItem xs="12" sm="@CountryColumns">
+    <MudItem xs="12"
+             sm="@CountryColumns">
         <MudAutocomplete T="CountryCallingCode"
                          Value="_selectedCountry"
                          ValueChanged="OnCountryChangedAsync"
@@ -25,7 +26,8 @@
             </ItemTemplate>
         </MudAutocomplete>
     </MudItem>
-    <MudItem xs="12" sm="@PhoneColumns">
+    <MudItem xs="12"
+             sm="@PhoneColumns">
         <MudTextField T="string"
                       Value="@NationalNumber"
                       ValueChanged="OnNationalNumberChangedAsync"

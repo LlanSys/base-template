@@ -13,7 +13,6 @@ COPY ["Global.json", "."]
 COPY ["nuget.config", "."]
 COPY ["src/Shared/BT.SharedKernel/BT.SharedKernel.csproj", "src/Shared/BT.SharedKernel/"]
 COPY ["src/Shared/BT.SharedKernel.Validation/BT.SharedKernel.Validation.csproj", "src/Shared/BT.SharedKernel.Validation/"]
-COPY ["src/Frontend/Shared/BT.UI.Rcl/BT.UI.Rcl.csproj", "src/Frontend/Shared/BT.UI.Rcl/"]
 COPY ["src/Frontend/Web/BT.UI.Blazor/BT.UI.Blazor.csproj", "src/Frontend/Web/BT.UI.Blazor/"]
 
 RUN dotnet restore "src/Frontend/Web/BT.UI.Blazor/BT.UI.Blazor.csproj"

@@ -8,7 +8,9 @@ using BT.Domain.Features.Banking.Customers.Events;
 using BT.Domain.Features.HR.Employees.Events;
 using BT.Domain.Features.IAM.Users.Events;
 using BT.Domain.Exceptions;
+
 using Microsoft.AspNetCore.Identity;
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,6 +18,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json.Serialization;
+
 using static System.Net.Mime.MediaTypeNames;
 
 namespace BT.Domain.Features.IAM.Users.Entities;
@@ -23,6 +26,20 @@ namespace BT.Domain.Features.IAM.Users.Entities;
 public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
 {
     public Guid TenantId { get; set; }
+    public bool IsPlatformStaff { get; set; }
+    public Guid? OnboardingInvitationId { get; private set; }
+    public DateTimeOffset? OnboardingCompletedAt { get; private set; }
+    [JsonIgnore]
+    public bool RequiresOnboarding => OnboardingInvitationId.HasValue && OnboardingCompletedAt is null;
+
+    public void BeginOnboarding(Guid invitationId)
+    {
+        if (RequiresOnboarding && OnboardingInvitationId != invitationId) throw new InvalidOperationException("Another invitation is being completed.");
+        OnboardingInvitationId = invitationId;
+        OnboardingCompletedAt = null;
+    }
+
+    public void CompleteOnboarding(DateTimeOffset now) => OnboardingCompletedAt = now;
     public Guid? EmployeeId { get; set; }
     public Guid? CustomerId { get; set; }
 
@@ -51,7 +68,7 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
     public bool IsActive { get; set; }
 
 
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     public string? CreatedBy { get; set; }
     public DateTimeOffset? ActivatedAt { get; set; }
     public string? ActivatedBy { get; set; }
@@ -86,6 +103,7 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
 
 
     public static AppUser Create(
+        DateTimeOffset now,
         Guid tenantId,
         Guid? employeeId,
         string userName,
@@ -105,7 +123,7 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
 
         return new AppUser
         {
-            Id = Guid.CreateVersion7().ToString(), 
+            Id = Guid.CreateVersion7().ToString(),
             TenantId = tenantId,
             EmployeeId = employeeId,
             UserName = userName,
@@ -116,12 +134,13 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
             ConcurrencyStamp = Guid.CreateVersion7().ToString(), // Initialize ConcurrencyStamp for optimistic concurrency control
             SecurityStamp = Guid.CreateVersion7().ToString(), // Initialize other properties with default values if necessary
             CreatedBy = createdBy,
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = now,
         };
     }
 
     // Factory for Employee-linked user
     public static AppUser CreateForEmployee(
+        DateTimeOffset now,
         Guid tenantId,
         Guid employeeId,
         string userName,
@@ -153,12 +172,13 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
             ConcurrencyStamp = Guid.CreateVersion7().ToString(),
             SecurityStamp = Guid.CreateVersion7().ToString(),
             CreatedBy = createdBy,
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = now,
         };
     }
 
     // Factory for Customer-linked user
     public static AppUser CreateForCustomer(
+        DateTimeOffset now,
         Guid tenantId,
         Guid customerId,
         string userName,
@@ -190,12 +210,13 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
             ConcurrencyStamp = Guid.CreateVersion7().ToString(),
             SecurityStamp = Guid.CreateVersion7().ToString(),
             CreatedBy = createdBy,
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = now,
         };
     }
 
     // Factory for system/admin users (no business relationship)
     public static AppUser CreateSystemUser(
+        DateTimeOffset now,
         Guid tenantId,
         string userName,
         string email,
@@ -216,12 +237,13 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
             ConcurrencyStamp = Guid.CreateVersion7().ToString(),
             SecurityStamp = Guid.CreateVersion7().ToString(),
             CreatedBy = createdBy,
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = now,
         };
     }
 
     // Factory for external SSO users provisioned just-in-time
     public static AppUser CreateExternalUser(
+        DateTimeOffset now,
         Guid tenantId,
         string userName,
         string email,
@@ -248,42 +270,43 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
             ConcurrencyStamp = Guid.CreateVersion7().ToString(),
             SecurityStamp = Guid.CreateVersion7().ToString(),
             CreatedBy = createdBy,
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = now,
             IsActive = true,
-            ActivatedAt = DateTimeOffset.UtcNow,
+            ActivatedAt = now,
             ActivatedBy = createdBy,
             RequirePasswordChange = false
         };
     }
 
     // Linking behaviours — called when role changes post-creation
-    public void LinkToEmployee(Guid employeeId)
+    public void LinkToEmployee(DateTimeOffset now, Guid employeeId)
     {
         if (EmployeeId.HasValue)
             throw new DomainException("User is already linked to an employee record.");
 
         EmployeeId = employeeId;
-        RaiseDomainEvent(new EmployeeLinkedToUserEvent(Id, employeeId));
+        RaiseDomainEvent(new EmployeeLinkedToUserEvent(Id, employeeId) { OccurredAt = now });
     }
 
-    public void LinkToCustomer(Guid customerId)
+    public void LinkToCustomer(DateTimeOffset now, Guid customerId)
     {
         if (CustomerId.HasValue)
             throw new DomainException("User is already linked to a customer record.");
 
         CustomerId = customerId;
-        RaiseDomainEvent(new CustomerLinkedToUserEvent(Id, customerId));
+        RaiseDomainEvent(new CustomerLinkedToUserEvent(Id, customerId) { OccurredAt = now });
     }
 
-    public void RaiseAppUserCreatedEvent()
+    public void RaiseAppUserCreatedEvent(DateTimeOffset now)
     {
         RaiseDomainEvent(new AppUserCreatedEvent(
-            Id, 
-            TenantId, 
+            Id,
+            TenantId,
             EmployeeId,
-            UserName!, 
-            $"{FirstName} {LastName}", 
-            Email ?? string.Empty));
+            UserName!,
+            $"{FirstName} {LastName}",
+            Email ?? string.Empty)
+        { OccurredAt = now });
     }
 
     public void ResetFailedLoginAttempts()
@@ -299,38 +322,39 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
         Gender = gender;
     }
 
-    public void RecordSuccessfulLogin()
+    public void RecordSuccessfulLogin(DateTimeOffset now)
     {
-        LastLoginAt = DateTimeOffset.UtcNow;
+        LastLoginAt = now;
         ResetFailedLoginAttempts();
     }
 
-    public void CompletePasswordReset(string updatedBy)
+    public void CompletePasswordReset(DateTimeOffset now, string updatedBy)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(updatedBy);
 
         ResetFailedLoginAttempts();
-        PasswordLastChanged = DateTimeOffset.UtcNow;
+        PasswordLastChanged = now;
         RequirePasswordChange = false;
-        MarkUpdated(updatedBy);
+        MarkUpdated(now, updatedBy);
     }
 
-    public void MarkUpdated(string? updatedBy = null)
+    public void MarkUpdated(DateTimeOffset now, string? updatedBy = null)
     {
-        UpdatedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = now;
         UpdatedBy = updatedBy;
     }
 
-    public void SetProfilePicture(Uri profilePictureUrl, string updatedBy)
+    public void SetProfilePicture(DateTimeOffset now, Uri profilePictureUrl, string updatedBy)
     {
         ArgumentNullException.ThrowIfNull(profilePictureUrl);
         ArgumentException.ThrowIfNullOrWhiteSpace(updatedBy);
 
         ProfilePictureUrl = profilePictureUrl;
-        MarkUpdated(updatedBy);
+        MarkUpdated(now, updatedBy);
     }
 
     public void UpdateAdminProfile(
+        DateTimeOffset now,
         string userName,
         string email,
         string firstName,
@@ -353,15 +377,15 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
         PhoneNumber = phoneNumber?.Trim();
         NationalId = nationalId?.Trim() ?? string.Empty;
         Gender = gender;
-        MarkUpdated(updatedBy);
+        MarkUpdated(now, updatedBy);
     }
 
-    public void MarkAsDeleted(string deletedBy)
+    public void MarkAsDeleted(string deletedBy, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(deletedBy);
         IsDeleted = true;
         DeletedBy = deletedBy;
-        DeletedAt = DateTimeOffset.UtcNow;
+        DeletedAt = now;
 
     }
 
@@ -377,14 +401,13 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
         _domainEvents.Clear();
     }
 
-    public void GrantAccess(string grantedBy, IEnumerable<string> defaultRoles)
+    public void GrantAccess(DateTimeOffset now, string grantedBy, IEnumerable<string> defaultRoles)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(grantedBy);
 
         if (IsActive)
             throw new DomainException("User account is already active.");
 
-        var now = DateTimeOffset.UtcNow;
 
         IsActive = true;
         ActivatedAt = now;
@@ -396,10 +419,10 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
         DeactivationReason = null;
         RequirePasswordChange = true; // Force password set on first login
 
-        RaiseDomainEvent(new AppUserAccessGrantedEvent(Id, EmployeeId, CustomerId, grantedBy));
+        RaiseDomainEvent(new AppUserAccessGrantedEvent(Id, EmployeeId, CustomerId, grantedBy) { OccurredAt = now });
     }
 
-    public void RevokeAccess(string revokedBy, string reason)
+    public void RevokeAccess(DateTimeOffset now, string revokedBy, string reason)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(revokedBy);
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
@@ -407,7 +430,6 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
         if (!IsActive)
             throw new DomainException("User account is already inactive.");
 
-        var now = DateTimeOffset.UtcNow;
 
         IsActive = false;
         DeactivatedAt = now;
@@ -416,7 +438,7 @@ public class AppUser : IdentityUser, ISoftDeletable, IHasDomainEvents
         UpdatedAt = now;
         UpdatedBy = revokedBy;
 
-        RaiseDomainEvent(new AppUserAccessRevokedEvent(Id, EmployeeId, CustomerId, revokedBy, reason));
+        RaiseDomainEvent(new AppUserAccessRevokedEvent(Id, EmployeeId, CustomerId, revokedBy, reason) { OccurredAt = now });
     }
 }
 

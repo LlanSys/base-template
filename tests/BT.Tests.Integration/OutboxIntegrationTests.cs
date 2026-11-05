@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
 using Serilog;
 using System.Globalization;
+using System.Text.Json;
 using BT.Domain.Shared.Contracts.Common;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
@@ -58,7 +59,8 @@ public class OutboxIntegrationTests
 
         await db.Database.EnsureCreatedAsync();
 
-        var message = new CustomerCreatedEvent(Guid.CreateVersion7(), "", "", "", CustomerType.Individual);
+        var occurredAt = new DateTimeOffset(2026, 11, 5, 9, 0, 0, TimeSpan.Zero);
+        var message = new CustomerCreatedEvent(Guid.CreateVersion7(), "", "", "", CustomerType.Individual) { OccurredAt = occurredAt };
 
         // Act
         await using var tx = await db.Database.BeginTransactionAsync();
@@ -70,7 +72,12 @@ public class OutboxIntegrationTests
 
         // Assert
         var outboxMessages = await db.Set<OutboxMessage>().ToListAsync();
-        Assert.Single(outboxMessages);
+        var persisted = Assert.Single(outboxMessages);
+        using var envelope = JsonDocument.Parse(persisted.Body);
+        var payload = envelope.RootElement.GetProperty("message");
+        var restored = payload.Deserialize<CustomerCreatedEvent>(new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.NotNull(restored);
+        Assert.Equal(occurredAt, restored.OccurredAt);
     }
 
     [Fact]

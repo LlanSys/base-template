@@ -5,4 +5,5 @@ namespace BT.Domain.Features.IAM.Permissions.Contracts.Repositories;
 
 public interface IPermissionRepository : IRepository<Permission>
 {
+    Task<bool> HasReferencesAsync(string key, CancellationToken cancellationToken);
 }

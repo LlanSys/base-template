@@ -7,7 +7,7 @@
 @inject ILogger<SignIn> Logger
 @inject ISnackbar Snackbar
 @inject IOptions<BackendApiSettings> BackendApiSettings
-@inject BT.UI.Rcl.Features.IAM.Users.Contracts.Interfaces.IAuthService AuthService
+@inject BT.UI.Blazor.Features.IAM.Users.Contracts.Interfaces.IAuthService AuthService
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
@@ -16,69 +16,70 @@
 <section class="auth-shell">
     <div class="auth-copy">
         <span class="eyebrow">Identity and access</span>
-        <h1>Sign in to the operations console.</h1>
+        <h1>Sign in to your workspace.</h1>
         <p>
-            This flow talks to the API, stores protected tokens in browser storage, and keeps the UI independent from backend Application internals.
+            Access the applications and administration tools available to your account.
         </p>
-        <div class="auth-proof">
-            <span>Production path</span>
-            <strong>UI → API → Application → Domain → Persistence</strong>
-        </div>
     </div>
 
     <div class="auth-card">
-        <EditForm FormName="@SignInFormName" Model="FormModel" OnValidSubmit="SignInAsync">
+        <EditForm FormName="@SignInFormName"
+                  Model="FormModel"
+                  OnValidSubmit="SignInAsync">
             <DataAnnotationsValidator />
 
             <div class="form-stack">
                 <div>
                     <label for="username">Username or email</label>
-                    <InputText id="username" class="form-control form-control-lg" @bind-Value="FormModel!.UserName" autocomplete="username webauthn" />
+                    <InputText id="username"
+                               class="form-control form-control-lg"
+                               @bind-Value="FormModel!.UserName"
+                               autocomplete="username webauthn" />
                     <ValidationMessage For="@(() => FormModel!.UserName)" />
                 </div>
 
                 <div>
                     <label for="password">Password</label>
-                    <InputText id="password" type="password" class="form-control form-control-lg" @bind-Value="FormModel!.Password" autocomplete="current-password" />
+                    <InputText id="password"
+                               type="password"
+                               class="form-control form-control-lg"
+                               @bind-Value="FormModel!.Password"
+                               autocomplete="current-password" />
                     <ValidationMessage For="@(() => FormModel!.Password)" />
                 </div>
 
 
-                <a class="auth-recovery-link" href="/iam/forgot-password">Forgot password?</a>
+                <a class="auth-recovery-link"
+                   href="/iam/forgot-password">Forgot password?</a>
 
                 @if (!string.IsNullOrWhiteSpace(_message))
                 {
-                    <div class="alert @(_isError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
+                    <div class="alert @(_isError ? "alert-danger" : "alert-success")"
+                         role="alert">@_message</div>
                 }
 
-                <button class="btn btn-bt-primary btn-lg" type="submit" disabled="@_isBusy">
+                <button class="btn btn-bt-primary btn-lg"
+                        type="submit"
+                        disabled="@_isBusy">
                     @(_isBusy ? "Signing in..." : "Sign in")
                 </button>
 
-                <div class="auth-separator" style="text-align: center; margin: 1rem 0;">
+                <div class="auth-separator"
+                     style="text-align: center; margin: 1rem 0;">
                     <span style="background-color: var(--mud-palette-surface); padding: 0 10px; color: var(--mud-palette-text-secondary); font-size: 0.875rem; text-transform: uppercase;">or</span>
                 </div>
 
-                <button class="btn btn-outline-primary btn-lg w-100 mb-2" type="button" @onclick="SignInWithPasskeyAsync" disabled="@_isBusy">
+                <button class="btn btn-outline-primary btn-lg w-100 mb-2"
+                        type="button"
+                        @onclick="SignInWithPasskeyAsync"
+                        disabled="@_isBusy">
                     Sign in with passkey
                 </button>
 
-                @{
-                    var apiBaseUrl = BackendApiSettings.Value.BaseUrl.TrimEnd('/');
-                    var returnUrl = Uri.EscapeDataString($"{Navigation.BaseUri}iam/sso-callback");
-                    var ssoLoginUrl = $"{apiBaseUrl}/api/v1/iam/auth/sso/login?returnUrl={returnUrl}";
-                }
-                
-                <a class="btn btn-outline-secondary btn-lg w-100" href="@ssoLoginUrl">
-                    Sign in with Microsoft
-                </a>
             </div>
         </EditForm>
+        <BT.UI.Blazor.Features.IAM.Users.Components.ExternalSignInOptions />
 
-        <div class="dev-hint">
-            <span>Local development admin</span>
-            <code>aamodhiambo@gmail.com</code>
-        </div>
     </div>
 </section>
 
@@ -129,12 +130,12 @@
 
             await Task.WhenAll(isSupportedTask, optionsTask);
 
-            if (!isSupportedTask.Result)
+            if (!await isSupportedTask)
             {
                 return;
             }
 
-            var optionsResponse = optionsTask.Result;
+            var optionsResponse = await optionsTask;
             if (!optionsResponse.IsSuccess || optionsResponse.Data is null)
             {
                 return;
@@ -332,6 +333,8 @@
 
     public async ValueTask DisposeAsync()
     {
+        // Static prerendering never starts the browser assertion and cannot invoke JS on disposal.
+        if (_dotNetRef is null) return;
         try
         {
             await JSRuntime.InvokeVoidAsync("webauthn.cancelConditionalAssertion");

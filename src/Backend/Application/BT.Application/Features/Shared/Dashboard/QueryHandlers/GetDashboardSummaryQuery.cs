@@ -19,12 +19,12 @@ namespace BT.Application.Features.Shared.Dashboard.QueryHandlers;
 
 
 public record GetDashboardSummaryQuery(string UserId, string? RoleScope = null) : IRequest<AppResponse<DashboardSummaryResponse>>, ICachableRequest
-    
+
 {
     public string CacheGroup => "dashboard";
     public string Discriminator => CacheKeys.Discriminator(new { RoleScope });
     public string? CacheUserId => null;
     public bool IsVersioned => true;
-    public TimeSpan? Expiration => TimeSpan.FromMinutes(5); 
+    public TimeSpan? Expiration => TimeSpan.FromMinutes(5);
 }
 

@@ -6,7 +6,7 @@ using BT.SharedKernel.Features.Shared.Common.Enums;
 using BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces;
 using BT.UI.Blazor.Features.Shared.Messaging;
 using BT.UI.Blazor.Logging;
-using BT.UI.Rcl.Features.IAM.Users.Contracts.Interfaces;
+using BT.UI.Blazor.Features.IAM.Users.Contracts.Interfaces;
 using BT.UI.Blazor.Configuration;
 using Microsoft.Extensions.Options;
 
@@ -14,12 +14,21 @@ namespace BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Implementations;
 
 internal sealed class BackendApiClient(
     HttpClient httpClient,
+    TimeProvider timeProvider,
     ITokenStorage storage,
     IOptions<BackendApiSettings> apiSettings,
+    Microsoft.AspNetCore.Components.NavigationManager navigation,
     ILogger<BackendApiClient> logger) : IBackendApiClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly BackendApiSettings _apiSettings = apiSettings.Value;
+
+    private void SetOrganizationHost(HttpRequestMessage message)
+    {
+        // Navigation belongs to the current circuit; HttpClientFactory configuration is singleton-scoped.
+        // Anonymous sign-in and recovery must resolve the organization named by the browser URL.
+        message.Headers.Host = new Uri(navigation.BaseUri).Authority;
+    }
 
     public async Task<AppResponse<T>> SendAsync<T>(
         HttpMethod method,
@@ -35,9 +44,11 @@ internal sealed class BackendApiClient(
 
         string? accessToken = null;
         string? sessionId = null;
+
         if (requiresAuthentication)
         {
             (accessToken, _, sessionId) = await storage.GetAsync().ConfigureAwait(false);
+
             if (string.IsNullOrWhiteSpace(accessToken))
             {
                 return AppResponses.Failure<T>("Please sign in to continue.");
@@ -50,10 +61,12 @@ internal sealed class BackendApiClient(
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
             using var message = CreateRequest(method, endpoint, request);
+            SetOrganizationHost(message);
 
             if (requiresAuthentication)
             {
                 message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
                 if (!string.IsNullOrWhiteSpace(sessionId))
                 {
                     message.Headers.TryAddWithoutValidation("X-Session-Id", sessionId);
@@ -68,7 +81,7 @@ internal sealed class BackendApiClient(
             catch (HttpRequestException ex) when (ShouldRetryTransportFailure(attempt, maxAttempts, cancellationToken))
             {
                 BackendApiLogDefinitions.LogRequestRetrying(logger, method.Method, endpoint, attempt, maxAttempts, (int)delay.TotalMilliseconds, ex);
-                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(delay, timeProvider, cancellationToken).ConfigureAwait(false);
             }
             catch (HttpRequestException ex)
             {
@@ -101,15 +114,19 @@ internal sealed class BackendApiClient(
             Content = content
         };
 
+        SetOrganizationHost(message);
+
         if (requiresAuthentication)
         {
             var (accessToken, _, sessionId) = await storage.GetAsync().ConfigureAwait(false);
+
             if (string.IsNullOrWhiteSpace(accessToken))
             {
                 return AppResponses.Failure<T>("Please sign in to continue.");
             }
 
             message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
             if (!string.IsNullOrWhiteSpace(sessionId))
             {
                 message.Headers.TryAddWithoutValidation("X-Session-Id", sessionId);
@@ -143,15 +160,19 @@ internal sealed class BackendApiClient(
         ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
 
         using var message = new HttpRequestMessage(HttpMethod.Get, endpoint);
+        SetOrganizationHost(message);
+
         if (requiresAuthentication)
         {
             var (accessToken, _, sessionId) = await storage.GetAsync().ConfigureAwait(false);
+
             if (string.IsNullOrWhiteSpace(accessToken))
             {
                 return AppResponses.Failure<FileContentResponse>("Please sign in to continue.");
             }
 
             message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
             if (!string.IsNullOrWhiteSpace(sessionId))
             {
                 message.Headers.TryAddWithoutValidation("X-Session-Id", sessionId);
@@ -207,6 +228,7 @@ internal sealed class BackendApiClient(
     private async Task<AppResponse<T>> ReadAppResponseAsync<T>(HttpResponseMessage response, string endpoint)
     {
         var appResponse = await TryReadAppResponseAsync<T>(response, endpoint).ConfigureAwait(false);
+
         if (appResponse is not null)
         {
             return appResponse with
@@ -232,12 +254,14 @@ internal sealed class BackendApiClient(
         try
         {
             var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
             if (string.IsNullOrWhiteSpace(content))
             {
                 return null;
             }
 
             using var document = JsonDocument.Parse(content);
+
             if (!document.RootElement.TryGetProperty("isSuccess", out _) &&
                 !document.RootElement.TryGetProperty("successful", out _))
             {
@@ -256,6 +280,7 @@ internal sealed class BackendApiClient(
     private static async Task<string> ReadErrorMessageAsync(HttpResponseMessage response, CancellationToken cancellationToken = default)
     {
         var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
         if (string.IsNullOrWhiteSpace(content))
         {
             return "The backend service rejected the request.";
@@ -267,6 +292,7 @@ internal sealed class BackendApiClient(
             var root = document.RootElement;
 
             var validationErrors = TryGetValidationErrors(root);
+
             if (!string.IsNullOrWhiteSpace(validationErrors))
             {
                 return validationErrors;
@@ -275,9 +301,11 @@ internal sealed class BackendApiClient(
             // If it's a Validation problem, we should prioritize the specific field errors.
             // Prioritized list of common error keys
             ReadOnlySpan<string> errorKeys = ["message", "detail", "title", "error"];
+
             foreach (var key in errorKeys)
             {
                 var value = TryGetString(root, key);
+
                 if (!string.IsNullOrWhiteSpace(value))
                 {
                     return value;
@@ -302,6 +330,7 @@ internal sealed class BackendApiClient(
     private static string? TryGetSessionInvalidMessage(JsonElement element)
     {
         var code = TryGetString(element, "code");
+
         if (!string.Equals(code, "SESSION_INVALID", StringComparison.OrdinalIgnoreCase))
         {
             return null;

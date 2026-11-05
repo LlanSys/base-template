@@ -1,7 +1,7 @@
 namespace BT.Domain.Shared.Exceptions;
 
 /// <summary>
-/// Thrown by <see cref="BT.Domain.Shared.Contracts.Common.ICurrentTenantProvider"/> when
+/// Thrown by <see cref="Contracts.Common.ICurrentTenantProvider"/> when
 /// no tenant can be resolved from the current request context (no claim, no header, no default).
 /// Catching this specific type allows callers to distinguish an expected "no-tenant" scenario
 /// from unexpected <see cref="InvalidOperationException"/> failures elsewhere in the call chain.

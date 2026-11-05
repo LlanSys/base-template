@@ -1,6 +1,9 @@
 using BT.Application.Utilities;
+
 using MediatR;
+
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,7 +17,7 @@ public class LoggingBehaviour<TRequest, TResponse>(ILogger<LoggingBehaviour<TReq
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(next);
-        
+
         var requestName = typeof(TRequest).Name;
 
         RequestLogDefinitions.LogRequestStarted(logger, requestName);

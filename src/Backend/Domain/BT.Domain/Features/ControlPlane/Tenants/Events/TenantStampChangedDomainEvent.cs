@@ -8,5 +8,5 @@ public record TenantStampChangedDomainEvent(
     Guid? OldStampId,
     Guid NewStampId) : IDomainEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }

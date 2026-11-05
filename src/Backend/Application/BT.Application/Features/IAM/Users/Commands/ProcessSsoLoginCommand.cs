@@ -8,4 +8,7 @@ public sealed record ProcessSsoLoginCommand(
     string FirstName,
     string LastName,
     string Provider,
-    string ProviderKey) : IRequest<AppResponse<string>>;
+    string ProviderKey,
+    Guid TenantId,
+    Guid? InvitationId = null,
+    string? InvitationToken = null) : IRequest<AppResponse<string>>;

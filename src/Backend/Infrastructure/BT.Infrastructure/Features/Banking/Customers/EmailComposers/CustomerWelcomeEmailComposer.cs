@@ -48,6 +48,7 @@ internal sealed class CustomerWelcomeEmailComposer(
         try
         {
             var template = await ResolveTemplateAsync(templateType, ct).ConfigureAwait(false);
+
             if (template is null)
                 return AppResponses.Failure<ComposeEmailResponse>($"Template {templateType} not found");
 

@@ -14,7 +14,8 @@ public class IamPostgreSqlDBContextFactory : IDesignTimeDbContextFactory<IamPost
 
         optionsBuilder.UseNpgsql(
             connectionString,
-            pgOptions => DesignTimeConfigurationFactory.ConfigurePostgreSql(pgOptions, "__EFMigrationsHistory_IAM")).ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsSqlGenerator, BT.Persistence.Features.Shared.Migrations.Generators.IdempotentNpgsqlMigrationsSqlGenerator>();
+            pgOptions => DesignTimeConfigurationFactory.ConfigurePostgreSql(pgOptions, "__EFMigrationsHistory_IAM")).ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsSqlGenerator, Shared.Migrations.Generators.IdempotentNpgsqlMigrationsSqlGenerator>();
+
         return new IamPostgreSqlDBContext(optionsBuilder.Options);
     }
 }

@@ -46,6 +46,7 @@ internal sealed class CorrelationIdEnricher : ILogEventEnricher
         if (context is not null)
         {
             context.TraceIdentifier = correlationId;
+
             if (!context.Response.HasStarted)
             {
                 context.Response.Headers.TryAdd(CorrelationIdHeader, correlationId);

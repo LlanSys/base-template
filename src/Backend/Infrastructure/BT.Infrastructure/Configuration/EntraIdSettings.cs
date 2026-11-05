@@ -9,7 +9,8 @@ public sealed class EntraIdSettings
     public string ClientId { get; set; } = string.Empty;
     public string ClientSecret { get; set; } = string.Empty;
     public string CallbackPath { get; set; } = "/signin-oidc";
-    public bool AutoLinkByVerifiedEmail { get; set; } = true;
+    // Retained for configuration compatibility. Automatic email-only linking is unsupported.
+    public bool AutoLinkByVerifiedEmail { get; set; }
 
     public string Authority =>
         string.IsNullOrWhiteSpace(TenantId)

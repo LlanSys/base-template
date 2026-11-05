@@ -25,13 +25,16 @@ public class GetAllTenantsQueryHandler : IRequestHandler<GetAllTenantsQuery, App
     {
         var rawTenants = await _unitOfWork.Tenants.FindAll()
             .Include(t => t.Modules)
+            .Include(t => t.AdministratorInvitations)
             .AsNoTracking()
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         var tenants = rawTenants
             .Select(t => new TenantResponse
             {
+                AdministratorOnboarding = t.AdministratorInvitations.Count == 0 ? "Existing tenant" : t.AdministratorInvitations.Any(item => item.Status != BT.Domain.Features.ControlPlane.Tenants.Enums.AdministratorInvitationStatus.Delivered) ? "Administrator invitation pending" : "Administrator invitation delivered",
                 Id = t.Id,
+                Revision = t.Revision,
                 Identifier = t.Identifier,
                 DisplayName = t.DisplayName,
                 HostName = t.HostName,

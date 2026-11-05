@@ -28,7 +28,7 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                 type: "bytea",
                 rowVersion: true,
                 nullable: false,
-                defaultValue: new byte[0],
+                defaultValue: Array.Empty<byte>(),
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true);
@@ -39,7 +39,7 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                 type: "bytea",
                 rowVersion: true,
                 nullable: true,
-                defaultValue: new byte[0],
+                defaultValue: Array.Empty<byte>(),
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true,
@@ -51,7 +51,7 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                 type: "bytea",
                 rowVersion: true,
                 nullable: false,
-                defaultValue: new byte[0],
+                defaultValue: Array.Empty<byte>(),
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true);
@@ -62,7 +62,7 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                 type: "bytea",
                 rowVersion: true,
                 nullable: true,
-                defaultValue: new byte[0],
+                defaultValue: Array.Empty<byte>(),
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true,
@@ -74,7 +74,7 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                 type: "bytea",
                 rowVersion: true,
                 nullable: false,
-                defaultValue: new byte[0],
+                defaultValue: Array.Empty<byte>(),
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true);
@@ -85,7 +85,7 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                 type: "bytea",
                 rowVersion: true,
                 nullable: false,
-                defaultValue: new byte[0],
+                defaultValue: Array.Empty<byte>(),
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true);
@@ -135,7 +135,7 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true,
-                oldDefaultValue: new byte[0]);
+                oldDefaultValue: Array.Empty<byte>());
 
             migrationBuilder.AlterColumn<byte[]>(
                 name: "RowVersion",
@@ -147,7 +147,7 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                 oldType: "bytea",
                 oldRowVersion: true,
                 oldNullable: true,
-                oldDefaultValue: new byte[0]);
+                oldDefaultValue: Array.Empty<byte>());
 
             migrationBuilder.AlterColumn<byte[]>(
                 name: "RowVersion",
@@ -158,7 +158,7 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true,
-                oldDefaultValue: new byte[0]);
+                oldDefaultValue: Array.Empty<byte>());
 
             migrationBuilder.AlterColumn<byte[]>(
                 name: "RowVersion",
@@ -170,7 +170,7 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                 oldType: "bytea",
                 oldRowVersion: true,
                 oldNullable: true,
-                oldDefaultValue: new byte[0]);
+                oldDefaultValue: Array.Empty<byte>());
 
             migrationBuilder.AlterColumn<byte[]>(
                 name: "RowVersion",
@@ -181,7 +181,7 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true,
-                oldDefaultValue: new byte[0]);
+                oldDefaultValue: Array.Empty<byte>());
 
             migrationBuilder.AlterColumn<byte[]>(
                 name: "RowVersion",
@@ -192,7 +192,7 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true,
-                oldDefaultValue: new byte[0]);
+                oldDefaultValue: Array.Empty<byte>());
 
             migrationBuilder.CreateIndex(
                 name: "IX_PaymentRecords_ProviderReference",

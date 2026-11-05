@@ -9,13 +9,17 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
+using BT.Infrastructure.Features.IAM.Authorization;
+
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
 internal sealed class RevokeEmployeeSystemAccess(
+    TimeProvider timeProvider,
     UserManager<AppUser> userManager,
     IIamUnitOfWork iamUnitOfWork,
     ISessionService sessionService,
-    ILogger<RevokeEmployeeSystemAccess> logger)
+    ILogger<RevokeEmployeeSystemAccess> logger,
+    IamAccessBoundary boundary)
     : IRequestHandler<RevokeEmployeeSystemAccessCommand, AppResponse<bool>>
 {
     public async Task<AppResponse<bool>> Handle(RevokeEmployeeSystemAccessCommand command, CancellationToken cancellationToken)
@@ -31,6 +35,9 @@ internal sealed class RevokeEmployeeSystemAccess(
                 return AppResponses.Failure<bool>("This employee is not linked to an IAM user account.");
             }
 
+            if (user.Id == command.RevokedBy || !await boundary.CanAccessUserAsync(command.RevokedBy, user, cancellationToken).ConfigureAwait(false))
+                return AppResponses.Failure<bool>(AppError.Forbidden("You cannot revoke your own access or an account outside your administrative scope."));
+
             if (!user.IsActive)
             {
                 return AppResponses.Success("Employee system access is already inactive.", true);
@@ -40,8 +47,9 @@ internal sealed class RevokeEmployeeSystemAccess(
                 ? "Revoked by administrator"
                 : command.Request.Reason.Trim();
 
-            user.RevokeAccess(command.RevokedBy, reason);
+            user.RevokeAccess(timeProvider.GetUtcNow(), command.RevokedBy, reason);
             var updateResult = await userManager.UpdateAsync(user).ConfigureAwait(false);
+
             if (!updateResult.Succeeded)
             {
                 return AppResponses.Failure<bool>(updateResult.Errors.First().Description);
@@ -51,6 +59,7 @@ internal sealed class RevokeEmployeeSystemAccess(
             await iamUnitOfWork.TokenRepository
                 .RevokeAllUserTokensAsync(user.Id, "Employee system access revoked")
                 .ConfigureAwait(false);
+
             await iamUnitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
 
             return AppResponses.Success("Employee system access revoked. Active sessions and refresh tokens have been terminated.", true);

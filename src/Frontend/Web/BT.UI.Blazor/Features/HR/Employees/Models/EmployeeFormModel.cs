@@ -27,7 +27,7 @@ internal sealed class EmployeeFormModel
 
     public Guid? ManagerId { get; set; }
 
-    public DateTime? HireDate { get; set; } = DateTime.Today;
+    public DateTime? HireDate { get; set; }
 
     public Guid PositionId { get; set; } = Guid.CreateVersion7();
 
@@ -52,7 +52,7 @@ internal sealed class EmployeeFormModel
         };
     }
 
-    public CreateEmployeeRequest ToCreateRequest() => new()
+    public CreateEmployeeRequest ToCreateRequest(DateTime today) => new()
     {
         FirstName = FirstName,
         LastName = LastName,
@@ -63,7 +63,7 @@ internal sealed class EmployeeFormModel
         PhoneNumber = PhoneNumber,
         DepartmentId = DepartmentId,
         ManagerId = ManagerId,
-        HireDate = DateOnly.FromDateTime(HireDate ?? DateTime.Today),
+        HireDate = DateOnly.FromDateTime(HireDate ?? today),
         PositionId = PositionId
     };
 

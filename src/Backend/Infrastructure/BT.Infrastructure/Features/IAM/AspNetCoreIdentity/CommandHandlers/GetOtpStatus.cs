@@ -17,6 +17,7 @@ internal sealed class GetOtpStatus(UserManager<AppUser> userManager, ILogger<Get
         try
         {
             var user = await userManager.FindByIdAsync(command.UserId).ConfigureAwait(false);
+
             if (user == null)
             {
                 return AppResponses.Failure<OtpStatusResponse>("User not found.");

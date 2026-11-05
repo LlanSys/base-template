@@ -26,6 +26,10 @@ namespace BT.Api.Features.IAM.Users.Controllers;
 [Authorize]
 public sealed class IamAdminController(ISender sender) : BaseController
 {
+    [HttpGet("permission-role-usage/{key}")]
+    [RequirePermission("roles.view")]
+    public async Task<IActionResult> GetPermissionRoleUsage(string key, CancellationToken cancellationToken)
+        => HandleResponse(await sender.Send(new GetPermissionRoleUsageQuery(key, GetActorId()), cancellationToken).ConfigureAwait(false));
     [HttpGet("users")]
     [RequirePermission("users.view")]
     public async Task<IActionResult> GetUsers([FromQuery] AdminUserSearchRequest request)
@@ -91,6 +95,11 @@ public sealed class IamAdminController(ISender sender) : BaseController
         return HandleResponse(await sender.Send(new UpdateUserPermissionsCommand(userId, request, updatedBy)).ConfigureAwait(false));
     }
 
+    [HttpGet("roles/{roleId}/assigned-users")]
+    [RequirePermission("roles.view")]
+    public async Task<IActionResult> GetRoleAssignedUsers(string roleId, [FromQuery] string? cursor, CancellationToken cancellationToken)
+        => HandleResponse(await sender.Send(new GetRoleAssignedUsersQuery(roleId, GetActorId(), cursor), cancellationToken).ConfigureAwait(false));
+
     [HttpGet("roles")]
     [RequirePermission("roles.view")]
     public async Task<IActionResult> GetRoles()
@@ -141,7 +150,7 @@ public sealed class IamAdminController(ISender sender) : BaseController
     }
 
     [HttpGet("roles/{roleId}/permissions")]
-    [RequirePermission("roles.manage_permissions")]
+    [RequirePermission("roles.view")]
     public async Task<IActionResult> GetRolePermissions(string roleId)
     {
         var userId = GetActorId();
@@ -213,7 +222,7 @@ public sealed class IamAdminController(ISender sender) : BaseController
     }
 
     [HttpPost("permissions")]
-    [RequirePermission("roles.manage_permissions")]
+    [RequirePermission("permissions.manage")]
     public async Task<IActionResult> CreatePermission(CreatePermissionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -223,7 +232,7 @@ public sealed class IamAdminController(ISender sender) : BaseController
     }
 
     [HttpPut("permissions/{permissionId:guid}")]
-    [RequirePermission("roles.manage_permissions")]
+    [RequirePermission("permissions.manage")]
     public async Task<IActionResult> UpdatePermission(Guid permissionId, UpdatePermissionRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -233,7 +242,7 @@ public sealed class IamAdminController(ISender sender) : BaseController
     }
 
     [HttpDelete("permissions/{permissionId:guid}")]
-    [RequirePermission("roles.manage_permissions")]
+    [RequirePermission("permissions.manage")]
     public async Task<IActionResult> DeletePermission(Guid permissionId)
     {
         var userId = GetActorId();
@@ -257,9 +266,8 @@ public sealed class IamAdminController(ISender sender) : BaseController
             .Select(static claim => claim.Value)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-        var hasFullAccess = User.IsInRole("System Administrator");
 
-        return HandleResponse(await sender.Send(new GetNavigationMenusQuery(placement, permissionKeys, userId, hasFullAccess)).ConfigureAwait(false));
+        return HandleResponse(await sender.Send(new GetNavigationMenusQuery(placement, permissionKeys, userId)).ConfigureAwait(false));
     }
 
     [HttpGet("menus/{menuId:guid}")]
@@ -314,6 +322,7 @@ public sealed class IamAdminController(ISender sender) : BaseController
     private string GetActorId()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
         if (string.IsNullOrWhiteSpace(userId))
         {
             throw new UnauthorizedAccessException("Authenticated user id was not found.");

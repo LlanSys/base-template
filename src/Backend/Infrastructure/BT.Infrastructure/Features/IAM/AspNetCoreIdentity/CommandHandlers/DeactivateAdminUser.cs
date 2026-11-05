@@ -6,9 +6,12 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 
+using BT.Infrastructure.Features.IAM.Authorization;
+
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
-internal sealed class DeactivateAdminUser(UserManager<AppUser> userManager, ILogger<DeactivateAdminUser> logger)
+internal sealed class DeactivateAdminUser(TimeProvider timeProvider, UserManager<AppUser> userManager, ILogger<DeactivateAdminUser> logger,
+    IamAccessBoundary boundary)
     : IRequestHandler<DeactivateAdminUserCommand, AppResponse<bool>>
 {
     public async Task<AppResponse<bool>> Handle(DeactivateAdminUserCommand command, CancellationToken cancellationToken)
@@ -16,10 +19,14 @@ internal sealed class DeactivateAdminUser(UserManager<AppUser> userManager, ILog
         try
         {
             var user = await userManager.FindByIdAsync(command.UserId).ConfigureAwait(false);
+
             if (user is null)
             {
                 return AppResponses.Failure<bool>("User not found.");
             }
+
+            if (user.Id == command.DeactivatedBy || !await boundary.CanAccessUserAsync(command.DeactivatedBy, user, cancellationToken).ConfigureAwait(false))
+                return AppResponses.Failure<bool>(AppError.Forbidden("You cannot deactivate your own account or an account outside your administrative scope."));
 
             if (!user.IsActive)
             {
@@ -30,7 +37,7 @@ internal sealed class DeactivateAdminUser(UserManager<AppUser> userManager, ILog
                 ? "Deactivated by administrator"
                 : command.Request.Reason.Trim();
 
-            user.RevokeAccess(command.DeactivatedBy, reason);
+            user.RevokeAccess(timeProvider.GetUtcNow(), command.DeactivatedBy, reason);
             var result = await userManager.UpdateAsync(user).ConfigureAwait(false);
 
             return result.Succeeded

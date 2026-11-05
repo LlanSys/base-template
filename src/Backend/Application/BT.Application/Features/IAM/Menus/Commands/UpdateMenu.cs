@@ -12,22 +12,26 @@ namespace BT.Application.Features.IAM.Menus.Commands;
 
 
 
-internal sealed class UpdateMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogger<UpdateMenuCommandHandler> logger)
+internal sealed class UpdateMenuCommandHandler(TimeProvider timeProvider, IIamUnitOfWork unitOfWork, ILogger<UpdateMenuCommandHandler> logger)
     : IRequestHandler<UpdateMenuCommand, AppResponse<MenuResponse>>
 {
     public async Task<AppResponse<MenuResponse>> Handle(UpdateMenuCommand command, CancellationToken cancellationToken)
     {
         try
         {
+            if (!BT.SharedKernel.Features.IAM.Menus.ImplementedMenuRoutes.Matches(command.Request.Url, command.Request.RequiredPermissionKey, command.Request.RequiredModule))
+                return AppResponses.Failure<MenuResponse>("Select an implemented route with its registered permission and business module.");
             var request = command.Request;
             var catalogError = await ValidateCatalogAsync(unitOfWork, request.Placement, request.Icon, request.Url, request.RequiredPermissionKey, cancellationToken)
                 .ConfigureAwait(false);
+
             if (catalogError is not null)
             {
                 return AppResponses.Failure<MenuResponse>(catalogError);
             }
 
             var menu = await unitOfWork.MenuRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
             if (menu is null)
             {
                 return AppResponses.Failure<MenuResponse>($"Menu {command.Id} not found.");
@@ -41,6 +45,7 @@ internal sealed class UpdateMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogge
             if (request.ParentId.HasValue)
             {
                 var parent = await unitOfWork.MenuRepository.FindByIdAsync(request.ParentId.Value, cancellationToken).ConfigureAwait(false);
+
                 if (parent is null)
                 {
                     return AppResponses.Failure<MenuResponse>("Parent menu not found.");
@@ -55,6 +60,7 @@ internal sealed class UpdateMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogge
 
 
             menu.Update(
+                timeProvider.GetUtcNow(),
                 request.ParentId,
                 request.DepartmentId,
                 menu.Key, // Prevent key change on update
@@ -68,6 +74,8 @@ internal sealed class UpdateMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogge
                 request.DisplayOrder,
                 request.IsActive,
                 command.UserId);
+
+            menu.AvailableTenantId = command.Request.AvailableTenantId;
             await unitOfWork.MenuRepository.UpdateAsync(menu, cancellationToken).ConfigureAwait(false);
             var saved = await unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false) > 0;
 

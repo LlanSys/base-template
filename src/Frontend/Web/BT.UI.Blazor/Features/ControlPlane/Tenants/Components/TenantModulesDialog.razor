@@ -1,112 +1,68 @@
 @inject ITenantService TenantService
+@inject BT.UI.Blazor.Features.ControlPlane.Modules.ModuleService Modules
 @inject ISnackbar Snackbar
-
+@using BT.SharedKernel.Features.ControlPlane.Modules
 <MudDialog>
     <DialogContent>
-        <MudGrid Spacing="2">
-            <MudItem xs="12">
-                <MudText Typo="Typo.body2">Manage modules enabled for <strong>@ExistingTenant.DisplayName</strong>.</MudText>
-            </MudItem>
-
-            @foreach (var module in _enabledModules)
-            {
-                <MudItem xs="12" Class="d-flex align-center">
-                    <MudText Typo="Typo.body1" Class="flex-grow-1">@module</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => RemoveModuleAsync(module))" title="Remove module" Disabled="_isBusy" />
-                </MudItem>
-            }
-
-            <MudItem xs="12" Class="mt-4">
-                <div class="d-flex gap-2">
-                    <MudSelect T="string" @bind-Value="_newModuleKey" Label="Module" Margin="Margin.Dense" Variant="Variant.Outlined" Disabled="_isBusy">
-                        <MudSelectItem T="string" Value="@("IAM")">IAM</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("HR")">HR</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("Banking")">Banking</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("Shared")">Shared</MudSelectItem>
-                    </MudSelect>
-                    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="mt-1" OnClick="AddModuleAsync" Disabled="@(string.IsNullOrWhiteSpace(_newModuleKey) || _isBusy)">Add</MudButton>
-                </div>
-            </MudItem>
-        </MudGrid>
+        <MudText Class="mb-3">Modules available to @ExistingTenant.DisplayName</MudText>
+        <MudTable Items="_modules"
+                  Dense="true"
+                  Hover="true"
+                  Breakpoint="Breakpoint.None">
+            <HeaderContent>
+                <MudTh>Enabled</MudTh>
+                <MudTh>Module</MudTh>
+                <MudTh>Catalog status</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudCheckBox T="bool"
+                                 Value="@_selected.Contains(context.Key)"
+                                 ValueChanged="@(value => Select(context.Key, value))"
+                                 Disabled="@(_busy || !context.IsActive && !_selected.Contains(context.Key))"
+                                 Dense="true" />
+                </MudTd>
+                <MudTd>@context.Name</MudTd>
+                <MudTd>@(context.IsActive ? "Available" : "Disabled by vendor")</MudTd>
+            </RowTemplate>
+        </MudTable>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="Cancel">Close</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   OnClick="@(() => Dialog.Cancel())"
+                   Disabled="_busy">Cancel</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Save"
+                   OnClick="SaveAsync"
+                   Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@(_busy || _loading)">Save</MudButton>
     </DialogActions>
 </MudDialog>
-
 @code {
-    private List<string> _enabledModules = [];
-    private string _newModuleKey = string.Empty;
-    private bool _isBusy;
-
-    [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = default!;
-
-    [Parameter, EditorRequired]
-    public TenantResponse ExistingTenant { get; set; } = default!;
-
-    protected override void OnInitialized()
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Parameter, EditorRequired] public TenantResponse ExistingTenant { get; set; } = default!;
+    private List<ModuleDefinitionResponse> _modules = [];
+    private readonly HashSet<string> _selected = new(StringComparer.OrdinalIgnoreCase);
+    private bool _busy, _loading = true;
+    protected override async Task OnInitializedAsync()
     {
-        _enabledModules = [.. ExistingTenant.EnabledModules];
+        var response = await Modules.GetAsync();
+        if (response.IsSuccess && response.Data is not null)
+        {
+            _modules = response.Data;
+            _selected.UnionWith(ExistingTenant.EnabledModules.Where(ModuleCatalog.IsImplemented)
+                .Where(key => _modules.Any(module => string.Equals(module.Key, key, StringComparison.OrdinalIgnoreCase))));
+            _loading = false;
+        }
+        else Snackbar.Add(response.Message ?? "Module catalog could not be loaded.", Severity.Error);
     }
-
-    private async Task AddModuleAsync()
+    private void Select(string key, bool value) { if (value) _selected.Add(key); else _selected.Remove(key); }
+    private async Task SaveAsync()
     {
-        if (string.IsNullOrWhiteSpace(_newModuleKey)) return;
-
-        var key = _newModuleKey.Trim();
-        if (_enabledModules.Contains(key, StringComparer.OrdinalIgnoreCase))
-        {
-            Snackbar.Add("Module is already enabled for this tenant.", Severity.Warning);
-            return;
-        }
-
-        _isBusy = true;
-        var response = await TenantService.AddModuleAsync(ExistingTenant.Id, new AddTenantModuleRequest { ModuleKey = key });
-        _isBusy = false;
-
-        if (!response.IsSuccess)
-        {
-            Snackbar.Add(response.Message ?? "Failed to add module.", Severity.Error);
-            return;
-        }
-
-        Snackbar.Add($"Module '{key}' added.", Severity.Success);
-        _newModuleKey = string.Empty;
-        if (response.Data is not null)
-        {
-            _enabledModules = [.. response.Data.EnabledModules];
-            ExistingTenant = response.Data;
-        }
-        else
-        {
-            _enabledModules.Add(key);
-        }
+        _busy = true;
+        var response = await TenantService.SetModulesAsync(ExistingTenant.Id, new(_selected.ToArray()));
+        _busy = false;
+        if (response.IsSuccess) Dialog.Close(DialogResult.Ok(true));
+        else Snackbar.Add(response.Message ?? "Module assignments could not be saved.", Severity.Error);
     }
-
-    private async Task RemoveModuleAsync(string moduleKey)
-    {
-        _isBusy = true;
-        var response = await TenantService.RemoveModuleAsync(ExistingTenant.Id, moduleKey);
-        _isBusy = false;
-
-        if (!response.IsSuccess)
-        {
-            Snackbar.Add(response.Message ?? "Failed to remove module.", Severity.Error);
-            return;
-        }
-
-        Snackbar.Add($"Module '{moduleKey}' removed.", Severity.Success);
-        if (response.Data is not null)
-        {
-            _enabledModules = [.. response.Data.EnabledModules];
-            ExistingTenant = response.Data;
-        }
-        else
-        {
-            _enabledModules.Remove(moduleKey);
-        }
-    }
-
-    private void Cancel() => MudDialog.Close(DialogResult.Ok(ExistingTenant));
 }

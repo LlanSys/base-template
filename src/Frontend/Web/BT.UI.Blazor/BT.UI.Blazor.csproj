@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Shared\BT.UI.Rcl\BT.UI.Rcl.csproj" />
+    <ProjectReference Include="..\..\..\Shared\BT.SharedKernel\BT.SharedKernel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -31,6 +31,7 @@ public static class PaginationExtensions
         TCursor? currentCursor) where TCursor : struct
     {
         var hasNextPage = items.Count > pageSize;
+
         if (hasNextPage)
         {
             items.RemoveAt(items.Count - 1);
@@ -65,6 +66,7 @@ public static class PaginationExtensions
         string? currentCursor)
     {
         var hasNextPage = items.Count > pageSize;
+
         if (hasNextPage)
         {
             items.RemoveAt(items.Count - 1);

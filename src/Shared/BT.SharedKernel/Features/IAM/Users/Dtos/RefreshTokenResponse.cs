@@ -2,6 +2,7 @@
 using System.Security.Claims;
 
 namespace BT.SharedKernel.Features.IAM.Users.Dtos;
+
 public record RefreshTokenResponse(
     string Token,
     string RefreshToken,

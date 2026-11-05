@@ -41,17 +41,18 @@ internal sealed class AdminUserFormModel
             PhoneNumber = user.PhoneNumber,
             Role = user.Roles.Count > 0 ? user.Roles[0] : "User"
         };
-        
+
         if (!string.IsNullOrWhiteSpace(user.PhoneNumber))
         {
             var country = CountryCallingCodeCatalog.FindByE164(user.PhoneNumber);
+
             if (country is not null)
             {
                 model.CountryCode = country.DialCode;
                 model.PhoneNationalNumber = user.PhoneNumber[country.DialCode.Length..];
             }
         }
-        
+
         return model;
     }
 

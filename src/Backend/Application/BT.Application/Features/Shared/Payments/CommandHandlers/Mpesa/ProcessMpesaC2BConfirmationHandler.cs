@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 namespace BT.Application.Features.Shared.Payments.CommandHandlers.Mpesa;
 
 internal sealed class ProcessMpesaC2BConfirmationHandler(
+    TimeProvider timeProvider,
     ISharedUnitOfWork sharedUnitOfWork,
     ILogger<ProcessMpesaC2BConfirmationHandler> logger) : IRequestHandler<ProcessMpesaC2BConfirmationCommand, AppResponse<string>>
 {
@@ -47,7 +48,7 @@ internal sealed class ProcessMpesaC2BConfirmationHandler(
             if (paymentRecord != null)
             {
                 // Update existing record
-                paymentRecord.UpdateStatus(PaymentStatus.Success, transId);
+                paymentRecord.UpdateStatus(timeProvider.GetUtcNow(), PaymentStatus.Success, transId);
             }
             else
             {
@@ -66,7 +67,7 @@ internal sealed class ProcessMpesaC2BConfirmationHandler(
                 };
 
                 // Explicitly set the provider reference
-                newRecord.UpdateStatus(PaymentStatus.Success, transId);
+                newRecord.UpdateStatus(timeProvider.GetUtcNow(), PaymentStatus.Success, transId);
 
                 await sharedUnitOfWork.PaymentRecordRepository.CreateAsync(newRecord, cancellationToken).ConfigureAwait(false);
             }

@@ -17,14 +17,14 @@ namespace BT.Infrastructure.Features.IAM.Users.Contracts.Implementations.Service
 
 internal sealed class JwtService(
     IOptions<JwtSettings> jwtSettings,
-    ILogger<JwtService> logger) : IJwtService
+    ILogger<JwtService> logger, TimeProvider timeProvider) : IJwtService
 {
     private readonly JwtSettings _jwtSettings = jwtSettings.Value;
     private readonly ILogger<JwtService> _logger = logger;
 
     public async Task<string> CreateTokenAsync(List<Claim> userClaims)
     {
-        var now = DateTime.UtcNow;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
         var authSigningKey = _jwtSettings.GetSymmetricSecurityKey();
         var credentials = new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256);
 
@@ -42,7 +42,7 @@ internal sealed class JwtService(
 
     public async Task<string> CreateTempTokenAsync(List<Claim> userClaims, TimeSpan expiry)
     {
-        var now = DateTime.UtcNow;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
         var authSigningKey = _jwtSettings.GetSymmetricSecurityKey();
         var credentials = new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256);
 
@@ -86,6 +86,7 @@ internal sealed class JwtService(
             }
 
             var securityKey = _jwtSettings.GetSecurityKey();
+
             if (string.IsNullOrWhiteSpace(securityKey))
             {
                 ServiceLogDefinitions.LogJwtSecurityKeyNotConfigured(_logger);
@@ -95,7 +96,7 @@ internal sealed class JwtService(
 
             var tokenHandler = new JwtSecurityTokenHandler();
 
-            // Create token validation parameters with NO expiry validation
+            // Refresh can inspect an expired signed token; ordinary validation uses the injected clock.
             var validationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
@@ -107,6 +108,9 @@ internal sealed class JwtService(
                 ValidateLifetime = validateLifetime,
                 ClockSkew = TimeSpan.FromMinutes(Convert.ToDouble(_jwtSettings.ClockSkew))
             };
+
+            if (validateLifetime)
+                validationParameters.LifetimeValidator = ValidateLifetime;
 
             var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
 
@@ -129,6 +133,23 @@ internal sealed class JwtService(
             ServiceLogDefinitions.LogErrorParsingExpiredToken(_logger, ex);
             throw;
         }
+    }
+
+    private bool ValidateLifetime(DateTime? notBefore, DateTime? expires, SecurityToken token, TokenValidationParameters parameters)
+    {
+        if (expires is null && parameters.RequireExpirationTime)
+            throw new SecurityTokenNoExpirationException("The token has no expiration time.");
+
+        if (notBefore.HasValue && expires.HasValue && notBefore.Value > expires.Value)
+            throw new SecurityTokenInvalidLifetimeException("The token lifetime is invalid.");
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+
+        if (notBefore > now.Add(parameters.ClockSkew))
+            throw new SecurityTokenNotYetValidException("The token is not yet valid.");
+
+        if (expires < now.Subtract(parameters.ClockSkew))
+            throw new SecurityTokenExpiredException("The token has expired.");
+        return true;
     }
 
     public DateTimeOffset GetTokenExpiry(string token)
@@ -167,6 +188,7 @@ internal sealed class JwtService(
                 ValidateAudience = true,
                 ValidAudience = _jwtSettings.Audience,
                 ValidateLifetime = true,
+                LifetimeValidator = ValidateLifetime,
                 ClockSkew = TimeSpan.FromMinutes(clockSkew)
 
             };

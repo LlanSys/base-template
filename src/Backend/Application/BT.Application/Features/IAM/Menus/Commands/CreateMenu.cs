@@ -20,8 +20,12 @@ internal sealed class CreateMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogge
         try
         {
             var request = command.Request;
+
+            if (!BT.SharedKernel.Features.IAM.Menus.ImplementedMenuRoutes.Matches(request.Url, request.RequiredPermissionKey, request.RequiredModule))
+                return AppResponses.Failure<MenuResponse>("Select an implemented route with its registered permission and business module.");
             var catalogError = await ValidateCatalogAsync(unitOfWork, request.Placement, request.Icon, request.Url, request.RequiredPermissionKey, cancellationToken)
                 .ConfigureAwait(false);
+
             if (catalogError is not null)
             {
                 return AppResponses.Failure<MenuResponse>(catalogError);
@@ -30,6 +34,7 @@ internal sealed class CreateMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogge
             if (request.ParentId.HasValue)
             {
                 var parent = await unitOfWork.MenuRepository.FindByIdAsync(request.ParentId.Value, cancellationToken).ConfigureAwait(false);
+
                 if (parent is null)
                 {
                     return AppResponses.Failure<MenuResponse>("Parent menu not found.");
@@ -53,6 +58,7 @@ internal sealed class CreateMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogge
                 return AppResponses.Failure<MenuResponse>($"Menu key {menu.Key} already exists.");
             }
 
+            menu.AvailableTenantId = request.AvailableTenantId;
             await unitOfWork.MenuRepository.CreateAsync(menu, cancellationToken).ConfigureAwait(false);
             var saved = await unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false) > 0;
 

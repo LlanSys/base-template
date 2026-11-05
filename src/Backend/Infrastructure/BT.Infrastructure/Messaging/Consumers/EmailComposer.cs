@@ -11,8 +11,10 @@ using BT.Infrastructure.Logging;
 using BT.Infrastructure.Utilities;
 using BT.SharedKernel.Dtos.Common;
 using BT.SharedKernel.Features.Shared.EmailTemplates.Enums;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -27,7 +29,7 @@ public abstract class EmailComposer<TEvent>(
 {
     private static readonly TimeSpan Ttl = TimeSpan.FromHours(1);
 
-    public abstract Task<AppResponse<ComposeEmailResponse>> ComposeAsync(TEvent evt,CancellationToken ct);
+    public abstract Task<AppResponse<ComposeEmailResponse>> ComposeAsync(TEvent evt, CancellationToken ct);
 
     protected static ComposeEmailResponse ComposeFromTemplate(
         EmailTemplate template,
@@ -47,7 +49,7 @@ public abstract class EmailComposer<TEvent>(
             EmailTemplateRenderer.Render(template.Subject, tokens),
             EmailTemplateRenderer.Render(template.Body, tokens));
     }
-        
+
     public async Task<EmailTemplate?> ResolveTemplateAsync(EmailTemplateType emailTemplateType, CancellationToken cancellationToken)
     {
         try

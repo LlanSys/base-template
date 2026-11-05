@@ -10,47 +10,73 @@
 
 <section class="dashboard-page">
     <div class="mb-4">
-        <MudButton Href="/admin" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" Class="px-0">Back to Admin Center</MudButton>
+        <MudButton Href="/admin"
+                   Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   Color="Color.Primary"
+                   Class="px-0">Back to Admin Center</MudButton>
     </div>
 
-    <MudGrid Spacing="3" Class="mb-3">
-        <MudItem xs="12" md="4">
-            <MudPaper Class="admin-tile" Elevation="0">
-                <MudIcon Icon="@Icons.Material.Filled.Api" Class="tile-icon" />
+    <MudGrid Spacing="3"
+             Class="mb-3">
+        <MudItem xs="12"
+                 md="4">
+            <MudPaper Class="admin-tile"
+                      Elevation="0">
+                <MudIcon Icon="@Icons.Material.Filled.Api"
+                         Class="tile-icon" />
                 <div>
                     <strong>Backend API</strong>
                     <span>UI-to-API base address, endpoint catalog, and timeout configuration.</span>
                 </div>
-                <MudChip T="string" Size="Size.Small" Color="Color.Success">Configured</MudChip>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="Color.Success">Configured</MudChip>
             </MudPaper>
         </MudItem>
-        <MudItem xs="12" md="4">
-            <MudPaper Class="admin-tile" Elevation="0">
-                <MudIcon Icon="@Icons.Material.Filled.Key" Class="tile-icon" />
+        <MudItem xs="12"
+                 md="4">
+            <MudPaper Class="admin-tile"
+                      Elevation="0">
+                <MudIcon Icon="@Icons.Material.Filled.Key"
+                         Class="tile-icon" />
                 <div>
                     <strong>Key Vault</strong>
                     <span>Production secret provider integration point.</span>
                 </div>
-                <MudChip T="string" Size="Size.Small" Color="Color.Warning">Planned</MudChip>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="Color.Warning">Planned</MudChip>
             </MudPaper>
         </MudItem>
-        <MudItem xs="12" md="4">
-            <MudPaper Class="admin-tile" Elevation="0">
-                <MudIcon Icon="@Icons.Material.Filled.Flag" Class="tile-icon" />
+        <MudItem xs="12"
+                 md="4">
+            <MudPaper Class="admin-tile"
+                      Elevation="0">
+                <MudIcon Icon="@Icons.Material.Filled.Flag"
+                         Class="tile-icon" />
                 <div>
                     <strong>Feature Flags</strong>
                     <span>Central toggle provider for gradual rollout.</span>
                 </div>
-                <MudChip T="string" Size="Size.Small" Color="Color.Warning">Planned</MudChip>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="Color.Warning">Planned</MudChip>
             </MudPaper>
         </MudItem>
     </MudGrid>
 
-    <MudPaper Class="poc-panel" Elevation="0">
+    <MudPaper Class="poc-panel"
+              Elevation="0">
         <div class="panel-heading">
             <h2 style="color: var(--bt-moss); font-weight: 700;">Reference Data</h2>
             <div class="d-flex align-center gap-3">
-                <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenLookupDialogAsync(null))" Disabled="@string.IsNullOrWhiteSpace(_typeFilter)">Create lookup</MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Size="Size.Small"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@(() => OpenLookupDialogAsync(null))"
+                           Disabled="@string.IsNullOrWhiteSpace(_typeFilter)">Create lookup</MudButton>
             </div>
         </div>
 
@@ -62,26 +88,46 @@
                           Margin="Margin.Dense"
                           Variant="Variant.Outlined"
                           Immediate="true" />
-            <MudSelect @bind-Value="_typeFilter" T="string" Label="Lookup Type" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+            <MudSelect @bind-Value="_typeFilter"
+                       T="string"
+                       Label="Lookup Type"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="true">
                 @foreach (var lookupType in _lookupTypes)
                 {
-                    <MudSelectItem T="string" Value="@lookupType.Key">@lookupType.Label</MudSelectItem>
+                    <MudSelectItem T="string"
+                                   Value="@lookupType.Key">@lookupType.Label</MudSelectItem>
                 }
             </MudSelect>
         </div>
 
         @if (_isLoading)
         {
-            <MudProgressLinear Color="Color.Success" Indeterminate="true" Class="my-2" />
+            <MudProgressLinear Color="Color.Success"
+                               Indeterminate="true"
+                               Class="my-2" />
         }
 
         @if (!string.IsNullOrWhiteSpace(_message))
         {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Class="my-2">@_message</MudAlert>
+            <MudAlert Severity="Severity.Error"
+                      Variant="Variant.Outlined"
+                      Dense="true"
+                      Class="my-2">@_message</MudAlert>
         }
 
         <div class="bt-table-scroll">
-            <MudTable @ref="_table" Items="FilteredLookups" Dense="true" Hover="true" Elevation="0" FixedHeader="true" RowsPerPage="100" Height="calc(100vh - 29rem)" Style="min-width: 860px;" Breakpoint="Breakpoint.None">
+            <MudTable @ref="_table"
+                      Items="FilteredLookups"
+                      Dense="true"
+                      Hover="true"
+                      Elevation="0"
+                      FixedHeader="true"
+                      RowsPerPage="100"
+                      Height="calc(100vh - 29rem)"
+                      Style="min-width: 860px;"
+                      Breakpoint="Breakpoint.None">
                 <HeaderContent>
                     <MudTh>Type</MudTh>
                     <MudTh>Id</MudTh>
@@ -101,7 +147,9 @@
                     </MudTd>
                 </RowTemplate>
                 <NoRecordsContent>
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No records found.</MudAlert>
+                    <MudAlert Severity="Severity.Info"
+                              Variant="Variant.Outlined"
+                              Dense="true">No records found.</MudAlert>
                 </NoRecordsContent>
                 <PagerContent>
                     <GlobalTablePager CurrentPage="(_table?.CurrentPage ?? 0) + 1"

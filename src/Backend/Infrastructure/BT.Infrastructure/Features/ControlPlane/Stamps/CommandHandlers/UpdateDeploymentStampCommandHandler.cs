@@ -21,11 +21,15 @@ public class UpdateDeploymentStampCommandHandler : IRequestHandler<UpdateDeploym
     private readonly ILogger<UpdateDeploymentStampCommandHandler> _logger;
     private readonly IEncryptionService _encryptionService;
 
+    private readonly TimeProvider _timeProvider;
+
     public UpdateDeploymentStampCommandHandler(
+        TimeProvider timeProvider,
         IControlPlaneUnitOfWork unitOfWork,
         ILogger<UpdateDeploymentStampCommandHandler> logger,
         IEncryptionService encryptionService)
     {
+        _timeProvider = timeProvider;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _encryptionService = encryptionService;
@@ -43,12 +47,16 @@ public class UpdateDeploymentStampCommandHandler : IRequestHandler<UpdateDeploym
 
         var duplicateName = await _unitOfWork.DeploymentStamps.AnyAsync(s => s.Name == request.Request.Name && s.Id != request.Id, cancellationToken).ConfigureAwait(false);
 
+        if (stamp.Revision != request.Request.Revision)
+            return AppResponses.Failure<DeploymentStampResponse>("The stamp changed. Reload it before saving.");
+
         if (duplicateName)
         {
             return AppResponses.Failure<DeploymentStampResponse>("Another deployment stamp with this name already exists.");
         }
 
         IsolationTier parsedTier;
+
         try
         {
             parsedTier = request.Request.IsolationTier.ToEnum<IsolationTier>();
@@ -62,7 +70,7 @@ public class UpdateDeploymentStampCommandHandler : IRequestHandler<UpdateDeploym
         stamp.TargetResourceGroup = request.Request.TargetResourceGroup;
         stamp.IsolationTier = parsedTier;
         stamp.KeyVaultUri = request.Request.KeyVaultUri;
-        
+
         if (request.Request.DatabaseProvider != null)
         {
             stamp.DatabaseProvider = request.Request.DatabaseProvider;
@@ -70,15 +78,15 @@ public class UpdateDeploymentStampCommandHandler : IRequestHandler<UpdateDeploym
 
         if (request.Request.DatabaseConnectionString != null)
         {
-            stamp.DatabaseConnectionString = request.Request.DatabaseConnectionString != "" 
-                ? _encryptionService.Encrypt(request.Request.DatabaseConnectionString) 
+            stamp.DatabaseConnectionString = request.Request.DatabaseConnectionString != ""
+                ? _encryptionService.Encrypt(request.Request.DatabaseConnectionString)
                 : null;
         }
 
-        stamp.UpdatedAt = DateTimeOffset.UtcNow;
+        stamp.UpdatedAt = _timeProvider.GetUtcNow();
         stamp.UpdatedBy = "System";
 
-        await _unitOfWork.DeploymentStamps.UpdateAsync(stamp, cancellationToken).ConfigureAwait(false)  ;
+        await _unitOfWork.DeploymentStamps.UpdateAsync(stamp, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
 
         ControlPlaneLogDefinitions.LogDeploymentStampUpdated(_logger, stamp.Id, stamp.Name);
@@ -86,6 +94,8 @@ public class UpdateDeploymentStampCommandHandler : IRequestHandler<UpdateDeploym
         var dto = new DeploymentStampResponse
         {
             Id = stamp.Id,
+            Revision = stamp.Revision,
+            IsActive = stamp.IsActive,
             Name = stamp.Name,
             TargetResourceGroup = stamp.TargetResourceGroup,
             IsolationTier = stamp.IsolationTier.ToDisplayString(),
@@ -95,6 +105,7 @@ public class UpdateDeploymentStampCommandHandler : IRequestHandler<UpdateDeploym
             CreatedAt = stamp.CreatedAt,
             UpdatedAt = stamp.UpdatedAt
         };
+
         return AppResponses.Success(dto);
     }
 }

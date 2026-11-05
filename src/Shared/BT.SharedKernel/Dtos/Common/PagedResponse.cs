@@ -34,6 +34,6 @@ public class PagedResponse<T, TCursor>
         IsFirstPage = isFirstPage;
         NextCursor = nextCursor;
         HasNextPage = nextCursor is not null;
-        
+
     }
 }

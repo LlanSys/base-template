@@ -9,9 +9,15 @@
 }
 else if (_hasError)
 {
-    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="session-alert">
+    <MudAlert Severity="Severity.Warning"
+              Variant="Variant.Outlined"
+              Class="session-alert">
         @_errorMessage
-        <MudButton Href="/iam/sign-in" Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="ms-3">
+        <MudButton Href="/iam/sign-in"
+                   Variant="Variant.Filled"
+                   Size="Size.Small"
+                   Color="Color.Primary"
+                   Class="ms-3">
             Sign in again
         </MudButton>
     </MudAlert>

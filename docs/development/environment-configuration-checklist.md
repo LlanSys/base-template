@@ -32,6 +32,8 @@ Never commit real passwords, account keys, connection strings, API keys, or temp
 
 ## Naming Rules
 
+Microsoft and Google sign-in have separate credentials and callback registrations. Configure `GoogleSso:Enabled`, `GoogleSso:ClientId`, and `GoogleSso:ClientSecret` in API user-secrets for local testing, or their environment/Key Vault equivalents in production. The browser-facing API address (`BackendApi:PublicBaseUrl`) must match the registered callback origin; it can differ from the server-to-server `BackendApi:BaseUrl`. Follow [Google and Microsoft SSO](google-and-microsoft-sso.md) for exact local callbacks and account-connection requirements. Neither external provider bypasses mandatory administrator onboarding/MFA or tenant KYC.
+
 - .NET configuration sections use `:` locally, for example `DataProtection:BlobKeyUri`.
 - App Service environment variables use `__`, for example `DataProtection__BlobKeyUri`.
 - Key Vault secret names use `--`, for example `DataProtection--BlobKeyUri`.

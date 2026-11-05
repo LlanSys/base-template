@@ -23,22 +23,23 @@ public class ProvisioningCallbackController : ControllerBase
     }
 
     [HttpPost("{tenantId:guid}")]
-    [RequirePermission("control_plane.manage")]
+    [RequirePermission("controlplane.manage_tenant_lifecycle")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CompleteProvisioning(
-        [FromRoute] Guid tenantId, 
+        [FromRoute] Guid tenantId,
         [FromBody] CompleteTenantProvisioningRequest request)
     {
+        ArgumentNullException.ThrowIfNull(request, nameof(request));
         var command = new CompleteTenantProvisioningCommand(
-            tenantId, 
-            request.DatabaseConnectionString, 
+            tenantId,
+            request.DatabaseConnectionString,
             request.ApplicationInsightsKey);
 
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

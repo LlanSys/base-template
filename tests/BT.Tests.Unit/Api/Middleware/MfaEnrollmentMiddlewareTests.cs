@@ -136,6 +136,7 @@ public sealed class MfaEnrollmentMiddlewareTests
         if (isAuthenticated)
         {
             var claims = new List<Claim>();
+
             if (includeUserId)
             {
                 claims.Add(new Claim(ClaimTypes.NameIdentifier, UserId));

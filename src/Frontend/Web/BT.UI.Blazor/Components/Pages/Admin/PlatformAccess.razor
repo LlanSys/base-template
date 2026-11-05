@@ -1,0 +1,5 @@
+@page "/control-panel/access"
+@layout ControlPlaneLayout
+@attribute [Authorize(Policy = "Platform.AccessManagement")]
+@rendermode InteractiveServer
+<IamAccessCatalog />

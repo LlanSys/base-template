@@ -44,6 +44,7 @@ public class CreateDeploymentStampCommandHandler : IRequestHandler<CreateDeploym
         }
 
         IsolationTier parsedTier;
+
         try
         {
             parsedTier = req.IsolationTier.ToEnum<IsolationTier>();
@@ -60,12 +61,12 @@ public class CreateDeploymentStampCommandHandler : IRequestHandler<CreateDeploym
             IsolationTier = parsedTier,
             KeyVaultUri = req.KeyVaultUri,
             DatabaseProvider = req.DatabaseProvider,
-            DatabaseConnectionString = !string.IsNullOrWhiteSpace(req.DatabaseConnectionString) 
-                ? _encryptionService.Encrypt(req.DatabaseConnectionString) 
+            DatabaseConnectionString = !string.IsNullOrWhiteSpace(req.DatabaseConnectionString)
+                ? _encryptionService.Encrypt(req.DatabaseConnectionString)
                 : null,
             CreatedBy = "System"
         };
-        
+
         await _unitOfWork.DeploymentStamps.CreateAsync(stamp, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
 
@@ -74,6 +75,8 @@ public class CreateDeploymentStampCommandHandler : IRequestHandler<CreateDeploym
         var dto = new DeploymentStampResponse
         {
             Id = stamp.Id,
+            Revision = stamp.Revision,
+            IsActive = stamp.IsActive,
             Name = stamp.Name,
             TargetResourceGroup = stamp.TargetResourceGroup,
             IsolationTier = stamp.IsolationTier.ToDisplayString(),
@@ -83,6 +86,7 @@ public class CreateDeploymentStampCommandHandler : IRequestHandler<CreateDeploym
             CreatedAt = stamp.CreatedAt,
             UpdatedAt = stamp.UpdatedAt
         };
+
         return AppResponses.Success(dto);
     }
 }

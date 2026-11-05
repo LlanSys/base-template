@@ -1,0 +1,69 @@
+@using BT.SharedKernel.Features.ControlPlane.Modules
+@inject ModuleService Modules
+@inject ISnackbar Snackbar
+@inject IAuthSession AuthSession
+<MudDialog>
+    <DialogContent>
+        <MudSelect T="string"
+                   @bind-Value="_key"
+                   Label="Implemented module"
+                   Disabled="@(Existing is not null)"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense">
+            @foreach (var key in ModuleCatalog.Keys)
+            {
+                <MudSelectItem T="string"
+                               Value="@key">@key</MudSelectItem>
+            }
+        </MudSelect>
+        <MudTextField @bind-Value="_name"
+                      Label="Name"
+                      MaxLength="160"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense" />
+        <MudTextField @bind-Value="_description"
+                      Label="Description"
+                      MaxLength="1000"
+                      Lines="3"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense" />
+        <MudSwitch T="bool"
+                   @bind-Value="_active"
+                   Label="Available for tenant assignment"
+                   Disabled="@(!AuthSession.HasPermission("modules.manage"))" />
+        @if (Existing is null)
+        {
+            <MudText Typo="Typo.caption">Save a draft, configure its default roles, permissions, and menus, then enable tenant assignment.</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   OnClick="@(() => Dialog.Cancel())"
+                   Disabled="_busy">Cancel</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Save"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   OnClick="SaveAsync"
+                   Disabled="_busy">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Parameter] public ModuleDefinitionResponse? Existing { get; set; }
+    private string _key = string.Empty, _name = string.Empty, _description = string.Empty;
+    private bool _active, _busy;
+    protected override void OnInitialized()
+    {
+        if (Existing is null) return;
+        _key = Existing.Key; _name = Existing.Name; _description = Existing.Description; _active = Existing.IsActive;
+    }
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_key) || string.IsNullOrWhiteSpace(_name)) { Snackbar.Add("Select an implemented module and enter a name.", Severity.Warning); return; }
+        _busy = true;
+        var response = await Modules.SaveAsync(Existing?.Id, new(_key, _name, _description, _active, Existing?.Revision ?? Guid.Empty));
+        _busy = false;
+        if (response.IsSuccess) Dialog.Close(DialogResult.Ok(true));
+        else Snackbar.Add(response.Message ?? "Module could not be saved.", Severity.Error);
+    }
+}

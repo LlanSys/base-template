@@ -78,6 +78,7 @@ internal sealed class SearchMenusQueryHandler(IIamUnitOfWork unitOfWork, ILogger
             var page = await unitOfWork.MenuRepository.ListAsync(ApplyPaging, cancellationToken).ConfigureAwait(false);
 
             var hasNextPage = page.Count > pageSize;
+
             if (hasNextPage)
             {
                 page.RemoveAt(page.Count - 1);

@@ -43,6 +43,7 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
         if (Request.Headers.TryGetValue("X-Test-Permissions", out var permissions))
         {
             var perms = permissions.ToString().Split(',');
+
             foreach (var perm in perms)
             {
                 claims.Add(new Claim("permission", perm.Trim()));

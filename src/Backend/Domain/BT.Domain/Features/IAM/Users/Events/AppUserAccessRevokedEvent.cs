@@ -19,5 +19,5 @@ public sealed record AppUserAccessRevokedEvent(
 
 ) : IDomainEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }

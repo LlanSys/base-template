@@ -8,8 +8,8 @@ namespace BT.Application.Features.IAM.Users.Contracts.Interfaces;
 
 public interface IClaimsService
 {
-    Task<List<Claim>> GetUserClaimsAsync(AppUser appUser, Guid? sessionId = null);
-    Task<List<Claim>> GetUserClaimsCombinedAsync(AppUser user);
+    Task<List<Claim>> GetUserClaimsAsync(AppUser appUser, Guid? sessionId = null, CancellationToken cancellationToken = default);
+    Task<List<Claim>> GetUserClaimsCombinedAsync(AppUser user, CancellationToken cancellationToken = default);
     Task<bool> AddUserClaimAsync(AppUser user, Claim claim);
     Task<bool> RemoveUserClaimAsync(AppUser user, Claim claim);
     Task<bool> UpdateUserClaimAsync(AppUser user, Claim existingClaim, Claim newClaim);

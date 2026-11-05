@@ -16,14 +16,22 @@
     </div>
 
     <div class="auth-card">
-        <EditForm FormName="@VerifyTwoFactorFormName" Model="VerificationModel" OnValidSubmit="VerifyAsync">
+        <EditForm FormName="@VerifyTwoFactorFormName"
+                  Model="VerificationModel"
+                  OnValidSubmit="VerifyAsync">
             <DataAnnotationsValidator />
-            <input type="hidden" name="VerificationModel.UserId" value="@VerificationModel!.UserId" />
+            <input type="hidden"
+                   name="VerificationModel.UserId"
+                   value="@VerificationModel!.UserId" />
 
             <div class="form-stack">
                 <div>
                     <label for="code">6-digit code</label>
-                    <InputText id="code" class="form-control form-control-lg otp-input" @bind-Value="VerificationModel!.Code" inputmode="numeric" autocomplete="one-time-code" />
+                    <InputText id="code"
+                               class="form-control form-control-lg otp-input"
+                               @bind-Value="VerificationModel!.Code"
+                               inputmode="numeric"
+                               autocomplete="one-time-code" />
                     <ValidationMessage For="@(() => VerificationModel!.Code)" />
                 </div>
 
@@ -34,10 +42,13 @@
 
                 @if (!string.IsNullOrWhiteSpace(_message))
                 {
-                    <div class="alert alert-danger" role="alert">@_message</div>
+                    <div class="alert alert-danger"
+                         role="alert">@_message</div>
                 }
 
-                <button class="btn btn-bt-primary btn-lg" type="submit" disabled="@_isBusy">
+                <button class="btn btn-bt-primary btn-lg"
+                        type="submit"
+                        disabled="@_isBusy">
                     @(_isBusy ? "Verifying..." : "Verify and continue")
                 </button>
             </div>

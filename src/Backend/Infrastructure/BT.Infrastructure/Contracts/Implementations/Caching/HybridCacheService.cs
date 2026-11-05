@@ -1,8 +1,11 @@
 using BT.Application.Contracts.Interfaces.Common;
 using BT.Infrastructure.Logging;
+
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
+
 using OpenTelemetry.Trace;
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -25,6 +28,7 @@ internal sealed class HybridCacheService(HybridCache cache, ILogger<HybridCacheS
 
         activity?.SetTag("cache.key", key);
         activity?.SetTag("cache.operation", "GET_OR_CREATE");
+
         if (expiration.HasValue)
         {
             activity?.SetTag("cache.expiration.seconds", expiration.Value.TotalSeconds);
@@ -67,6 +71,7 @@ internal sealed class HybridCacheService(HybridCache cache, ILogger<HybridCacheS
         using var activity = CacheActivity.StartActivity("Cache SET");
         activity?.SetTag("cache.key", key);
         activity?.SetTag("cache.operation", "SET");
+
         if (expiration.HasValue) activity?.SetTag("cache.expiration.seconds", expiration.Value.TotalSeconds);
 
         try
@@ -100,7 +105,7 @@ internal sealed class HybridCacheService(HybridCache cache, ILogger<HybridCacheS
             // Let's see if we can just use IDistributedCache internally or just IMemoryCache if HybridCache lacks it. Actually, `cache` usually supports `GetAsync` if we pass a default value factory? No, FIDO2 options we MUST get what was set.
             // Wait, I will use IDistributedCache injected into HybridCacheService or just `GetOrCreateAsync` with a factory that throws? No, if it's absent it shouldn't throw.
         }
-        catch(Exception) {}
+        catch (Exception) { }
         return default;
     }
 

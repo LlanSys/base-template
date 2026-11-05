@@ -5,6 +5,9 @@ public sealed record UpdatePermissionRequest
     public required Guid Id { get; init; }
 
     public Guid? DepartmentId { get; init; }
+    public Guid? AvailableTenantId { get; init; }
+    public string? RequiredModule { get; init; }
+    public bool IsTenantDelegatable { get; init; }
 
     public required string Context { get; init; }
 

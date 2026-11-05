@@ -3,6 +3,7 @@ using BT.Application.Features.Shared.Payments.Contracts.Interfaces;
 using BT.Domain.Features.Shared.Contracts;
 using BT.Domain.Features.Shared.Payments.Enums;
 using BT.SharedKernel.Extensions;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -27,7 +28,7 @@ public sealed class PaymentReconciliationWorker(
         {
             try
             {
-                await ReconcilePendingPaymentsAsync(stoppingToken);
+                await ReconcilePendingPaymentsAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -35,9 +36,9 @@ public sealed class PaymentReconciliationWorker(
             }
 
             // Wait 5 minutes before sweeping again
-            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            await Task.Delay(TimeSpan.FromMinutes(5), timeProvider, stoppingToken).ConfigureAwait(false);
         }
-        
+
         PaymentLogDefinitions.LogPaymentReconciliationWorkerStopping(logger);
     }
 
@@ -52,8 +53,8 @@ public sealed class PaymentReconciliationWorker(
 
         // Sweeping pending records
         var pendingRecords = await sharedUnitOfWork.PaymentRecordRepository.ListAsync(
-            q => q.Where(p => p.Status == PaymentStatus.Initiated && p.CreatedAt <= threshold).Take(50), 
-            cancellationToken);
+            q => q.Where(p => p.Status == PaymentStatus.Initiated && p.CreatedAt <= threshold).Take(50),
+            cancellationToken).ConfigureAwait(false);
 
         if (pendingRecords.Count == 0)
         {
@@ -67,17 +68,18 @@ public sealed class PaymentReconciliationWorker(
             if (string.IsNullOrWhiteSpace(record.ProviderReference))
             {
                 PaymentLogDefinitions.LogPaymentMissingProviderReference(logger, record.Id);
-                continue; 
+                continue;
             }
 
             try
             {
-                var gatewayResponse = await paymentGateway.GetStatusAsync(record.ProviderReference, record.Provider, cancellationToken);
-                
+                var gatewayResponse = await paymentGateway.GetStatusAsync(record.ProviderReference, record.Provider, cancellationToken).ConfigureAwait(false);
+
                 if (gatewayResponse.IsSuccess && gatewayResponse.Data != null && !string.IsNullOrWhiteSpace(gatewayResponse.Data.Status))
                 {
                     // Map provider status to standard enum safely
                     PaymentStatus parsedStatus;
+
                     if (Enum.TryParse<PaymentStatus>(gatewayResponse.Data.Status, true, out var parsed))
                     {
                         parsedStatus = parsed;
@@ -99,17 +101,17 @@ public sealed class PaymentReconciliationWorker(
                     if (parsedStatus == PaymentStatus.Success)
                     {
                         PaymentLogDefinitions.LogReconcilingPaymentStatus(logger, record.Id, "Success");
-                        record.UpdateStatus(PaymentStatus.Success, statusMessage: "Reconciled from background gateway check");
+                        record.UpdateStatus(timeProvider.GetUtcNow(), PaymentStatus.Success, statusMessage: "Reconciled from background gateway check");
                     }
                     else if (parsedStatus == PaymentStatus.Failed)
                     {
                         PaymentLogDefinitions.LogReconcilingPaymentStatus(logger, record.Id, "Failed");
-                        record.UpdateStatus(PaymentStatus.Failed, statusMessage: "Reconciled from background gateway check");
+                        record.UpdateStatus(timeProvider.GetUtcNow(), PaymentStatus.Failed, statusMessage: "Reconciled from background gateway check");
                     }
                     else if (parsedStatus == PaymentStatus.Cancelled)
                     {
                         PaymentLogDefinitions.LogReconcilingPaymentStatus(logger, record.Id, "Cancelled");
-                        record.UpdateStatus(PaymentStatus.Cancelled, statusMessage: "Reconciled from background gateway check");
+                        record.UpdateStatus(timeProvider.GetUtcNow(), PaymentStatus.Cancelled, statusMessage: "Reconciled from background gateway check");
                     }
                 }
             }
@@ -120,6 +122,6 @@ public sealed class PaymentReconciliationWorker(
         }
 
         // Commit the transaction to save all state transitions and dispatch domain events
-        await sharedUnitOfWork.CompleteAsync(cancellationToken);
+        await sharedUnitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
     }
 }

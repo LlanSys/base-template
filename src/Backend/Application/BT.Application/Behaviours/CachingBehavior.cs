@@ -28,6 +28,7 @@ namespace BT.Application.Behaviours;
 ///   in the group without any key scanning.
 /// </summary>
 public sealed class CachingBehavior<TRequest, TResponse>(
+    TimeProvider timeProvider,
     ICacheService cache,
     ICurrentTenantProvider tenantProvider,
     ILogger<CachingBehavior<TRequest, TResponse>> logger)
@@ -89,7 +90,7 @@ public sealed class CachingBehavior<TRequest, TResponse>(
             ttl,
             cancellationToken).ConfigureAwait(false);
 
-        if (response is BT.SharedKernel.Dtos.Common.IAppResponse appResponse && !appResponse.IsSuccess)
+        if (response is SharedKernel.Dtos.Common.IAppResponse appResponse && !appResponse.IsSuccess)
         {
             // Do not cache failed responses (especially since errors don't serialize well).
             await cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
@@ -114,8 +115,8 @@ public sealed class CachingBehavior<TRequest, TResponse>(
             ct).ConfigureAwait(false);
     }
 
-    private static string GenerateVersion()
-        => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
+    private string GenerateVersion()
+        => timeProvider.GetUtcNow().ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
 
     private static string BuildTenantScope(Guid tenantId, string? userId)
     {

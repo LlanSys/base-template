@@ -1,18 +1,28 @@
 @inject IIamAdminService IamAdminService
 @inject ISnackbar Snackbar
+@inject IAuthSession AuthSession
 
 <MudDialog>
     <DialogContent>
         @if (_isLoading)
         {
-            <MudProgressLinear Color="Color.Success" Indeterminate="true" />
+            <MudProgressLinear Color="Color.Success"
+                               Indeterminate="true" />
         }
         else
         {
             <MudStack Spacing="2">
                 <MudText Typo="Typo.body2">Direct permissions are exceptions granted to <strong>@DisplayName</strong> outside role membership.</MudText>
+                <MudText Typo="Typo.caption">Tenant administrators can grant only permissions approved for delegation by the vendor.</MudText>
                 <div class="bt-table-scroll">
-                    <MudTable Items="_permissions" Dense="true" Hover="true" Elevation="0" FixedHeader="true" Height="28rem" Style="min-width: 760px;" Breakpoint="Breakpoint.None">
+                    <MudTable Items="_permissions"
+                              Dense="true"
+                              Hover="true"
+                              Elevation="0"
+                              FixedHeader="true"
+                              Height="28rem"
+                              Style="min-width: 760px;"
+                              Breakpoint="Breakpoint.None">
                         <HeaderContent>
                             <MudTh Style="width: 4rem;">Grant</MudTh>
                             <MudTh>Key</MudTh>
@@ -22,7 +32,12 @@
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="Grant">
-                                <MudCheckBox T="bool" Value="@IsSelected(context.Key)" ValueChanged="@((selected) => TogglePermission(context.Key, selected))" Color="Color.Success" Dense="true" />
+                                <MudCheckBox T="bool"
+                                             Value="@IsSelected(context.Key)"
+                                             ValueChanged="@((selected) => TogglePermission(context.Key, selected))"
+                                             Disabled="@(AuthSession.CurrentUser?.IsPlatformStaff != true && !context.IsTenantDelegatable && !IsSelected(context.Key))"
+                                             Color="Color.Success"
+                                             Dense="true" />
                             </MudTd>
                             <MudTd DataLabel="Key">@context.Key</MudTd>
                             <MudTd DataLabel="Context">@context.Context</MudTd>
@@ -35,8 +50,16 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Success" Disabled="@(_isLoading || _isSaving)" OnClick="SaveAsync">@(_isSaving ? "Saving..." : "Update")</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   Variant="Variant.Text"
+                   Size="Size.Small"
+                   OnClick="Cancel">Cancel</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Save"
+                   Variant="Variant.Filled"
+                   Size="Size.Small"
+                   Color="Color.Success"
+                   Disabled="@(_isLoading || _isSaving)"
+                   OnClick="SaveAsync">@(_isSaving ? "Saving..." : "Update")</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -56,7 +79,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var permissionsResponse = await IamAdminService.SearchPermissionsAsync(new PermissionSearchRequest(IsActive: true, PageSize: 50));
+        var permissionsResponse = await BT.UI.Blazor.Features.IAM.Permissions.PermissionCatalogLoader.LoadAsync(IamAdminService);
         var userPermissionsResponse = await IamAdminService.GetUserPermissionsAsync(User.Id);
 
         if (!permissionsResponse.IsSuccess || permissionsResponse.Data is null)
@@ -73,7 +96,7 @@
             return;
         }
 
-        _permissions.AddRange(permissionsResponse.Data.Items);
+        _permissions.AddRange(permissionsResponse.Data);
         foreach (var key in userPermissionsResponse.Data.PermissionKeys)
         {
             _selectedKeys.Add(key);

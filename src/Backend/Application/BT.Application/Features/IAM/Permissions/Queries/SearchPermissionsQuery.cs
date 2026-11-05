@@ -19,8 +19,9 @@ public sealed record SearchPermissionsQuery(PermissionSearchRequest SearchReques
 
     public string Discriminator => CacheKeys.Discriminator(SearchRequest);
 
-    public string? CacheUserId => null;
+    public string? CacheUserId => UserId;
 
     public bool IsVersioned => true;
+    public bool BypassCache => true;
 }
 

@@ -27,10 +27,10 @@ public class PaymentRecord : BaseEntity, IAuditable, ISoftDeletable, IHasDomainE
     public DateTimeOffset? DeletedAt { get; set; }
     public string? DeletedBy { get; set; }
 
-    public void MarkAsDeleted(string deletedBy)
+    public void MarkAsDeleted(string deletedBy, DateTimeOffset now)
     {
         IsDeleted = true;
-        DeletedAt = DateTimeOffset.UtcNow;
+        DeletedAt = now;
         DeletedBy = deletedBy;
     }
 
@@ -55,7 +55,7 @@ public class PaymentRecord : BaseEntity, IAuditable, ISoftDeletable, IHasDomainE
         Status = status;
     }
 
-    public void UpdateStatus(PaymentStatus status, string? providerReference = null, string? statusMessage = null)
+    public void UpdateStatus(DateTimeOffset now, PaymentStatus status, string? providerReference = null, string? statusMessage = null)
     {
         if (Status == PaymentStatus.Success || Status == PaymentStatus.Failed || Status == PaymentStatus.Cancelled)
         {
@@ -64,10 +64,12 @@ public class PaymentRecord : BaseEntity, IAuditable, ISoftDeletable, IHasDomainE
         }
 
         Status = status;
+
         if (providerReference != null)
         {
             ProviderReference = providerReference;
         }
+
         if (statusMessage != null)
         {
             StatusMessage = string.IsNullOrWhiteSpace(statusMessage) ? null : statusMessage.Trim();
@@ -75,15 +77,15 @@ public class PaymentRecord : BaseEntity, IAuditable, ISoftDeletable, IHasDomainE
 
         if (status == PaymentStatus.Success)
         {
-            RaiseDomainEvent(new PaymentCompletedEvent(Id, CustomerReference, Provider, Amount));
+            RaiseDomainEvent(new PaymentCompletedEvent(Id, CustomerReference, Provider, Amount) { OccurredAt = now });
         }
         else if (status == PaymentStatus.Failed)
         {
-            RaiseDomainEvent(new PaymentFailedEvent(Id, CustomerReference, Provider, Amount, StatusMessage ?? "Asynchronous payment failed."));
+            RaiseDomainEvent(new PaymentFailedEvent(Id, CustomerReference, Provider, Amount, StatusMessage ?? "Asynchronous payment failed.") { OccurredAt = now });
         }
         else if (status == PaymentStatus.Cancelled)
         {
-            RaiseDomainEvent(new PaymentCancelledEvent(Id, CustomerReference, Provider, Amount, StatusMessage ?? "Asynchronous payment was cancelled."));
+            RaiseDomainEvent(new PaymentCancelledEvent(Id, CustomerReference, Provider, Amount, StatusMessage ?? "Asynchronous payment was cancelled.") { OccurredAt = now });
         }
     }
 

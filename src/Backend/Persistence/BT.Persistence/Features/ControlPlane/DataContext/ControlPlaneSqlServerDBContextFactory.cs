@@ -10,11 +10,12 @@ public class ControlPlaneSqlServerDBContextFactory : IDesignTimeDbContextFactory
     {
         var configuration = DesignTimeConfigurationFactory.Create();
         var optionsBuilder = new DbContextOptionsBuilder<ControlPlaneSqlServerDBContext>();
-        var connectionString = DesignTimeConfigurationFactory.GetConnectionString(configuration, "ControlPlaneConnection");
+        var connectionString = DesignTimeConfigurationFactory.GetConnectionString(configuration, "ControlPlaneConnection", fallbackConnectionName: "DefaultSqlConnection");
 
         optionsBuilder.UseSqlServer(
             connectionString,
-            sqlOptions => DesignTimeConfigurationFactory.ConfigureSqlServer(sqlOptions, "__EFMigrationsHistory_ControlPlane")).ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsSqlGenerator, BT.Persistence.Features.Shared.Migrations.Generators.IdempotentSqlServerMigrationsSqlGenerator>();
+            sqlOptions => DesignTimeConfigurationFactory.ConfigureSqlServer(sqlOptions, "__EFMigrationsHistory_ControlPlane")).ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsSqlGenerator, Shared.Migrations.Generators.IdempotentSqlServerMigrationsSqlGenerator>();
+
         return new ControlPlaneSqlServerDBContext(optionsBuilder.Options);
     }
 }

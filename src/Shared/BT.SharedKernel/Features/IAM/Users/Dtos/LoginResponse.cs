@@ -1,10 +1,11 @@
 
 namespace BT.SharedKernel.Features.IAM.Users.Dtos;
+
 public record LoginResponse(
-    string UserId, 
-    string FirstName, 
-    string LastName, 
-    string Email, 
+    string UserId,
+    string FirstName,
+    string LastName,
+    string Email,
     bool Requires2FA,
     bool RequiresEmailConfirmation,
     bool IsAuthenticated,

@@ -7,7 +7,7 @@ using BT.SharedKernel.Dtos.Common;
 
 namespace BT.UI.Blazor.Features.ControlPlane.Auditing.Contracts;
 
-public interface IAuditService
+internal interface IAuditService
 {
     Task<AppResponse<ImpersonationRecordResponse>> StartImpersonationAsync(StartImpersonationRequest request, CancellationToken cancellationToken = default);
     Task<AppResponse<bool>> EndImpersonationAsync(Guid impersonationRecordId, CancellationToken cancellationToken = default);

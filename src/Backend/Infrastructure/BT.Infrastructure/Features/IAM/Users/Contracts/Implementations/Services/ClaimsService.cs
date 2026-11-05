@@ -10,15 +10,16 @@ using System.Security.Claims;
 using System.Text;
 using System.Globalization;
 using BT.Infrastructure.Logging;
+using BT.Application.Features.IAM.Authorization;
 
-namespace BT.Infrastructure.Features.IAM.Users.Contracts.Implementations.Services; 
+namespace BT.Infrastructure.Features.IAM.Users.Contracts.Implementations.Services;
 
 internal sealed class ClaimsService(
     UserManager<AppUser> userManager,
-    RoleManager<AppRole> roleManager, ILogger<ClaimsService> logger) : IClaimsService
+    IEffectiveAccessService accessService, ILogger<ClaimsService> logger, TimeProvider timeProvider) : IClaimsService
 {
     private readonly UserManager<AppUser> _userManager = userManager;
-    private readonly RoleManager<AppRole> _roleManager = roleManager;
+
     private readonly ILogger<ClaimsService> _logger = logger;
 
     public async Task<bool> AddUserClaimAsync(AppUser user, Claim claim)
@@ -26,6 +27,7 @@ internal sealed class ClaimsService(
         try
         {
             var result = await _userManager.AddClaimAsync(user, claim).ConfigureAwait(false);
+
             if (result.Succeeded)
             {
                 ServiceLogDefinitions.LogClaimAdded(_logger, claim.Type, claim.Value, user.Id);
@@ -44,7 +46,7 @@ internal sealed class ClaimsService(
         }
     }
 
-    public async Task<List<Claim>> GetUserClaimsAsync(AppUser user, Guid? sessionId = null)
+    public async Task<List<Claim>> GetUserClaimsAsync(AppUser user, Guid? sessionId = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -54,13 +56,14 @@ internal sealed class ClaimsService(
                 new(JwtRegisteredClaimNames.Sub, user.Id),
                 new(ClaimTypes.NameIdentifier, user.Id),
                 new(JwtRegisteredClaimNames.Jti, Guid.CreateVersion7().ToString()),
-                new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture), ClaimValueTypes.Integer64),
+                new(JwtRegisteredClaimNames.Iat, timeProvider.GetUtcNow().ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture), ClaimValueTypes.Integer64),
 
-                new("tenant_id", user.TenantId.ToString()),
                 new(JwtRegisteredClaimNames.Name, $"{user.FirstName} {user.LastName}"),
                 new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
                 new("mfa_enrolled", user.TwoFactorEnabled ? "true" : "false"),
             };
+
+            claims.Add(user.IsPlatformStaff ? new Claim("platform_staff", "true") : new Claim("tenant_id", user.TenantId.ToString()));
 
             if (sessionId.HasValue && sessionId.Value != Guid.Empty)
                 claims.Add(new("session_id", sessionId.Value.ToString()));
@@ -72,25 +75,9 @@ internal sealed class ClaimsService(
                 claims.Add(new("customer_id", user.CustomerId.Value.ToString()));
 
             var roles = await _userManager.GetRolesAsync(user).ConfigureAwait(false);
-
-            foreach (var roleName in roles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, roleName));
-
-                // 2. DYNAMICALLY fetch permissions linked to this role from the DB
-                var role = await _roleManager.FindByNameAsync(roleName).ConfigureAwait(false);
-                if (role != null)
-                {
-                    var roleClaims = await _roleManager.GetClaimsAsync(role).ConfigureAwait(false);
-
-                    // Permissions are stored as claims with type "permission"
-                    var permissions = roleClaims.Where(c => c.Type == "permission");
-                    claims.AddRange(permissions);
-                }
-            }
-
-            var directClaims = await _userManager.GetClaimsAsync(user).ConfigureAwait(false);
-            claims.AddRange(directClaims.Where(c => c.Type == "permission"));
+            claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+            var access = await accessService.GetAsync(user.Id, cancellationToken).ConfigureAwait(false);
+            claims.AddRange(access.Permissions.Select(permission => new Claim("permission", permission)));
 
             return [.. claims
                 .GroupBy(static claim => $"{claim.Type}:{claim.Value}", StringComparer.OrdinalIgnoreCase)
@@ -104,45 +91,15 @@ internal sealed class ClaimsService(
 
     }
 
-    public async Task<List<Claim>> GetUserClaimsCombinedAsync(AppUser user)
-    {
-        var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Sub, user.Id),
-            new(JwtRegisteredClaimNames.Jti, Guid.CreateVersion7().ToString()),
-            new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture), ClaimValueTypes.Integer64),
-
-            new("tenant_id", user.TenantId.ToString()),
-            new(JwtRegisteredClaimNames.Name, $"{user.FirstName} {user.LastName}"),
-            new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-        };
-
-
-        // Get permissions from the User's ROLES
-        var roles = await _userManager.GetRolesAsync(user).ConfigureAwait(false);
-        foreach (var roleName in roles)
-        {
-            var role = await _roleManager.FindByNameAsync(roleName).ConfigureAwait(false);
-            if (role != null)
-            {
-                var roleClaims = await _roleManager.GetClaimsAsync(role).ConfigureAwait(false);
-                claims.AddRange(roleClaims.Where(c => c.Type == "permission"));
-            }
-        }
-
-        // Get permissions assigned DIRECTLY to the USER (the "Permission 5" case)
-        var directClaims = await _userManager.GetClaimsAsync(user).ConfigureAwait(false);
-        claims.AddRange(directClaims.Where(c => c.Type == "permission"));
-
-        // Return a distinct list (so Permission 1 isn't added twice if it's in both)
-        return [.. claims.GroupBy(c => c.Value).Select(g => g.First())];
-    }
+    public Task<List<Claim>> GetUserClaimsCombinedAsync(AppUser user, CancellationToken cancellationToken = default)
+        => GetUserClaimsAsync(user, cancellationToken: cancellationToken);
 
     public async Task<bool> RemoveUserClaimAsync(AppUser user, Claim claim)
     {
         try
         {
             var result = await _userManager.RemoveClaimAsync(user, claim).ConfigureAwait(false);
+
             if (result.Succeeded)
             {
                 ServiceLogDefinitions.LogClaimRemoved(_logger, claim.Type, claim.Value, user.Id);
@@ -167,6 +124,7 @@ internal sealed class ClaimsService(
         {
             // Remove old claim and add new one
             var removeResult = await _userManager.RemoveClaimAsync(user, existingClaim).ConfigureAwait(false);
+
             if (!removeResult.Succeeded)
             {
                 ServiceLogDefinitions.LogFailedToRemoveExistingClaim(_logger, user.Id);
@@ -175,6 +133,7 @@ internal sealed class ClaimsService(
             }
 
             var addResult = await _userManager.AddClaimAsync(user, newClaim).ConfigureAwait(false);
+
             if (!addResult.Succeeded)
             {
                 // Try to rollback by adding the old claim back

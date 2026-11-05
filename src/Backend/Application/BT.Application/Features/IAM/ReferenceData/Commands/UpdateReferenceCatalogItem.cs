@@ -11,7 +11,7 @@ namespace BT.Application.Features.IAM.ReferenceData.Commands;
 
 
 
-internal sealed class UpdateReferenceCatalogItemCommandHandler(IIamUnitOfWork unitOfWork, ILogger<UpdateReferenceCatalogItemCommandHandler> logger)
+internal sealed class UpdateReferenceCatalogItemCommandHandler(TimeProvider timeProvider, IIamUnitOfWork unitOfWork, ILogger<UpdateReferenceCatalogItemCommandHandler> logger)
     : IRequestHandler<UpdateReferenceCatalogItemCommand, AppResponse<ReferenceCatalogItemResponse>>
 {
     public async Task<AppResponse<ReferenceCatalogItemResponse>> Handle(UpdateReferenceCatalogItemCommand command, CancellationToken cancellationToken)
@@ -24,6 +24,7 @@ internal sealed class UpdateReferenceCatalogItemCommandHandler(IIamUnitOfWork un
             }
 
             var parentError = await ValidateParentChangeAsync(command, cancellationToken).ConfigureAwait(false);
+
             if (parentError is not null)
             {
                 return AppResponses.Failure<ReferenceCatalogItemResponse>(parentError);
@@ -60,8 +61,9 @@ internal sealed class UpdateReferenceCatalogItemCommandHandler(IIamUnitOfWork un
     private async Task<ReferenceCatalogItemResponse?> UpdatePermissionContextAsync(UpdateReferenceCatalogItemCommand command, CancellationToken cancellationToken)
     {
         var item = await unitOfWork.PermissionContextRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
         if (item is null) return null;
-        item.Update(command.Request.Label, command.Request.Description, command.Request.IsActive, command.UserId);
+        item.Update(timeProvider.GetUtcNow(), command.Request.Label, command.Request.Description, command.Request.IsActive, command.UserId);
         await unitOfWork.PermissionContextRepository.UpdateAsync(item, cancellationToken).ConfigureAwait(false);
         return item.ToResponse();
     }
@@ -69,8 +71,9 @@ internal sealed class UpdateReferenceCatalogItemCommandHandler(IIamUnitOfWork un
     private async Task<ReferenceCatalogItemResponse?> UpdatePermissionResourceAsync(UpdateReferenceCatalogItemCommand command, CancellationToken cancellationToken)
     {
         var item = await unitOfWork.PermissionResourceRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
         if (item is null) return null;
-        item.Update(command.Request.Label, command.Request.ParentKey ?? item.ContextKey, command.Request.Description, command.Request.IsActive, command.UserId);
+        item.Update(timeProvider.GetUtcNow(), command.Request.Label, command.Request.ParentKey ?? item.ContextKey, command.Request.Description, command.Request.IsActive, command.UserId);
         await unitOfWork.PermissionResourceRepository.UpdateAsync(item, cancellationToken).ConfigureAwait(false);
         return item.ToResponse();
     }
@@ -78,8 +81,9 @@ internal sealed class UpdateReferenceCatalogItemCommandHandler(IIamUnitOfWork un
     private async Task<ReferenceCatalogItemResponse?> UpdatePermissionActionAsync(UpdateReferenceCatalogItemCommand command, CancellationToken cancellationToken)
     {
         var item = await unitOfWork.PermissionActionRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
         if (item is null) return null;
-        item.Update(command.Request.Label, command.Request.Description, command.Request.IsActive, command.UserId);
+        item.Update(timeProvider.GetUtcNow(), command.Request.Label, command.Request.Description, command.Request.IsActive, command.UserId);
         await unitOfWork.PermissionActionRepository.UpdateAsync(item, cancellationToken).ConfigureAwait(false);
         return item.ToResponse();
     }
@@ -87,8 +91,9 @@ internal sealed class UpdateReferenceCatalogItemCommandHandler(IIamUnitOfWork un
     private async Task<ReferenceCatalogItemResponse?> UpdateMenuPlacementAsync(UpdateReferenceCatalogItemCommand command, CancellationToken cancellationToken)
     {
         var item = await unitOfWork.MenuPlacementRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
         if (item is null) return null;
-        item.Update(command.Request.Label, command.Request.Description, command.Request.IsActive, command.UserId);
+        item.Update(timeProvider.GetUtcNow(), command.Request.Label, command.Request.Description, command.Request.IsActive, command.UserId);
         await unitOfWork.MenuPlacementRepository.UpdateAsync(item, cancellationToken).ConfigureAwait(false);
         return item.ToResponse();
     }
@@ -96,8 +101,9 @@ internal sealed class UpdateReferenceCatalogItemCommandHandler(IIamUnitOfWork un
     private async Task<ReferenceCatalogItemResponse?> UpdateMenuIconAsync(UpdateReferenceCatalogItemCommand command, CancellationToken cancellationToken)
     {
         var item = await unitOfWork.MenuIconRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
         if (item is null) return null;
-        item.Update(command.Request.Label, command.Request.Description, command.Request.IsActive, command.UserId);
+        item.Update(timeProvider.GetUtcNow(), command.Request.Label, command.Request.Description, command.Request.IsActive, command.UserId);
         await unitOfWork.MenuIconRepository.UpdateAsync(item, cancellationToken).ConfigureAwait(false);
         return item.ToResponse();
     }
@@ -105,8 +111,9 @@ internal sealed class UpdateReferenceCatalogItemCommandHandler(IIamUnitOfWork un
     private async Task<ReferenceCatalogItemResponse?> UpdateMenuRouteAsync(UpdateReferenceCatalogItemCommand command, CancellationToken cancellationToken)
     {
         var item = await unitOfWork.MenuRouteRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
         if (item is null) return null;
-        item.Update(command.Request.Label, command.Request.Url ?? item.Url, command.Request.ParentKey ?? item.PlacementKey, command.Request.Description, command.Request.IsActive, command.UserId);
+        item.Update(timeProvider.GetUtcNow(), command.Request.Label, command.Request.Url ?? item.Url, command.Request.ParentKey ?? item.PlacementKey, command.Request.Description, command.Request.IsActive, command.UserId);
         await unitOfWork.MenuRouteRepository.UpdateAsync(item, cancellationToken).ConfigureAwait(false);
         return item.ToResponse();
     }
@@ -121,6 +128,7 @@ internal sealed class UpdateReferenceCatalogItemCommandHandler(IIamUnitOfWork un
             }
 
             var item = await unitOfWork.PermissionResourceRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
             if (item is not null && !string.Equals(item.ContextKey, command.Request.ParentKey.Trim(), StringComparison.OrdinalIgnoreCase))
             {
                 var used = await unitOfWork.PermissionRepository
@@ -148,6 +156,7 @@ internal sealed class UpdateReferenceCatalogItemCommandHandler(IIamUnitOfWork un
             }
 
             var item = await unitOfWork.MenuRouteRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
             if (item is not null
                 && (!string.Equals(item.PlacementKey, command.Request.ParentKey.Trim(), StringComparison.OrdinalIgnoreCase)
                     || !string.Equals(item.Url, command.Request.Url.Trim(), StringComparison.OrdinalIgnoreCase)))

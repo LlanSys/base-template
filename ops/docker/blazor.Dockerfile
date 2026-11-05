@@ -37,7 +37,7 @@ RUN framework_asset="$(find / -path '*/_framework/blazor.web.js' -print -quit)" 
 FROM runtime AS final
 WORKDIR /app
 RUN mkdir -p /var/basetemplate/dataprotection \
-    && chown -R $APP_UID:$APP_UID /var/basetemplate
+    && chown -R "$APP_UID:$APP_UID" /var/basetemplate
 COPY --from=build /app/publish .
 USER $APP_UID
 ENTRYPOINT ["dotnet", "BT.UI.Blazor.dll"]

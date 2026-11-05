@@ -25,6 +25,7 @@ internal sealed class GetEmployeeByIdQueryHandler(IHrUnitOfWork unitOfWork)
                         .Select(static department => department.Name),
                     cancellationToken)
                 .ConfigureAwait(false) ?? string.Empty;
+
         var managerName = employee?.ManagerId is null
             ? string.Empty
             : await unitOfWork.EmployeeRepository

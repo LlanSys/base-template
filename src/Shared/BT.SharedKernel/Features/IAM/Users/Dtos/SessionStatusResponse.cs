@@ -1,4 +1,5 @@
 namespace BT.SharedKernel.Features.IAM.Users.Dtos;
+
 public record SessionStatusResponse
 {
     public bool IsValid { get; init; }

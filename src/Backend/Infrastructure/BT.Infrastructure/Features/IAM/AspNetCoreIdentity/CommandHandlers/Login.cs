@@ -15,17 +15,22 @@ using BT.Infrastructure.Configuration;
 using BT.Infrastructure.Logging;
 using BT.SharedKernel.Features.IAM.Users.Dtos;
 using BT.SharedKernel.Dtos.Common;
+
 using MediatR;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+
 using System.Collections.ObjectModel;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Authentication;
 using System.Security.Claims;
+
+using RefreshTokenEntity = BT.Domain.Features.IAM.Users.Entities.RefreshToken;
 
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
@@ -39,22 +44,22 @@ internal sealed class Login(
     IIamUnitOfWork iamUnitOfWork,
     IOptions<JwtSettings> jwtSettings,
     IOptions<MfaSettings> mfaSettings,
-    ILogger<Login> logger) : IRequestHandler<LoginCommand, AppResponse<LoginResponse>>
+    ILogger<Login> logger, TimeProvider timeProvider) : IRequestHandler<LoginCommand, AppResponse<LoginResponse>>
 {
     private readonly JwtSettings _jwtSettings = jwtSettings.Value;
     private readonly MfaSettings _mfaSettings = mfaSettings.Value;
 
-        public async Task<AppResponse<LoginResponse>> Handle(LoginCommand command, CancellationToken cancellationToken)
+    public async Task<AppResponse<LoginResponse>> Handle(LoginCommand command, CancellationToken cancellationToken)
+    {
+        var loginRequest = command.LoginRequest;
+
+        AppUser? user = null;
+
+        try
         {
-            var loginRequest = command.LoginRequest;
-
-            AppUser? user = null;
-
-            try
-            {
-                user = await userManager.Users
-                    .FirstOrDefaultAsync(u => u.UserName == loginRequest.UserName, cancellationToken)
-                    .ConfigureAwait(false);
+            user = await userManager.Users
+                .FirstOrDefaultAsync(u => u.UserName == loginRequest.UserName, cancellationToken)
+                .ConfigureAwait(false);
 
             if (user == null)
             {
@@ -69,6 +74,7 @@ internal sealed class Login(
             }
 
             var emailConfirmed = await userManager.IsEmailConfirmedAsync(user).ConfigureAwait(false);
+
             if (!emailConfirmed)
             {
                 ServiceLogDefinitions.LogLoginError(logger, user.UserName ?? string.Empty, new AuthenticationException("Unconfirmed email"));
@@ -99,6 +105,7 @@ internal sealed class Login(
             }
 
             var twoFactorEnabled = await userManager.GetTwoFactorEnabledAsync(user).ConfigureAwait(false);
+
             if (!twoFactorEnabled)
             {
                 ServiceLogDefinitions.LogUsingTempSecret(logger, user.Id);
@@ -127,6 +134,7 @@ internal sealed class Login(
 
             var rememberedTwoFactorClient = twoFactorEnabled
                 && await signInManager.IsTwoFactorClientRememberedAsync(user).ConfigureAwait(false);
+
             var requiresTwoFactorChallenge = signInResult.RequiresTwoFactor || (twoFactorEnabled && !rememberedTwoFactorClient);
 
             if (requiresTwoFactorChallenge)
@@ -139,6 +147,7 @@ internal sealed class Login(
                 };
 
                 var tempToken = await jwtService.CreateTempTokenAsync(tempClaims, TimeSpan.FromMinutes(10)).ConfigureAwait(false);
+
                 if (string.IsNullOrWhiteSpace(tempToken))
                 {
                     ServiceLogDefinitions.LogFailedToGenerateAccessToken(logger, user.Id);
@@ -160,7 +169,7 @@ internal sealed class Login(
                     tempToken,
                     string.Empty,
                     null,
-                    DateTimeOffset.UtcNow.AddMinutes(10),
+                    timeProvider.GetUtcNow().AddMinutes(10),
                     userInfoWith2FA,
                     tempClaims.ToClaimResponses()));
             }
@@ -181,13 +190,15 @@ internal sealed class Login(
             }
 
             var activeSessionId = sessionCreationResult.Data;
+
             if (activeSessionId == Guid.Empty)
             {
                 ServiceLogDefinitions.LogFailedToCreateUserSession(logger, user.Id);
                 return AppResponses.Failure<LoginResponse>("Could not establish a user session.");
             }
 
-            var userClaims = await claimsService.GetUserClaimsAsync(user, activeSessionId).ConfigureAwait(false);
+            var userClaims = await claimsService.GetUserClaimsAsync(user, activeSessionId, cancellationToken).ConfigureAwait(false);
+
             if (!userClaims.Any())
             {
                 ServiceLogDefinitions.LogFailedToGetUserClaims(logger, user.Id);
@@ -195,6 +206,7 @@ internal sealed class Login(
             }
 
             var tokenResponse = await jwtService.CreateTokenAsync(userClaims).ConfigureAwait(false);
+
             if (string.IsNullOrWhiteSpace(tokenResponse))
             {
                 ServiceLogDefinitions.LogFailedToGenerateAccessToken(logger, user.Id);
@@ -202,16 +214,18 @@ internal sealed class Login(
             }
 
             var refreshToken = jwtService.CreateRefreshToken();
+
             if (string.IsNullOrWhiteSpace(refreshToken))
             {
                 ServiceLogDefinitions.LogFailedToGenerateRefreshToken(logger, user.Id);
                 return AppResponses.Failure<LoginResponse>("Could not generate refresh token");
             }
 
-            var refreshTokenEntity = BT.Domain.Features.IAM.Users.Entities.RefreshToken.Create(
+            var refreshTokenEntity = RefreshTokenEntity.Create(
+                timeProvider.GetUtcNow(),
                 user.Id,
                 refreshToken,
-                DateTimeOffset.UtcNow.AddHours(_jwtSettings.RefreshTokenExpiryHours),
+                timeProvider.GetUtcNow().AddHours(_jwtSettings.RefreshTokenExpiryHours),
                 user.Id,
                 httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString());
 
@@ -228,19 +242,21 @@ internal sealed class Login(
 
             var rolesResponse = await userManager.GetRolesAsync(user).ConfigureAwait(false);
             var userRoles = new Collection<string>(rolesResponse.ToList());
-            var mfaEnrollmentRequired = IsMfaEnrollmentRequired(twoFactorEnabled, rolesResponse);
+            var mfaEnrollmentRequired = user.RequiresOnboarding || IsMfaEnrollmentRequired(twoFactorEnabled, rolesResponse);
             // Reload the user via UserManager to ensure we operate on the EF-tracked instance
             var trackedUser = await userManager.FindByIdAsync(user.Id).ConfigureAwait(false);
+
             if (trackedUser == null)
             {
                 ServiceLogDefinitions.LogLoginError(logger, user.UserName ?? string.Empty, new InvalidOperationException("User disappeared from store before update"));
                 return AppResponses.Failure<LoginResponse>("Could not complete login.");
             }
 
-            trackedUser.RecordSuccessfulLogin();
+            trackedUser.RecordSuccessfulLogin(timeProvider.GetUtcNow());
             var finalAppUserResponse = appUserResponse with { Roles = userRoles, LastLoginAt = trackedUser.LastLoginAt };
 
             var userUpdateResult = await userManager.UpdateAsync(trackedUser).ConfigureAwait(false);
+
             if (!userUpdateResult.Succeeded)
             {
                 var updateError = string.Join("; ", userUpdateResult.Errors.Select(e => e.Description));

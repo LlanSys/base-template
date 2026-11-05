@@ -17,7 +17,7 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.SqlServer
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -90,6 +90,105 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.SqlServer
                     b.ToTable("ImpersonationRecords", (string)null);
                 });
 
+            modelBuilder.Entity("BT.Domain.Features.ControlPlane.Modules.Entities.ModuleDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.ToTable("Modules", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("0194f700-0000-7000-8000-000000000101"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "00000000-0000-0000-0000-000000000001",
+                            Description = "",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "Banking",
+                            Name = "Banking",
+                            Revision = new Guid("0194f700-0000-7000-8000-000000000101")
+                        },
+                        new
+                        {
+                            Id = new Guid("0194f700-0000-7000-8000-000000000102"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "00000000-0000-0000-0000-000000000001",
+                            Description = "",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "HR",
+                            Name = "Human Resources",
+                            Revision = new Guid("0194f700-0000-7000-8000-000000000102")
+                        },
+                        new
+                        {
+                            Id = new Guid("0194f700-0000-7000-8000-000000000103"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "00000000-0000-0000-0000-000000000001",
+                            Description = "",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "Payments",
+                            Name = "Payments",
+                            Revision = new Guid("0194f700-0000-7000-8000-000000000103")
+                        });
+                });
+
             modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.DeploymentStamp", b =>
                 {
                     b.Property<Guid>("Id")
@@ -110,6 +209,21 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.SqlServer
                     b.Property<string>("DatabaseProvider")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<int>("IsolationTier")
                         .HasColumnType("int");
 
@@ -121,6 +235,10 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.SqlServer
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -153,8 +271,11 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.SqlServer
                             Id = new Guid("0194f700-0000-7000-8000-000000000001"),
                             CreatedAt = new DateTimeOffset(new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             CreatedBy = "System",
+                            IsActive = true,
+                            IsDeleted = false,
                             IsolationTier = 0,
                             Name = "default-pooled-stamp",
+                            Revision = new Guid("00000000-0000-0000-0000-000000000000"),
                             RowVersion = new byte[0],
                             TargetResourceGroup = "rg-basetemplate-dev"
                         });
@@ -184,6 +305,13 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.SqlServer
                     b.Property<string>("DatabaseProvider")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<Guid>("DeploymentStampId")
                         .HasColumnType("uniqueidentifier");
 
@@ -202,8 +330,15 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.SqlServer
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<int>("MaxUsers")
                         .HasColumnType("int");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -247,11 +382,110 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.SqlServer
                             DisplayName = "Default Tenant",
                             HostName = "localhost",
                             Identifier = "default",
+                            IsDeleted = false,
                             MaxUsers = 100,
+                            Revision = new Guid("00000000-0000-0000-0000-000000000000"),
                             RowVersion = new byte[0],
                             Status = 3,
                             SubscriptionTier = 0
                         });
+                });
+
+            modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.TenantAdministratorInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AcceptanceStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("AcceptedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClaimedUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset?>("DeliveredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("LastFailure")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("NextAttemptAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "NextAttemptAt");
+
+                    b.HasIndex("TenantId", "NormalizedEmail")
+                        .IsUnique();
+
+                    b.ToTable("TenantAdministratorInvitations", (string)null);
                 });
 
             modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.TenantModule", b =>
@@ -345,6 +579,50 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.SqlServer
                         });
                 });
 
+            modelBuilder.Entity("BT.Domain.Shared.Entities.AdministrationAuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ChangedFields")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "OccurredAt");
+
+                    b.ToTable("ControlPlaneAdministrationAudit", (string)null);
+                });
+
             modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.Tenant", b =>
                 {
                     b.HasOne("BT.Domain.Features.ControlPlane.Tenants.Entities.DeploymentStamp", "DeploymentStamp")
@@ -354,6 +632,17 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.SqlServer
                         .IsRequired();
 
                     b.Navigation("DeploymentStamp");
+                });
+
+            modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.TenantAdministratorInvitation", b =>
+                {
+                    b.HasOne("BT.Domain.Features.ControlPlane.Tenants.Entities.Tenant", "Tenant")
+                        .WithMany("AdministratorInvitations")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.TenantModule", b =>
@@ -369,6 +658,8 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.SqlServer
 
             modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.Tenant", b =>
                 {
+                    b.Navigation("AdministratorInvitations");
+
                     b.Navigation("Modules");
                 });
 #pragma warning restore 612, 618

@@ -23,15 +23,17 @@ public record GetImpersonationRecordsQuery(bool ActiveOnly = false) : IRequest<A
 }
 
 internal sealed class GetImpersonationRecordsQueryHandler(
+    TimeProvider timeProvider,
     IControlPlaneUnitOfWork unitOfWork,
     ICurrentActorProvider actorProvider)
     : IRequestHandler<GetImpersonationRecordsQuery, AppResponse<IReadOnlyList<ImpersonationRecordDto>>>
 {
     public async Task<AppResponse<IReadOnlyList<ImpersonationRecordDto>>> Handle(GetImpersonationRecordsQuery request, CancellationToken cancellationToken)
     {
+        var now = timeProvider.GetUtcNow();
         var query = await unitOfWork.ImpersonationRecords.ListAsync(
-            q => request.ActiveOnly 
-                ? q.Where(x => x.Status == ImpersonationRecordStatus.Active && x.ExpiryTime > DateTimeOffset.UtcNow)
+            q => request.ActiveOnly
+                ? q.Where(x => x.Status == ImpersonationRecordStatus.Active && x.ExpiryTime > now)
                 : q,
             cancellationToken).ConfigureAwait(false);
 

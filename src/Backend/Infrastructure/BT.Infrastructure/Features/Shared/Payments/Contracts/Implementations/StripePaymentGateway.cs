@@ -64,6 +64,7 @@ internal sealed class StripePaymentGateway(
             using var stream = await response.Content
                 .ReadAsStreamAsync(cancellationToken)
                 .ConfigureAwait(false);
+
             var providerResponse = await JsonSerializer
                 .DeserializeAsync<StripeCheckoutSessionResponse>(stream, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
@@ -132,6 +133,7 @@ internal sealed class StripePaymentGateway(
             using var stream = await response.Content
                 .ReadAsStreamAsync(cancellationToken)
                 .ConfigureAwait(false);
+
             var providerResponse = await JsonSerializer
                 .DeserializeAsync<StripePaymentStatusResponse>(stream, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);

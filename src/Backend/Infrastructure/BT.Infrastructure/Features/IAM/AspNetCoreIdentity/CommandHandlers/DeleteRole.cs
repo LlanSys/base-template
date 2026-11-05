@@ -8,20 +8,27 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
+using BT.Infrastructure.Features.IAM.Authorization;
+
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
-internal sealed class DeleteRole(RoleManager<AppRole> roleManager, IamDBContext context, ILogger<DeleteRole> logger)
+internal sealed class DeleteRole(TimeProvider timeProvider, RoleManager<AppRole> roleManager, IamDBContext context, ILogger<DeleteRole> logger,
+    IamAccessBoundary boundary)
     : IRequestHandler<DeleteRoleCommand, AppResponse<bool>>
 {
     public async Task<AppResponse<bool>> Handle(DeleteRoleCommand command, CancellationToken cancellationToken)
     {
         try
         {
-            var role = await roleManager.FindByIdAsync(command.RoleId).ConfigureAwait(false);
+            var role = await roleManager.Roles.IgnoreQueryFilters().SingleOrDefaultAsync(role => role.Id == command.RoleId && !role.IsDeleted, cancellationToken).ConfigureAwait(false);
+
             if (role is null)
             {
                 return AppResponses.Failure<bool>("Role not found.");
             }
+
+            if (role.IsDefault || !await boundary.CanEditRoleAsync(command.DeletedBy, role, cancellationToken).ConfigureAwait(false))
+                return AppResponses.Failure<bool>(AppError.Forbidden("Default roles cannot be deleted. You can delete only roles in your authorized scope."));
 
             var assignedUserCount = await context.UserRoles
                 .AsNoTracking()
@@ -43,7 +50,7 @@ internal sealed class DeleteRole(RoleManager<AppRole> roleManager, IamDBContext 
                 return AppResponses.Failure<bool>($"Role cannot be deleted because it has {permissionCount} permission claim(s). Remove permissions first.");
             }
 
-            role.MarkAsDeleted(command.DeletedBy);
+            role.MarkAsDeleted(command.DeletedBy, timeProvider.GetUtcNow());
             var result = await roleManager.UpdateAsync(role).ConfigureAwait(false);
 
             return result.Succeeded

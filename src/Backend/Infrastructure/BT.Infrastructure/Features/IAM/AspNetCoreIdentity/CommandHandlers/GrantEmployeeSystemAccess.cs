@@ -12,14 +12,18 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using BT.Infrastructure.Features.IAM.Authorization;
+
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
 internal sealed class GrantEmployeeSystemAccess(
+    TimeProvider timeProvider,
     UserManager<AppUser> userManager,
     IHrUnitOfWork hrUnitOfWork,
     IOptions<IamProvisioningSettings> provisioningOptions,
     IEmailService emailService,
-    ILogger<GrantEmployeeSystemAccess> logger)
+    ILogger<GrantEmployeeSystemAccess> logger,
+    IamAccessBoundary boundary)
     : IRequestHandler<GrantEmployeeSystemAccessCommand, AppResponse<bool>>
 {
     public async Task<AppResponse<bool>> Handle(GrantEmployeeSystemAccessCommand command, CancellationToken ct)
@@ -28,7 +32,10 @@ internal sealed class GrantEmployeeSystemAccess(
 
         try
         {
+            if (!await boundary.CanAssignRolesAsync(command.GrantedBy, command.Roles, ct).ConfigureAwait(false))
+                return AppResponses.Failure<bool>(AppError.Forbidden("You cannot assign these roles."));
             var temporaryPassword = provisioningOptions.Value.TemporaryPassword;
+
             if (string.IsNullOrWhiteSpace(temporaryPassword))
             {
                 return AppResponses.Failure<bool>(
@@ -40,6 +47,10 @@ internal sealed class GrantEmployeeSystemAccess(
                 .ConfigureAwait(false);
 
             var createdNewUser = false;
+
+            if (user is not null && !await boundary.CanAccessUserAsync(command.GrantedBy, user, ct).ConfigureAwait(false))
+                return AppResponses.Failure<bool>(AppError.Forbidden("This account is outside your administrative scope."));
+
             if (user is null)
             {
                 var employee = await hrUnitOfWork.EmployeeRepository
@@ -54,6 +65,7 @@ internal sealed class GrantEmployeeSystemAccess(
                 }
 
                 user = AppUser.CreateForEmployee(
+                    timeProvider.GetUtcNow(),
                     Guid.Empty,
                     employee.Id,
                     employee.Email,
@@ -67,6 +79,7 @@ internal sealed class GrantEmployeeSystemAccess(
                 user.EmailConfirmed = true;
 
                 var createResult = await userManager.CreateAsync(user, temporaryPassword).ConfigureAwait(false);
+
                 if (!createResult.Succeeded)
                 {
                     return AppResponses.Failure<bool>(createResult.Errors.First().Description);
@@ -85,20 +98,23 @@ internal sealed class GrantEmployeeSystemAccess(
             {
                 var passwordResetResult = await ResetTemporaryPasswordForReactivationAsync(user, temporaryPassword)
                     .ConfigureAwait(false);
+
                 if (!passwordResetResult.Succeeded)
                 {
                     return AppResponses.Failure<bool>(passwordResetResult.Errors.First().Description);
                 }
             }
 
-            user.GrantAccess(command.GrantedBy, command.Roles);
+            user.GrantAccess(timeProvider.GetUtcNow(), command.GrantedBy, command.Roles);
             user.EmailConfirmed = true;
 
             var updateResult = await userManager.UpdateAsync(user).ConfigureAwait(false);
+
             if (!updateResult.Succeeded)
                 return AppResponses.Failure<bool>(updateResult.Errors.First().Description);
 
             var rolesAdded = Array.Empty<string>();
+
             if (command.Roles.Any())
             {
                 var existingRoles = await userManager.GetRolesAsync(user).ConfigureAwait(false);
@@ -109,6 +125,7 @@ internal sealed class GrantEmployeeSystemAccess(
                 if (rolesToAdd.Length > 0)
                 {
                     var roleResult = await userManager.AddToRolesAsync(user, rolesToAdd).ConfigureAwait(false);
+
                     if (!roleResult.Succeeded)
                         return AppResponses.Failure<bool>(roleResult.Errors.First().Description);
 
@@ -118,6 +135,7 @@ internal sealed class GrantEmployeeSystemAccess(
 
             var emailResponse = await SendActivationEmailAsync(user, provisioningOptions.Value, createdNewUser, ct)
                 .ConfigureAwait(false);
+
             if (!emailResponse.IsSuccess)
             {
                 await RollBackActivationAsync(user, rolesAdded, command.GrantedBy).ConfigureAwait(false);
@@ -148,6 +166,7 @@ internal sealed class GrantEmployeeSystemAccess(
     {
         var resetToken = await userManager.GeneratePasswordResetTokenAsync(user).ConfigureAwait(false);
         var resetResult = await userManager.ResetPasswordAsync(user, resetToken, temporaryPassword).ConfigureAwait(false);
+
         if (!resetResult.Succeeded)
         {
             return resetResult;
@@ -158,6 +177,7 @@ internal sealed class GrantEmployeeSystemAccess(
         user.ResetFailedLoginAttempts();
 
         var failedCountResult = await userManager.ResetAccessFailedCountAsync(user).ConfigureAwait(false);
+
         if (!failedCountResult.Succeeded)
         {
             return failedCountResult;
@@ -173,6 +193,7 @@ internal sealed class GrantEmployeeSystemAccess(
         CancellationToken ct)
     {
         var displayName = $"{user.FirstName} {user.LastName}".Trim();
+
         if (string.IsNullOrWhiteSpace(displayName))
         {
             displayName = user.UserName ?? user.Email ?? "there";
@@ -204,6 +225,7 @@ internal sealed class GrantEmployeeSystemAccess(
         if (rolesAdded.Length > 0)
         {
             var roleRemovalResult = await userManager.RemoveFromRolesAsync(user, rolesAdded).ConfigureAwait(false);
+
             if (!roleRemovalResult.Succeeded)
             {
                 ServiceLogDefinitions.LogGrantEmployeeSystemAccessError(
@@ -215,8 +237,9 @@ internal sealed class GrantEmployeeSystemAccess(
 
         if (user.IsActive)
         {
-            user.RevokeAccess(changedBy, "Activation email could not be sent.");
+            user.RevokeAccess(timeProvider.GetUtcNow(), changedBy, "Activation email could not be sent.");
             var revokeResult = await userManager.UpdateAsync(user).ConfigureAwait(false);
+
             if (!revokeResult.Succeeded)
             {
                 ServiceLogDefinitions.LogGrantEmployeeSystemAccessError(

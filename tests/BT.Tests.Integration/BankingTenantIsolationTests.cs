@@ -4,10 +4,13 @@ using BT.Domain.Features.Banking.Customers.ValueObjects;
 using BT.Domain.Shared.Contracts.Common;
 using BT.Persistence.Features.Banking.DataContext;
 using BT.Tests.Integration.TestFixtures;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+
 using System;
 using System.Threading.Tasks;
+
 using Xunit;
 
 namespace BT.Tests.Integration;
@@ -63,6 +66,7 @@ public abstract class BankingTenantIsolationTests<TFixture> : IClassFixture<TFix
         using (var context = new BankingDBContext(_options, tenantProvider, actorProvider))
         {
             var creator = context.Database.GetService<Microsoft.EntityFrameworkCore.Storage.IRelationalDatabaseCreator>();
+
             if (!await creator.HasTablesAsync())
             {
                 if (context.Database.IsSqlServer())
@@ -77,11 +81,13 @@ public abstract class BankingTenantIsolationTests<TFixture> : IClassFixture<TFix
                     await context.Database.ExecuteSqlRawAsync("CREATE TABLE IF NOT EXISTS \"Employees\" (\"Id\" uuid NOT NULL PRIMARY KEY)");
                     await context.Database.ExecuteSqlRawAsync("INSERT INTO \"Employees\" (\"Id\") VALUES ('0194f800-0000-7000-8000-000000000001'), ('0194f800-0000-7000-8000-000000000002'), ('0194f800-0000-7000-8000-000000000003') ON CONFLICT DO NOTHING");
                 }
-                
+
                 var script = context.Database.GenerateCreateScript();
+
                 if (context.Database.IsSqlServer())
                 {
                     var batches = script.Split(new[] { "GO\r\n", "GO\n", "GO\r", "\r\nGO", "\nGO" }, StringSplitOptions.RemoveEmptyEntries);
+
                     foreach (var batch in batches)
                     {
                         if (!string.IsNullOrWhiteSpace(batch) && batch.Trim() != "GO")
@@ -97,6 +103,7 @@ public abstract class BankingTenantIsolationTests<TFixture> : IClassFixture<TFix
             }
 
             var rmId1 = Guid.CreateVersion7();
+
             if (context.Database.IsSqlServer())
             {
                 await context.Database.ExecuteSqlRawAsync($"INSERT INTO [Employees] ([Id]) VALUES ('{rmId1}')");
@@ -106,16 +113,18 @@ public abstract class BankingTenantIsolationTests<TFixture> : IClassFixture<TFix
                 await context.Database.ExecuteSqlRawAsync($"INSERT INTO \"Employees\" (\"Id\") VALUES ('{rmId1}')");
             }
 
-            var cust1 = Customer.Create("CUST1", "Customer 1", CustomerType.Corporate, SegmentType.Corporate, SubSegmentType.Local, rmId1, DateTimeOffset.UtcNow, corpDetail, address, commPref, "test");
+            var cust1 = Customer.Create(TimeProvider.System.GetUtcNow(), "CUST1", "Customer 1", CustomerType.Corporate, SegmentType.Corporate, SubSegmentType.Local, rmId1, DateTimeOffset.UtcNow, corpDetail, address, commPref, "test");
             context.Customers.Add(cust1);
             await context.SaveChangesAsync();
         }
 
         // Seed data acting as tenant 2
         tenantProvider.TenantId = tenant2;
+
         using (var context = new BankingDBContext(_options, tenantProvider, actorProvider))
         {
             var rmId2 = Guid.CreateVersion7();
+
             if (context.Database.IsSqlServer())
             {
                 await context.Database.ExecuteSqlRawAsync($"INSERT INTO [Employees] ([Id]) VALUES ('{rmId2}')");
@@ -125,13 +134,14 @@ public abstract class BankingTenantIsolationTests<TFixture> : IClassFixture<TFix
                 await context.Database.ExecuteSqlRawAsync($"INSERT INTO \"Employees\" (\"Id\") VALUES ('{rmId2}')");
             }
 
-            var cust2 = Customer.Create("CUST2", "Customer 2", CustomerType.Corporate, SegmentType.Corporate, SubSegmentType.Local, rmId2, DateTimeOffset.UtcNow, corpDetail, address, commPref, "test");
+            var cust2 = Customer.Create(TimeProvider.System.GetUtcNow(), "CUST2", "Customer 2", CustomerType.Corporate, SegmentType.Corporate, SubSegmentType.Local, rmId2, DateTimeOffset.UtcNow, corpDetail, address, commPref, "test");
             context.Customers.Add(cust2);
             await context.SaveChangesAsync();
         }
 
         // Act - Query as tenant 1
         tenantProvider.TenantId = tenant1;
+
         using (var context = new BankingDBContext(_options, tenantProvider, actorProvider))
         {
             var items = await context.Customers.ToListAsync();
@@ -140,9 +150,10 @@ public abstract class BankingTenantIsolationTests<TFixture> : IClassFixture<TFix
             Assert.Contains(items, i => i.Number == "CUST1");
             Assert.DoesNotContain(items, i => i.Number == "CUST2");
         }
-        
+
         // Act - Query as tenant 2
         tenantProvider.TenantId = tenant2;
+
         using (var context = new BankingDBContext(_options, tenantProvider, actorProvider))
         {
             var items = await context.Customers.ToListAsync();

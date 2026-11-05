@@ -11,5 +11,5 @@ namespace BT.Domain.Features.Banking.Customers.Events;
 
 public sealed record CustomerLinkedToUserEvent(string Id, Guid CustomerId) : IDomainEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }

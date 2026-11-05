@@ -1,5 +1,6 @@
 using BT.Domain.Features.Shared.OrgSettings.Entities;
 using BT.SharedKernel.Features.Shared.OrgSettings.Dtos;
+
 using System.Diagnostics.CodeAnalysis;
 
 namespace BT.Application.Features.Shared.OrgSettings.Mappings;
@@ -26,9 +27,9 @@ public static class OrgSettingMapping
     {
         if (string.IsNullOrWhiteSpace(key)) return false;
         var lowerKey = key.ToLowerInvariant();
-        return lowerKey.Contains("secret") || 
-               lowerKey.Contains("password") || 
-               lowerKey.Contains("token") || 
+        return lowerKey.Contains("secret") ||
+               lowerKey.Contains("password") ||
+               lowerKey.Contains("token") ||
                lowerKey.Contains("key");
     }
 }

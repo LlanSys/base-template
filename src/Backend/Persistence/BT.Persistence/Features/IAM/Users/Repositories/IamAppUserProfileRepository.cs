@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BT.Persistence.Features.IAM.Users.Repositories;
 
-internal sealed class IamAppUserProfileRepository(IamDBContext context) : Repository<AppUserProfile>(context), IAppUserProfileRepository
+internal sealed class IamAppUserProfileRepository(IamDBContext context, TimeProvider timeProvider) : Repository<AppUserProfile>(context), IAppUserProfileRepository
 {
     public async Task<AppUserProfile> CreateOrUpdateAsync(string userId, AppUserProfile profile, CancellationToken cancellationToken)
     {
@@ -21,9 +21,9 @@ internal sealed class IamAppUserProfileRepository(IamDBContext context) : Reposi
         }
         else
         {
-            existing.UpdateContact(profile.TelephoneNo, profile.MobileNo, profile.Email, profile.UpdatedBy ?? profile.CreatedBy);
+            existing.UpdateContact(timeProvider.GetUtcNow(), profile.TelephoneNo, profile.MobileNo, profile.Email, profile.UpdatedBy ?? profile.CreatedBy);
             profile = existing;
-            await UpdateAsync(existing).ConfigureAwait(false);
+            await UpdateAsync(existing, cancellationToken).ConfigureAwait(false);
         }
 
         return profile;

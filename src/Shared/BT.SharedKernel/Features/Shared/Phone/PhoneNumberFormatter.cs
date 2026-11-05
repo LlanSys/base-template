@@ -56,6 +56,7 @@ public static partial class PhoneNumberFormatter
         }
 
         PhoneNumber parsed;
+
         try
         {
             parsed = PhoneUtil.Parse(cleaned, null);
@@ -74,6 +75,7 @@ public static partial class PhoneNumberFormatter
         var country = CountryCallingCodeCatalog.FindByE164(cleaned)
             ?? CountryCallingCodeCatalog.FindByDialCode($"+{parsed.CountryCode}")
             ?? throw new ArgumentException("Phone number country calling code is not supported.");
+
         var e164 = PhoneUtil.Format(parsed, PhoneNumberFormat.E164);
         var nationalNumber = PhoneUtil.GetNationalSignificantNumber(parsed);
         var numberType = PhoneUtil.GetNumberType(parsed).ToString();
@@ -89,6 +91,7 @@ public static partial class PhoneNumberFormatter
         }
 
         PhoneNumber parsed;
+
         try
         {
             parsed = PhoneUtil.Parse(nationalNumber, country.Iso2);
@@ -124,6 +127,7 @@ public static partial class PhoneNumberFormatter
         }
 
         var digits = DigitsOnly(countryCode);
+
         if (string.IsNullOrWhiteSpace(digits))
         {
             return DefaultCountryCode;

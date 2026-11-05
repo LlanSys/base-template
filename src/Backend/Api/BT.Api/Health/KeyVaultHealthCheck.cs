@@ -17,12 +17,14 @@ internal sealed class KeyVaultHealthCheck(
         CancellationToken cancellationToken = default)
     {
         var settings = options.Value;
+
         if (!settings.KeyVault)
         {
             return HealthCheckResult.Healthy("Key Vault probe is disabled.");
         }
 
         var keyVaultUri = configuration["KeyVault:Uri"];
+
         if (string.IsNullOrWhiteSpace(keyVaultUri))
         {
             return HealthCheckResult.Unhealthy("KeyVault:Uri is not configured.");

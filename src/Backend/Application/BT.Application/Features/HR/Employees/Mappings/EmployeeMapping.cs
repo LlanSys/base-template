@@ -1,6 +1,7 @@
 using BT.Domain.Features.HR.Employees.Entities;
 using BT.SharedKernel.Features.HR.Employees.Dtos;
 using BT.SharedKernel.Features.Shared.Phone;
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -11,7 +12,7 @@ namespace BT.Application.Features.HR.Employees.Mappings;
 
 public static class EmployeeMapping
 {
-    public static Employee ToEntity(this CreateEmployeeRequest request, string generatedNumber, string createdBy) 
+    public static Employee ToEntity(this CreateEmployeeRequest request, string generatedNumber, string createdBy)
     {
         ArgumentNullException.ThrowIfNull(request, nameof(request));
 
@@ -34,7 +35,7 @@ public static class EmployeeMapping
             createdBy
         );
     }
-        
+
     public static EmployeeResponse ToEmployeeResponse(this Employee employee, string departmentName = "", string managerName = "")
     {
         ArgumentNullException.ThrowIfNull(employee, nameof(employee));
@@ -54,7 +55,7 @@ public static class EmployeeMapping
             employee.PhoneNationalNumber
         );
     }
-       
+
     public static Expression<Func<Employee, EmployeeResponse>> AsResponse => employee =>
         new EmployeeResponse(
             employee.Id,

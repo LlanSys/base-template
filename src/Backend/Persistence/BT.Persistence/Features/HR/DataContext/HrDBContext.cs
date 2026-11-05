@@ -17,30 +17,35 @@ public class HrDBContext : DbContext, ITenantFilteredDBContext
 {
     private readonly ICurrentTenantProvider? _tenantProvider;
     private readonly ICurrentActorProvider? _actorProvider;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<HrDBContext>? _logger;
 
     public HrDBContext(
         DbContextOptions<HrDBContext> options,
         ICurrentTenantProvider? tenantProvider = null,
         ICurrentActorProvider? actorProvider = null,
-        ILogger<HrDBContext>? logger = null
+        ILogger<HrDBContext>? logger = null,
+        TimeProvider? timeProvider = null
     ) : base(options)
     {
         _tenantProvider = tenantProvider;
         _actorProvider = actorProvider;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     protected HrDBContext(
         DbContextOptions options,
         ICurrentTenantProvider? tenantProvider = null,
         ICurrentActorProvider? actorProvider = null,
-        ILogger<HrDBContext>? logger = null
+        ILogger<HrDBContext>? logger = null,
+        TimeProvider? timeProvider = null
     ) : base(options)
     {
         _tenantProvider = tenantProvider;
         _actorProvider = actorProvider;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
     public DbSet<Employee> Employees { get; set; }
     public DbSet<EmployeeNumberSequence> EmployeeNumberSequences { get; set; }
@@ -71,7 +76,8 @@ public class HrDBContext : DbContext, ITenantFilteredDBContext
         {
             var domainEvents = DBContextHelper.CollectDomainEvents(ChangeTracker);
             DBContextHelper.ClearDomainEventsFromAggregates(ChangeTracker);
-            DBContextHelper.UpdateAuditAndSoftDelete(ChangeTracker, _actorProvider?.ActorId ?? ICurrentActorProvider.SystemActor, CurrentTenantId);
+            var now = _timeProvider.GetUtcNow();
+            DBContextHelper.UpdateAuditAndSoftDelete(ChangeTracker, _actorProvider?.ActorId ?? ICurrentActorProvider.SystemActor, CurrentTenantId, now);
             var result = await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             _collectedDomainEvents ??= [];
             _collectedDomainEvents.AddRange(domainEvents);
@@ -82,6 +88,7 @@ public class HrDBContext : DbContext, ITenantFilteredDBContext
             foreach (var entry in ex.Entries)
             {
                 var entityId = entry.Entity is BaseEntity b ? b.Id.ToString() : "(unknown)";
+
                 if (_logger is not null)
                     PersistenceLogDefinitions.LogConcurrencyConflict(_logger, entry.Entity.GetType().Name, entityId);
                 _ = await entry.GetDatabaseValuesAsync(cancellationToken).ConfigureAwait(false);

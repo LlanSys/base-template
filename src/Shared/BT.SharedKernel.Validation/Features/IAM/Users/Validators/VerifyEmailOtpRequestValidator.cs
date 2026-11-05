@@ -16,6 +16,7 @@ public sealed class VerifyEmailOtpRequestValidator : Validator<VerifyEmailOtpReq
             .NotEmpty()
             .Must(static purpose => Enum.TryParse<OtpPurpose>(purpose, ignoreCase: true, out _))
             .WithMessage("OTP purpose is not supported.");
+
         RuleFor(request => request.DeviceFingerprint).MaximumLength(256);
     }
 }

@@ -1,6 +1,8 @@
 using BT.Domain.Features.Banking.Customers.Contracts.Specifications;
 using BT.Domain.Shared.Contracts.Specifications;
+
 using Microsoft.EntityFrameworkCore;
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -31,6 +33,7 @@ internal static class SpecificationEvaluator<T, TCursor> where T : class
         else if (spec.Cursor != null && spec.CursorProperty != null)
         {
             var predicate = BuildCursorPredicate(spec.Cursor, spec.CursorProperty);
+
             if (predicate != null) query = query.Where(predicate);
         }
 
@@ -48,46 +51,46 @@ internal static class SpecificationEvaluator<T, TCursor> where T : class
     private static Expression<Func<T, bool>>? BuildCursorPredicate(TCursor cursorValue, string propertyName)
     {
         var param = Expression.Parameter(typeof(T), "x");
-            var propExpr = Expression.PropertyOrField(param, propertyName);
-            var underlyingType = Nullable.GetUnderlyingType(propExpr.Type) ?? propExpr.Type;
+        var propExpr = Expression.PropertyOrField(param, propertyName);
+        var underlyingType = Nullable.GetUnderlyingType(propExpr.Type) ?? propExpr.Type;
 
-            // Type-safe conversion
-            var convertedValue = underlyingType switch
-            {
-                var t when t == typeof(Guid) => cursorValue is Guid g
-                    ? g
-                    : Guid.TryParse(cursorValue?.ToString(), out var parsedGuid)
-                        ? parsedGuid
-                        : throw new InvalidOperationException($"Cannot convert cursor value '{cursorValue}' to Guid"),
+        // Type-safe conversion
+        var convertedValue = underlyingType switch
+        {
+            var t when t == typeof(Guid) => cursorValue is Guid g
+                ? g
+                : Guid.TryParse(cursorValue?.ToString(), out var parsedGuid)
+                    ? parsedGuid
+                    : throw new InvalidOperationException($"Cannot convert cursor value '{cursorValue}' to Guid"),
 
-                var t when t.IsEnum => Enum.TryParse(t, cursorValue?.ToString(), ignoreCase: true, out var parsedEnum)
-                    ? parsedEnum
-                    : throw new InvalidOperationException($"Cannot convert cursor value '{cursorValue}' to enum {t.Name}"),
+            var t when t.IsEnum => Enum.TryParse(t, cursorValue?.ToString(), ignoreCase: true, out var parsedEnum)
+                ? parsedEnum
+                : throw new InvalidOperationException($"Cannot convert cursor value '{cursorValue}' to enum {t.Name}"),
 
-                _ => Convert.ChangeType(cursorValue, underlyingType, CultureInfo.InvariantCulture)
-                    ?? throw new InvalidOperationException($"Cannot convert cursor value '{cursorValue}' to {underlyingType.Name}")
-            };
+            _ => Convert.ChangeType(cursorValue, underlyingType, CultureInfo.InvariantCulture)
+                ?? throw new InvalidOperationException($"Cannot convert cursor value '{cursorValue}' to {underlyingType.Name}")
+        };
 
-            var constant = Expression.Constant(convertedValue, underlyingType);
+        var constant = Expression.Constant(convertedValue, underlyingType);
 
-            // Build comparison using CompareTo for strings/Guids/numbers
-            var compareToMethod = underlyingType.GetMethod("CompareTo", [underlyingType])
-                ?? throw new InvalidOperationException($"Type {underlyingType.Name} does not support CompareTo — cannot build cursor predicate for property '{propertyName}'");
+        // Build comparison using CompareTo for strings/Guids/numbers
+        var compareToMethod = underlyingType.GetMethod("CompareTo", [underlyingType])
+            ?? throw new InvalidOperationException($"Type {underlyingType.Name} does not support CompareTo — cannot build cursor predicate for property '{propertyName}'");
 
-            // Handle Nullable types by accessing .Value
-            Expression left = propExpr.Type != underlyingType
-                ? Expression.Property(propExpr, "Value")
-                : propExpr;
+        // Handle Nullable types by accessing .Value
+        Expression left = propExpr.Type != underlyingType
+            ? Expression.Property(propExpr, "Value")
+            : propExpr;
 
-            var call = Expression.Call(left, compareToMethod, constant);
-            var comparison = Expression.GreaterThan(call, Expression.Constant(0));
+        var call = Expression.Call(left, compareToMethod, constant);
+        var comparison = Expression.GreaterThan(call, Expression.Constant(0));
 
-            // If nullable, add the .HasValue check
-            if (Nullable.GetUnderlyingType(propExpr.Type) != null)
-            {
-                var hasValue = Expression.Property(propExpr, "HasValue");
-                return Expression.Lambda<Func<T, bool>>(Expression.AndAlso(hasValue, comparison), param);
-            }
+        // If nullable, add the .HasValue check
+        if (Nullable.GetUnderlyingType(propExpr.Type) != null)
+        {
+            var hasValue = Expression.Property(propExpr, "HasValue");
+            return Expression.Lambda<Func<T, bool>>(Expression.AndAlso(hasValue, comparison), param);
+        }
 
         return Expression.Lambda<Func<T, bool>>(comparison, param);
     }

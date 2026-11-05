@@ -1,39 +1,28 @@
-using BT.Application.Contracts.Interfaces.Common;
 using BT.Domain.Features.Shared.Contracts;
 using BT.SharedKernel.Dtos.Common;
+using BT.SharedKernel.Features.Shared.OrgSettings;
 using BT.SharedKernel.Features.Shared.OrgSettings.Dtos;
 using BT.Application.Features.Shared.OrgSettings.Mappings;
 using MediatR;
 
 namespace BT.Application.Features.Shared.OrgSettings.QueryHandlers;
 
-internal sealed class GetOrgSettingsHandler(
-    ISharedUnitOfWork unitOfWork,
-    IEncryptionService encryptionService)
+internal sealed class GetOrgSettingsHandler(ISharedUnitOfWork unitOfWork)
     : IRequestHandler<GetOrgSettingsQuery, AppResponse<IEnumerable<OrgSettingResponse>>>
 {
     public async Task<AppResponse<IEnumerable<OrgSettingResponse>>> Handle(GetOrgSettingsQuery request, CancellationToken cancellationToken)
     {
-        var settings = await unitOfWork.OrgSettingRepository.ListAsync(ct: cancellationToken).ConfigureAwait(false);
-        
-        var responses = settings.Select(s =>
-        {
-            var mapped = s.ToResponse();
-            // If mapping didn't obscure it (i.e. not "***"), we must decrypt it so it's readable
-            if (mapped.Value != "***")
-            {
-                try
-                {
-                    mapped = mapped with { Value = encryptionService.Decrypt(mapped.Value) };
-                }
-                catch
-                {
-                    // Ignore decryption error, fallback to original encrypted or raw value
-                }
-            }
-            return mapped;
-        });
+        var keys = OrganizationSettingCatalog.Definitions.Select(definition => definition.Key).ToArray();
+        var settings = await unitOfWork.OrgSettingRepository.ListAsync(query => query.Where(setting => keys.Contains(setting.Key)),
+            cancellationToken).ConfigureAwait(false);
 
-        return AppResponses.Success("Tenant settings retrieved successfully.", responses);
+        var responses = OrganizationSettingCatalog.Definitions.Select(definition =>
+        {
+            var setting = settings.FirstOrDefault(setting => setting.Key == definition.Key);
+            return setting is null ? new OrgSettingResponse(Guid.Empty, definition.Key, definition.DefaultValue, definition.Description,
+                new DateTime(2026, 1, 1), "00000000-0000-0000-0000-000000000001", null, null) : setting.ToResponse();
+        }).ToArray();
+
+        return AppResponses.Success<IEnumerable<OrgSettingResponse>>("Organization settings loaded.", responses);
     }
 }

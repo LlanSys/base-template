@@ -10,11 +10,12 @@ public class SharedSqlServerDBContextFactory : IDesignTimeDbContextFactory<Share
     {
         var configuration = DesignTimeConfigurationFactory.Create();
         var optionsBuilder = new DbContextOptionsBuilder<SharedSqlServerDBContext>();
-        var connectionString = DesignTimeConfigurationFactory.GetConnectionString(configuration, "SharedConnection");
+        var connectionString = DesignTimeConfigurationFactory.GetConnectionString(configuration, "SharedConnection", fallbackConnectionName: "DefaultSqlConnection");
 
         optionsBuilder.UseSqlServer(
             connectionString,
-            sqlOptions => DesignTimeConfigurationFactory.ConfigureSqlServer(sqlOptions, "__EFMigrationsHistory_Shared")).ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsSqlGenerator, BT.Persistence.Features.Shared.Migrations.Generators.IdempotentSqlServerMigrationsSqlGenerator>();
+            sqlOptions => DesignTimeConfigurationFactory.ConfigureSqlServer(sqlOptions, "__EFMigrationsHistory_Shared")).ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IMigrationsSqlGenerator, Migrations.Generators.IdempotentSqlServerMigrationsSqlGenerator>();
+
         return new SharedSqlServerDBContext(optionsBuilder.Options, null!, null!);
     }
 }

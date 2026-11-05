@@ -6,9 +6,15 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
+<div class="panel-heading">
+    <h3>Permissions</h3>
+    <MudChip T="string"
+             Size="Size.Small">@(_permissions.Count) shown</MudChip>
+</div>
 <div class="list-toolbar">
     <MudTextField @bind-Value="_searchText"
                   Placeholder="Search key, context, resource, action, description..."
+                  Label="Search permissions"
                   Adornment="Adornment.Start"
                   AdornmentIcon="@Icons.Material.Filled.Search"
                   Margin="Margin.Dense"
@@ -17,103 +23,153 @@
                   DebounceInterval="400"
                   OnDebounceIntervalElapsed="ApplyFiltersAsync"
                   OnKeyDown="HandleSearchKeyDown" />
-    <MudIconButton Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" Color="@(_showFilters ? Color.Success : Color.Default)" OnClick="ToggleFilters" title="Advanced filters" />
+    <MudIconButton Icon="@Icons.Material.Filled.FilterList"
+                   Size="Size.Small"
+                   Color="@(_showFilters ? Color.Success : Color.Default)"
+                   OnClick="ToggleFilters"
+                   title="Advanced filters" />
     @if (HasActiveFilters)
     {
-        <MudIconButton Icon="@Icons.Material.Filled.FilterAltOff" Size="Size.Small" Color="Color.Error" OnClick="ClearFiltersAsync" title="Clear filters" />
+        <MudIconButton Icon="@Icons.Material.Filled.FilterAltOff"
+                       Size="Size.Small"
+                       Color="Color.Error"
+                       OnClick="ClearFiltersAsync"
+                       title="Clear filters" />
     }
 </div>
 
-        @if (_showFilters)
-        {
-            <MudDivider Class="my-2" />
-            <MudGrid Spacing="2" Class="mb-2">
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="string" Value="_contextFilter" ValueChanged="@(async (string? val) => { _contextFilter = val; await ApplyFiltersAsync(); })" Label="Context" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                        @foreach (var context in ContextOptions)
-                        {
-                            <MudSelectItem Value="@context">@context</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="string" Value="_resourceFilter" ValueChanged="@(async (string? val) => { _resourceFilter = val; await ApplyFiltersAsync(); })" Label="Resource" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                        @foreach (var resource in ResourceOptions)
-                        {
-                            <MudSelectItem Value="@resource">@resource</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="bool?" Value="_isActiveFilter" ValueChanged="@(async (bool? val) => { _isActiveFilter = val; await ApplyFiltersAsync(); })" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                        <MudSelectItem T="bool?" Value="@((bool?)true)">Active</MudSelectItem>
-                        <MudSelectItem T="bool?" Value="@((bool?)false)">Inactive</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-            </MudGrid>
-        }
+@if (_showFilters)
+{
+    <MudDivider Class="my-2" />
+    <MudGrid Spacing="2"
+             Class="mb-2">
+        <MudItem xs="12"
+                 sm="4">
+            <MudSelect T="string"
+                       Value="_contextFilter"
+                       ValueChanged="@(async (string? val) => { _contextFilter = val; await ApplyFiltersAsync(); })"
+                       Label="Context"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="true">
+                @foreach (var context in ContextOptions)
+                {
+                    <MudSelectItem Value="@context">@context</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12"
+                 sm="4">
+            <MudSelect T="string"
+                       Value="_resourceFilter"
+                       ValueChanged="@(async (string? val) => { _resourceFilter = val; await ApplyFiltersAsync(); })"
+                       Label="Resource"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="true">
+                @foreach (var resource in ResourceOptions)
+                {
+                    <MudSelectItem Value="@resource">@resource</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12"
+                 sm="4">
+            <MudSelect T="bool?"
+                       Value="_isActiveFilter"
+                       ValueChanged="@(async (bool? val) => { _isActiveFilter = val; await ApplyFiltersAsync(); })"
+                       Label="Status"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="true">
+                <MudSelectItem T="bool?"
+                               Value="@((bool? )true)">Active</MudSelectItem>
+                <MudSelectItem T="bool?"
+                               Value="@((bool? )false)">Inactive</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+}
 
-        @if (_isLoading)
-        {
-            <MudProgressLinear Color="Color.Success" Indeterminate="true" Class="my-2" />
-        }
+@if (_isLoading)
+{
+    <MudProgressLinear Color="Color.Success"
+                       Indeterminate="true"
+                       Class="my-2" />
+}
 
-        @if (!string.IsNullOrWhiteSpace(_message))
-        {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Class="my-2">@_message</MudAlert>
-        }
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <MudAlert Severity="Severity.Error"
+              Variant="Variant.Outlined"
+              Dense="true"
+              Class="my-2">@_message</MudAlert>
+}
 
-        <div class="bt-table-scroll">
-            <MudTable Items="_permissions" Dense="true" Hover="true" Elevation="0" FixedHeader="true" RowsPerPage="PageSize" Height="calc(100vh - 25rem)" Style="min-width: 980px;" Breakpoint="Breakpoint.None">
-                <HeaderContent>
-                    <MudTh Style="width: 15rem;">Key</MudTh>
-                    <MudTh Style="width: 8rem;">Context</MudTh>
-                    <MudTh Style="width: 10rem;">Scope</MudTh>
-                    <MudTh Style="width: 10rem;">Resource</MudTh>
-                    <MudTh Style="width: 10rem;">Action</MudTh>
-                    <MudTh>Description</MudTh>
-                    <MudTh Style="width: 8rem;">Status</MudTh>
-                    <MudTh Style="width: 8rem;">Actions</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Key">@context.Key</MudTd>
-                    <MudTd DataLabel="Context">@context.Context</MudTd>
-                    <MudTd DataLabel="Scope">@DepartmentName(context.DepartmentId)</MudTd>
-                    <MudTd DataLabel="Resource">@context.Resource</MudTd>
-                    <MudTd DataLabel="Action">@context.Action</MudTd>
-                    <MudTd DataLabel="Description">@context.Description</MudTd>
-                    <MudTd DataLabel="Status">
-                        <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Default)">
-                            @(context.IsActive ? "Active" : "Inactive")
-                        </MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="Actions">
-                        <TableRowActions OnView="@(() => OpenViewDialogAsync(context))"
-                                         OnEdit="@(() => OpenFormDialogAsync(context))"
-                                         OnDelete="@(() => ConfirmDeleteAsync(context))"
-                                         CanView="@AuthSession.HasPermission("roles.manage_permissions")"
-                                         CanEdit="@AuthSession.HasPermission("roles.manage_permissions")"
-                                         CanDelete="@AuthSession.HasPermission("roles.manage_permissions")"
-                                         ExtraActions="@(["Review role usage"])"
-                                         OnExtraAction="@((action) => HandlePermissionActionAsync(context, action))" />
-                    </MudTd>
-                </RowTemplate>
-                <NoRecordsContent>
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No records found.</MudAlert>
-                </NoRecordsContent>
-                <PagerContent>
-                    <GlobalTablePager CurrentPage="_currentPage"
-                                      TotalRecords="_totalRecords"
-                                      PageSize="PageSize"
-                                      IsLoading="_isLoading"
-                                      OnFirstPage="GoToFirstPageAsync"
-                                      OnPreviousPage="GoToPreviousPageAsync"
-                                      OnNextPage="GoToNextPageAsync" />
-                </PagerContent>
-            </MudTable>
-        </div>
+<div class="bt-table-scroll">
+    <MudTable Items="_permissions"
+              Dense="true"
+              Hover="true"
+              Elevation="0"
+              FixedHeader="true"
+              RowsPerPage="PageSize"
+              Height="calc(100vh - 25rem)"
+              Style="min-width: 980px;"
+              Breakpoint="Breakpoint.None">
+        <HeaderContent>
+            <MudTh Style="width: 15rem;">Key</MudTh>
+            <MudTh Style="width: 8rem;">Context</MudTh>
+            <MudTh Style="width: 10rem;">Scope</MudTh>
+            <MudTh Style="width: 10rem;">Resource</MudTh>
+            <MudTh Style="width: 10rem;">Action</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh Style="width: 8rem;">Status</MudTh>
+            <MudTh Style="width: 8rem;">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Key">@context.Key</MudTd>
+            <MudTd DataLabel="Context">@context.Context</MudTd>
+            <MudTd DataLabel="Scope">@DepartmentName(context.DepartmentId)</MudTd>
+            <MudTd DataLabel="Resource">@context.Resource</MudTd>
+            <MudTd DataLabel="Action">@context.Action</MudTd>
+            <MudTd DataLabel="Description">@context.Description</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@(context.IsActive ? Color.Success : Color.Default)">
+                    @(context.IsActive ? "Active" : "Inactive")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <TableRowActions OnView="@(() => OpenViewDialogAsync(context))"
+                                 OnEdit="@(() => OpenFormDialogAsync(context))"
+                                 OnDelete="@(() => ConfirmDeleteAsync(context))"
+                                 CanView="@AuthSession.HasPermission("roles.manage_permissions")"
+                                 CanEdit="@AuthSession.HasPermission("permissions.manage")"
+                                 CanDelete="@(AuthSession.HasPermission("permissions.manage") && !context.IsProtected)"
+                                 ExtraActions="@(AuthSession.HasPermission("permissions.manage") ? new[] {  "Manage roles",  context.IsActive ? "Disable" : "Enable" }  : new[] {  "Review role usage" }  )"
+                                 OnExtraAction="@((action) => HandlePermissionActionAsync(context, action))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudAlert Severity="Severity.Info"
+                      Variant="Variant.Outlined"
+                      Dense="true">No records found.</MudAlert>
+        </NoRecordsContent>
+        <PagerContent>
+            <GlobalTablePager CurrentPage="_currentPage"
+                              TotalRecords="_totalRecords"
+                              PageSize="PageSize"
+                              IsLoading="_isLoading"
+                              OnFirstPage="GoToFirstPageAsync"
+                              OnPreviousPage="GoToPreviousPageAsync"
+                              OnNextPage="GoToNextPageAsync" />
+        </PagerContent>
+    </MudTable>
+</div>
 
 @code {
+    [Parameter] public string? ModuleKey { get; set; }
     public Task OpenCreateDialogAsync() => OpenFormDialogAsync(null);
 
     private readonly List<PermissionResponse> _permissions = [];
@@ -234,8 +290,8 @@
 
         var request = new PermissionSearchRequest(
             GlobalSearch: string.IsNullOrWhiteSpace(_searchText) ? null : _searchText.Trim(),
-            Context: _contextFilter,
-            Resource: _resourceFilter,
+            Context: ModuleKey == "Payments" ? "Shared" : ModuleKey ?? _contextFilter,
+            Resource: ModuleKey == "Payments" ? "payments" : _resourceFilter,
             IsActive: _isActiveFilter,
             Cursor: _currentCursor,
             PageSize: PageSize);
@@ -295,7 +351,8 @@
     {
         var parameters = new DialogParameters
         {
-            { nameof(PermissionFormDialog.ExistingPermission), permission }
+            { nameof(PermissionFormDialog.ExistingPermission), permission },
+            { nameof(PermissionFormDialog.ModuleKey), ModuleKey }
         };
 
         var dialog = await DialogService.ShowAsync<PermissionFormDialog>(
@@ -343,33 +400,21 @@
 
     private async Task HandlePermissionActionAsync(PermissionResponse permission, string action)
     {
-        if (!action.Equals("Review role usage", StringComparison.OrdinalIgnoreCase))
+        if (action == "Disable" || action == "Enable")
         {
-            return;
-        }
-
-        var rolesResponse = await IamAdminService.GetRolesAsync();
-        if (!rolesResponse.IsSuccess || rolesResponse.Data is null)
-        {
-            Snackbar.Add(rolesResponse.Message ?? "We could not load roles for usage review.", Severity.Error);
-            return;
-        }
-
-        var roleNames = new List<string>();
-        foreach (var role in rolesResponse.Data)
-        {
-            var permissionsResponse = await IamAdminService.GetRolePermissionsAsync(role.Id);
-            if (permissionsResponse.IsSuccess
-                && permissionsResponse.Data?.PermissionKeys.Contains(permission.Key, StringComparer.OrdinalIgnoreCase) == true)
+            if (await DialogService.ShowMessageBoxAsync(action + " permission", $"{action} {permission.Key}?", yesText: action, cancelText: "Cancel") != true) return;
+            var response = await IamAdminService.UpdatePermissionAsync(permission.Id, new UpdatePermissionRequest
             {
-                roleNames.Add(role.Name);
-            }
+                Id = permission.Id, DepartmentId = permission.DepartmentId, Context = permission.Context, Resource = permission.Resource,
+                Action = permission.Action, Description = permission.Description, IsActive = !permission.IsActive,
+                AvailableTenantId = permission.AvailableTenantId, RequiredModule = permission.RequiredModule
+            });
+            if (!response.IsSuccess) Snackbar.Add(response.Message ?? "Permission could not be changed.", Severity.Error);
+            await LoadPermissionsAsync();
+            return;
         }
-
-        var message = roleNames.Count == 0
-            ? $"{permission.Key} is not assigned to any role."
-            : $"{permission.Key} is assigned to: {string.Join(", ", roleNames.Order(StringComparer.OrdinalIgnoreCase))}.";
-
-        Snackbar.Add(message, Severity.Info);
+        await DialogService.ShowAsync<PermissionRoleUsageDialog>("Role usage",
+            new DialogParameters { [nameof(PermissionRoleUsageDialog.PermissionKey)] = permission.Key },
+            new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
     }
 }

@@ -62,6 +62,7 @@ internal sealed class SearchDepartmentsQueryHandler(IHrUnitOfWork unitOfWork, IL
             var page = await unitOfWork.DepartmentRepository.ListAsync(ApplyPaging, cancellationToken).ConfigureAwait(false);
 
             var hasNextPage = page.Count > pageSize;
+
             if (hasNextPage)
             {
                 page.RemoveAt(page.Count - 1);

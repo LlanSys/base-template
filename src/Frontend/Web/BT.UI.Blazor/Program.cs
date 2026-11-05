@@ -19,19 +19,21 @@ using BT.UI.Blazor.Features.ControlPlane.Auditing.Implementations;
 using BT.UI.Blazor.Features.ControlPlane.Stamps.Contracts;
 using BT.UI.Blazor.Features.ControlPlane.Stamps.Implementations;
 using BT.UI.Blazor.Features.Shared.Payments.Contracts.Implementations;
-using BT.UI.Rcl.Features.Banking.Customers.Contracts.Interfaces;
-using BT.UI.Rcl.Features.HR.Departments.Contracts.Interfaces;
-using BT.UI.Rcl.Features.HR.Employees.Contracts.Interfaces;
-using BT.UI.Rcl.Features.IAM.Users.Contracts.Interfaces;
-using BT.UI.Rcl.Features.Shared.Lookups.Contracts.Interfaces;
-using BT.UI.Rcl.Features.Shared.Payments.Contracts.Interfaces;
+using BT.UI.Blazor.Features.Banking.Customers.Contracts.Interfaces;
+using BT.UI.Blazor.Features.HR.Departments.Contracts.Interfaces;
+using BT.UI.Blazor.Features.HR.Employees.Contracts.Interfaces;
+using BT.UI.Blazor.Features.Shared.Lookups.Contracts.Interfaces;
+using BT.UI.Blazor.Features.Shared.Payments.Contracts.Interfaces;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using MudBlazor;
 using MudBlazor.Services;
 using System.Globalization;
+using BT.SharedKernel.Features.ControlPlane;
+using BT.UI.Blazor.Features.IAM.Users.State;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton(TimeProvider.System);
 ConfigurePlatformAssignedPort(builder.WebHost);
 
 UserMessageSanitizer.IsDevelopment = builder.Environment.IsDevelopment();
@@ -48,11 +50,34 @@ ConfigureDataProtection(builder.Services, builder.Configuration);
 
 builder.Services.AddMudServices();
 
-builder.Services.AddAuthorizationCore(options =>
-{
-    options.AddPolicy("ControlPlane.Manage", policy =>
-        policy.RequireClaim("permission", "controlplane.manage"));
-});
+builder.Services.AddAuthorizationCore(
+    options =>
+    {
+        options.AddPolicy(
+            "ControlPlane.Access",
+            policy =>
+                policy.RequireAssertion(context => context.User.HasClaim("platform_staff", "true")
+                    && PlatformPermissions.OpensControlPanel(
+                        context.User.FindAll("permission").Select(claim => claim.Value))));
+
+        foreach (var permission in PlatformPermissions.Operations.Concat(["modules.manage", "modules.create", "menus.view", "roles.view", "users.view", "permissions.manage"]))
+        {
+            options.AddPolicy(permission, policy => policy.RequireClaim("platform_staff", "true").RequireClaim("permission", permission));
+        }
+
+        options.AddPolicy(
+            "Platform.AccessManagement",
+            policy => policy.RequireClaim("platform_staff", "true")
+                .RequireAssertion(context => context.User.FindAll("permission").Any(claim => claim.Value is "roles.view" or "roles.manage_permissions" or "users.view")));
+
+        options.AddPolicy(
+            "Tenant.Administration",
+            policy => policy.RequireAssertion(context =>
+                !context.User.HasClaim("platform_staff", "true") && context.User.Claims.Any(claim => claim.Type == "permission"
+                    && (claim.Value.StartsWith("users.", StringComparison.Ordinal)
+                        || claim.Value.StartsWith("roles.", StringComparison.Ordinal)
+                        || claim.Value.StartsWith("tenant-settings.", StringComparison.Ordinal)))));
+    });
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
 builder.Services
@@ -81,11 +106,12 @@ builder.Services.AddScoped<IServerTokenStore, ServerTokenStore>();
 
 builder.Services.AddScoped<IAuthSession, AuthSession>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<BT.UI.Blazor.Features.IAM.Users.State.PasswordRecoveryState>();
+builder.Services.AddScoped<PasswordRecoveryState>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IIamAdminService, IamAdminService>();
+builder.Services.AddScoped<BT.UI.Blazor.Features.ControlPlane.Modules.ModuleService>();
 builder.Services.AddScoped<ILookupService, LookupService>();
 builder.Services.AddScoped<IPaymentCheckoutService, PaymentCheckoutService>();
 builder.Services.AddScoped<BT.UI.Blazor.Features.Shared.OrgSettings.Contracts.IOrgSettingsService, BT.UI.Blazor.Features.Shared.OrgSettings.Implementations.OrgSettingsService>();
@@ -93,12 +119,13 @@ builder.Services.AddSingleton<IAuthenticatorQrCodeService, AuthenticatorQrCodeSe
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IDeploymentStampService, DeploymentStampService>();
-var httpClientBuilder = builder.Services.AddHttpClient<IBackendApiClient, BackendApiClient>((serviceProvider, client) =>
-{
-    var settings = serviceProvider.GetRequiredService<IOptions<BackendApiSettings>>().Value;
-    client.BaseAddress = new Uri(settings.BaseUrl);
-    client.Timeout = TimeSpan.FromSeconds(30);
-});
+var httpClientBuilder = builder.Services.AddHttpClient<IBackendApiClient, BackendApiClient>(
+    (serviceProvider, client) =>
+    {
+        var settings = serviceProvider.GetRequiredService<IOptions<BackendApiSettings>>().Value;
+        client.BaseAddress = new Uri(settings.BaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(30);
+    });
 
 if (builder.Environment.IsDevelopment())
 {
@@ -117,7 +144,21 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.Use(
+    async (context, next) =>
+    {
+        if (context.Request.Path.StartsWithSegments("/iam/invitations", StringComparison.OrdinalIgnoreCase)
+            || context.Request.Path.StartsWithSegments("/iam/sso-callback", StringComparison.OrdinalIgnoreCase))
+        {
+            context.Response.Headers["Referrer-Policy"] = "no-referrer";
+            context.Response.Headers.CacheControl = "no-store";
+        }
+
+        await next(context).ConfigureAwait(false);
+    });
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
@@ -125,7 +166,10 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    // Only an empty shell is served over HTTP. Native Blazor policies run after
+    // protected browser storage is restored; all data remains behind API authorization.
+    .AddInteractiveServerRenderMode()
+    .AllowAnonymous();
 
 app.Run();
 

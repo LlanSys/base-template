@@ -1,4 +1,5 @@
 namespace BT.SharedKernel.Features.IAM.Users.Dtos;
+
 public record UserClaimsResponse
 {
     public string Type { get; init; } = string.Empty;

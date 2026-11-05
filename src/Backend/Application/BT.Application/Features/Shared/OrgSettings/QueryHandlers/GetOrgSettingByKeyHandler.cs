@@ -1,41 +1,16 @@
-using BT.Application.Contracts.Interfaces.Common;
-using BT.Domain.Features.Shared.Contracts;
 using BT.SharedKernel.Dtos.Common;
 using BT.SharedKernel.Features.Shared.OrgSettings.Dtos;
-using BT.Application.Features.Shared.OrgSettings.Mappings;
-using MediatR;
-using System.Net;
 
+using MediatR;
 namespace BT.Application.Features.Shared.OrgSettings.QueryHandlers;
 
-internal sealed class GetOrgSettingByKeyHandler(
-    ISharedUnitOfWork unitOfWork,
-    IEncryptionService encryptionService)
+internal sealed class GetOrgSettingByKeyHandler(ISender sender)
     : IRequestHandler<GetOrgSettingByKeyQuery, AppResponse<OrgSettingResponse>>
 {
     public async Task<AppResponse<OrgSettingResponse>> Handle(GetOrgSettingByKeyQuery request, CancellationToken cancellationToken)
     {
-        var setting = await unitOfWork.OrgSettingRepository.FirstOrDefaultAsync(x => x.Key == request.Key, cancellationToken).ConfigureAwait(false);
-        
-        if (setting == null)
-        {
-            return AppResponses.Failure<OrgSettingResponse>("Tenant setting not found.");
-        }
-
-        var response = setting.ToResponse();
-        
-        if (response.Value != "***")
-        {
-            try
-            {
-                response = response with { Value = encryptionService.Decrypt(response.Value) };
-            }
-            catch
-            {
-                // Fallback to original value on decryption failure
-            }
-        }
-
-        return AppResponses.Success("Tenant setting retrieved successfully.", response);
+        var response = await sender.Send(new GetOrgSettingsQuery(), cancellationToken).ConfigureAwait(false);
+        var setting = response.Data?.FirstOrDefault(setting => string.Equals(setting.Key, request.Key, StringComparison.Ordinal));
+        return setting is null ? AppResponses.NotFound<OrgSettingResponse>("Supported organization setting not found.") : AppResponses.Success(setting);
     }
 }

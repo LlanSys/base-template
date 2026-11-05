@@ -11,6 +11,7 @@ public sealed class GrantEmployeeSystemAccessCommandValidator : AbstractValidato
         RuleFor(command => command.GrantedBy).NotEmpty().MaximumLength(450);
         RuleFor(command => command.Roles).NotNull().Must(static roles => roles.Count > 0)
             .WithMessage("At least one role is required.");
+
         RuleForEach(command => command.Roles).NotEmpty().MaximumLength(80);
     }
 }

@@ -8,4 +8,10 @@ public sealed record PermissionResponse(
     string Resource,
     string Action,
     string Description,
-    bool IsActive);
+    bool IsActive,
+    Guid? AvailableTenantId = null,
+    string? RequiredModule = null,
+    bool IsTenantDelegatable = false)
+{
+    public bool IsProtected => BT.SharedKernel.Features.IAM.Permissions.ImplementedPermissions.IsProtected(Key);
+}

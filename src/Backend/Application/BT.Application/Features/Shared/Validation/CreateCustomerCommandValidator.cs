@@ -6,9 +6,9 @@ namespace BT.Application.Features.Shared.Validation;
 
 public sealed class CreateCustomerCommandValidator : AbstractValidator<CreateCustomerCommand>
 {
-    public CreateCustomerCommandValidator()
+    public CreateCustomerCommandValidator(TimeProvider timeProvider)
     {
-        RuleFor(x => x.CreateCustomerRequest).SetValidator(new CreateCustomerRequestValidator());
+        RuleFor(x => x.CreateCustomerRequest).SetValidator(new CreateCustomerRequestValidator(timeProvider));
         RuleFor(x => x.UserId).NotEmpty().WithMessage("Current user is required.");
     }
 }

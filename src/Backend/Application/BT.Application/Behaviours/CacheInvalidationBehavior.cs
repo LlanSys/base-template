@@ -1,14 +1,17 @@
 using BT.Application.Contracts.Interfaces.Common;
 using BT.Application.Utilities;
 using BT.Domain.Shared.Contracts.Common;
+
 using MediatR;
+
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace BT.Application.Behaviours; 
+namespace BT.Application.Behaviours;
 
 /// <summary>
 /// MediatR pipeline behavior that invalidates cache entries after a mutation command succeeds.
@@ -31,13 +34,14 @@ namespace BT.Application.Behaviours;
 ///      next read (wrong version in the key) and expire naturally.
 /// </summary>
 public sealed class CacheInvalidationBehavior<TRequest, TResponse>(
+    TimeProvider timeProvider,
     ICacheService cache,
     ICurrentTenantProvider tenantProvider,
     ILogger<CacheInvalidationBehavior<TRequest, TResponse>> logger)
 
-    : IPipelineBehavior<TRequest, TResponse> where TRequest 
+    : IPipelineBehavior<TRequest, TResponse> where TRequest
     : IRequest<TResponse>, ICacheInvalidatorRequest
-    
+
 {
     // Version tokens bump to a 24 h TTL — same as CachingBehavior creates them.
     private static readonly TimeSpan VersionTtl = TimeSpan.FromDays(1);
@@ -64,12 +68,14 @@ public sealed class CacheInvalidationBehavior<TRequest, TResponse>(
             // We must also remove that variant here so mutations don't leave stale
             // tenant-scoped entries in the cache.
             var tenantId = tenantProvider.TenantId;
+
             if (tenantId != Guid.Empty && key.Contains(":entity:", StringComparison.OrdinalIgnoreCase))
             {
                 var tenantScopedKey = key.Replace(
                     ":entity:",
                     $":entity:tenant:{tenantId:D}:",
                     StringComparison.OrdinalIgnoreCase);
+
                 await cache.RemoveAsync(tenantScopedKey, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -80,6 +86,7 @@ public sealed class CacheInvalidationBehavior<TRequest, TResponse>(
             await BumpVersionAsync(sentinelKey, cancellationToken).ConfigureAwait(false);
 
             var tenantScopedKey = ToTenantScopedVersionKey(sentinelKey, tenantProvider.TenantId);
+
             if (!string.Equals(tenantScopedKey, sentinelKey, StringComparison.OrdinalIgnoreCase))
             {
                 await BumpVersionAsync(tenantScopedKey, cancellationToken).ConfigureAwait(false);
@@ -105,8 +112,8 @@ public sealed class CacheInvalidationBehavior<TRequest, TResponse>(
         return $"{sentinelKey[..^":global".Length]}:tenant:{tenantId:D}";
     }
 
-    private static string GenerateVersion() 
-        => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
-        
+    private string GenerateVersion()
+        => timeProvider.GetUtcNow().ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
+
 }
 

@@ -22,38 +22,39 @@ public class Employee : BaseEntity, ISoftDeletable
     public bool IsDeleted { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }
     public string? DeletedBy { get; set; }
-    
+
 
     private Employee() { } // EF Core
 
     public static Employee Create(
         string number,
-        string email, 
-        string fName, 
-        string lName, 
+        string email,
+        string fName,
+        string lName,
         string idNumber,
         string countryCode,
         string phoneNationalNumber,
         string phoneNumber,
-        Guid departmentId, 
-        Guid? managerId, 
+        Guid departmentId,
+        Guid? managerId,
         string createdBy) => new()
-    {
-        Id = Guid.CreateVersion7(),
-        Number = number,
-        Email = email,
-        FirstName = fName,
-        LastName = lName,
-        IdNumber = idNumber,
-        CountryCode = countryCode,
-        PhoneNationalNumber = phoneNationalNumber,
-        PhoneNumber = phoneNumber,
-        DepartmentId = departmentId,
-        ManagerId = managerId,
-        CreatedBy = createdBy
-    };
+        {
+            Id = Guid.CreateVersion7(),
+            Number = number,
+            Email = email,
+            FirstName = fName,
+            LastName = lName,
+            IdNumber = idNumber,
+            CountryCode = countryCode,
+            PhoneNationalNumber = phoneNationalNumber,
+            PhoneNumber = phoneNumber,
+            DepartmentId = departmentId,
+            ManagerId = managerId,
+            CreatedBy = createdBy
+        };
 
     public void Update(
+        DateTimeOffset now,
         string number,
         string email,
         string firstName,
@@ -86,16 +87,16 @@ public class Employee : BaseEntity, ISoftDeletable
         PhoneNumber = phoneNumber.Trim();
         DepartmentId = departmentId;
         ManagerId = managerId;
-        SetUpdatedInfo(updatedBy);
+        SetUpdatedInfo(now, updatedBy);
     }
 
-    public void MarkAsDeleted(string deletedBy)
+    public void MarkAsDeleted(string deletedBy, DateTimeOffset now)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(deletedBy);
 
         IsDeleted = true;
-        DeletedAt = DateTimeOffset.UtcNow;
+        DeletedAt = now;
         DeletedBy = deletedBy;
-        SetUpdatedInfo(deletedBy);
+        SetUpdatedInfo(now, deletedBy);
     }
 }

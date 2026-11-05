@@ -11,5 +11,5 @@ public sealed record PaymentFailedEvent(
     Money Amount,
     string FailureReason) : IDomainEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }

@@ -23,10 +23,13 @@ This file is the canonical source of truth and working contract for AI coding to
 
 - Repo: `odhiamboally/base-template`
 - Product: BaseTemplate
+- StarterTemplate is the neutral default for downstream applications. BaseTemplate remains the domain-rich reference. Complete BaseTemplate onboarding first and track StarterTemplate parity in `docs/architecture/invitation-acceptance-and-starter-parity.md`.
 - Root namespace prefix: `BT`
 - Rename a clone with `scripts/rename-template.ps1` before its first run or deployment.
 - After protected data has been issued, `DataProtection:ApplicationName` is immutable without an explicit migration or security reset.
 - Target framework: `.NET 10`
+- Blazor Web is the only shipped frontend. Keep presentation contracts in their owning Blazor feature folders and shared transport DTOs in SharedKernel; do not reintroduce mobile hosts or a separate UI component library.
+- Every solution project supports `AnyCPU` and `x64`; map each project, including tools, to the matching solution platform. Never suppress processor-architecture mismatch warnings.
 - Architecture: modular monolith with Clean Architecture boundaries and bounded-context feature folders.
 - Current bounded contexts: `IAM`, `Banking`, `HR`, and `Shared`.
 
@@ -40,11 +43,24 @@ This file is the canonical source of truth and working contract for AI coding to
 - Keep feature-owned code inside `Features/{Context}/{Feature}` in every layer where that code exists.
 - Keep cross-cutting concerns outside feature folders: logging, middleware, generic caching, generic repositories, JSON helpers, base entities, and shared abstractions.
 
+## Source Formatting
+
+- Use four-space indentation, Allman braces, block-bodied methods, one statement per line, and blank lines between methods and logical steps.
+- Start wrapped argument lists on a new line. Prefer a vertical layout for fluent chains of three or more calls and treat 120 columns as a soft target.
+- Prefer adjacent partial classes for substantial Razor component logic. Keep whitespace-sensitive markup, literals, and generated schema history intact.
+- Apply or check the affected source with `scripts/Format-Code.ps1` and `-Include` for a focused pass. See `docs/development/code-readability.md`.
+
 ## Backend Conventions
+
+- Keep MassTransit packages on the Apache-licensed 8.x line and aligned at the same pinned patch version. A move to 9.x requires an explicit licensing and maintenance decision; do not disable messaging to work around an unintended major-version upgrade.
+- All MassTransit package references use the exact range `[$(MassTransitVersion)]`, defined once in `Directory.Build.props`. Exclude this family from bulk major-version updates; update the approved shared pin deliberately.
+- Keep Quartz on the current 3.x schema/serializer contract until a dedicated provider migration and queued-job compatibility check accompanies a major upgrade. Updating a package alone is insufficient.
 
 - Use MediatR request/handler flows already established in the repo.
 - Commands/queries and handlers should remain feature-owned.
 - Each public top-level type must live in its own file named after that type. This applies to classes, records, structs, interfaces, and enums; do not bundle multiple public DTOs, validators, settings POCOs, entities, or helper types in one file.
+- Use `using` directives and short type names in handwritten C# and Razor. Use descriptive `using` aliases for real name collisions; do not embed fully qualified or partially qualified type names in signatures and method bodies. Generated migrations, namespace declarations, and string-based type/configuration contracts are exceptions. See `docs/development/configuration-code-conventions.md`.
+- Use injected `TimeProvider` for current-time decisions, expiration, and clock-driven timers in new or changed runtime flows. Register `TimeProvider.System` at composition roots and replace it in tests. Keep `DateTimeOffset`, `DateTime`, and `DateOnly` as timestamp/calendar value types; do not replace persisted fields with a provider. Domain operations should receive captured timestamp values, not DI services. Never perform a mechanical `UtcNow` to `TimeProvider.System` replacement in business logic. Capture one clock instant per decision or persistence operation. Carry the source instant through published events and preserve their wire contracts. Keep StarterTemplate parity tracked separately.
 - Use `AppResponse<T>` for expected business outcomes.
 - Throw exceptions only for unexpected or exceptional failures.
 - API responses must go through the established response/problem-details pattern.
@@ -54,10 +70,13 @@ This file is the canonical source of truth and working contract for AI coding to
 - When a capability supports multiple runtime providers per operation, use a router/factory over isolated provider adapters. Do not make one provider adapter understand another provider's DTOs, credentials, or callbacks.
 - Application-layer command/query handlers must use bounded-context Unit of Work interfaces (`ISharedUnitOfWork`, `IBankingUnitOfWork`, etc.) for persistence orchestration, not raw `IRepository<T>`. Always call `CompleteAsync` with a `CancellationToken` after write operations.
 - Pass `CancellationToken` to all async I/O calls (`ReadAsStringAsync`, `CompleteAsync`, `SaveChangesAsync`, etc.) where the parameter is available.
+- Keep async resources in their original concrete/base types. When configuring async disposal, use a separate `await using` lifetime variable; a `ConfiguredAsyncDisposable` wrapper cannot replace a transaction, DbContext, connection, or service scope.
 - Use `StringComparison.OrdinalIgnoreCase` for case-insensitive comparisons. Reserve `ToUpperInvariant()`/`ToLowerInvariant()` for value normalization (stored keys, wire formats, display strings) — never for equality checks. C# `switch` on normalized strings is acceptable when `StringComparison` is not supported by the expression.
 - Always use `Guid.CreateVersion7()` instead of `Guid.NewGuid()` to ensure time-ordered identifiers.
 
 ## Persistence Rules
+
+- New BaseTemplate databases use the explicit `tools/BT.DatabaseTools` fresh initializer; existing databases use migrations. Read `docs/development/database-initialization.md` before initialization or upgrades. Never reset an existing database to work around historical bootstrap migrations.
 
 - Every declared `DbSet<T>` entity must have explicit EF configuration.
 - Custom persistence context-related types use the project `DB` acronym, for example `IamDBContext`, `DBContextHelper`, and `ITenantFilteredDBContext`; keep Microsoft framework API names unchanged.
@@ -84,6 +103,18 @@ This file is the canonical source of truth and working contract for AI coding to
 ## IAM And Security
 
 - IAM is a core platform capability, not an application-specific feature.
+- Maintain one shared codebase for all tenants. Implement specialized capabilities in that codebase and control availability through the vendor catalog and tenant entitlements; do not create tenant forks.
+- Authorize functionality by permission keys, never by business role names or a System Administrator shortcut. Platform identity is explicit (`IsPlatformStaff`). Use granular `controlplane.*` operation permissions. The retired `controlplane.manage` key is reserved.
+- Keep `EffectiveAccessMiddleware` after authentication and before authorization. Current user/tenant state, role scope, active permission definitions, and enabled, unexpired module entitlements must determine effective permissions on every API request.
+- Tenant administrators may edit only their own custom roles. Default roles are vendor-managed. Delegation requires both the actor's effective permission and the permission definition's vendor-controlled `IsTenantDelegatable` approval; assigning a role must enforce the same boundary.
+- Shipped endpoint permission keys must be listed in `ImplementedPermissions`. Do not deactivate or delete them through catalog CRUD. Custom permission retirement must reject outstanding menu, role, or direct-user references.
+- KYC is mandatory in both BaseTemplate and StarterTemplate. Preserve approval/provisioning gates before activation and invitation delivery/acceptance; never allow suspend/reactivate transitions to bypass KYC.
+- Tenant creation must persist the initial administrator invitation with the tenant and module grants. The durable worker sends an explicit, expiring welcome invitation without creating an account. Store only token hashes, preserve retry/idempotency and concurrency leases, and separate delivery from acceptance. Never send passwords or use Forgot Password for initial onboarding.
+- Invitation acceptance creates restricted setup only after credential validation. Existing accounts prove their current sign-in method; invitations cannot reset existing credentials or move accounts between tenants. Grant administrator access only after MFA and final invitation/tenant checks. Make completion resumable and idempotent across bounded-context databases.
+- Microsoft and Google external sign-in use validated provider identities, protected tenant/return state, approved callback origins, and one-time database-backed exchange codes. Never link accounts based on matching email alone. Connecting an existing account requires authenticated password confirmation plus provider authentication. Do not cache bearer/refresh tokens in Redis.
+- Module activation must validate the shipped permissions, a complete usable default role, and applicable implemented menu routes. Readiness checks must batch database access.
+- Organization settings must come from `OrganizationSettingCatalog`, have validation and an implemented consumer, and support reset to default. Infrastructure settings and arbitrary keys are not tenant configuration.
+- Keep the tenant Admin Center at the bottom of the sidebar and the user profile in the top navigation bar. Session refreshes must notify Blazor authorization and refresh navigation.
 - Administrative endpoints require permission-based authorization, not only `[Authorize]`.
 - Admin MFA enforcement is intentional; non-admin MFA can be policy-driven.
 - Session lifecycle must expire cleanly, warn before timeout, and avoid stale UI state.
@@ -96,12 +127,14 @@ This file is the canonical source of truth and working contract for AI coding to
 
 - Blazor UI talks to the backend API boundary for app flows.
 - Use MudBlazor components where practical and keep UI compact, responsive, and consistent.
+- Confirmation messages must describe the action and its effect on the user. Keep persistence and infrastructure terms such as "soft-delete" out of product wording unless they explain a meaningful user choice.
 - Use `wwwroot/css` for app CSS.
 - Avoid JavaScript unless Blazor cannot access the browser capability directly.
 - Tables should support compact layout, horizontal overflow, pagination/search/filter patterns, and consistent actions.
 - Listing pages follow the Customer hierarchy: create actions occupy a separate top-right page action row, shown-count badges occupy the list heading's right edge, and search/filter controls occupy a full-width row below the heading.
 - New route guards must use native Blazor authorization: `@attribute [Authorize]`, `@layout` with a policy-protected layout, or `<AuthorizeView>`. Do not add new ad-hoc `HasPermission()` checks for route-level gating; leave existing `HasPermission()` calls for inline UI visibility unchanged.
-- Control Plane pages must use `ControlPlaneLayout` (`@layout ControlPlaneLayout`), which enforces the `ControlPlane.Manage` policy at the layout level before `OnInitializedAsync` fires.
+- The web host serves only an empty HTTP shell before restoring protected browser storage in the interactive router. Keep protected prerendering disabled and preserve native component policies plus permission-protected API endpoints; never place authorized content or tokens in that anonymous shell.
+- Control Plane pages must use `ControlPlaneLayout` (`@layout ControlPlaneLayout`). Its `ControlPlane.Access` policy requires explicit platform identity and a supported platform capability. Add a native `[Authorize(Policy = "<operation permission>")]` route guard where a page owns a specific capability.
 
 ## Azure And Configuration
 

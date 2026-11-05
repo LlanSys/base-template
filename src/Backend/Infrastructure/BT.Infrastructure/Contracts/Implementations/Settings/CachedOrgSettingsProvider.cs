@@ -1,149 +1,39 @@
 using System.Text.Json;
-using BT.Infrastructure.Logging;
 using BT.Domain.Features.Shared.Contracts;
-using BT.Application.Contracts.Interfaces.Common;
-using BT.Domain.Shared.Contracts.Common;
 using BT.Domain.Shared.Contracts.Settings;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using BT.SharedKernel.Features.Shared.OrgSettings;
 
 namespace BT.Infrastructure.Contracts.Implementations.Settings;
 
-public class CachedOrgSettingsProvider : IOrgSettingsProvider
+/// <summary>Request-scoped supported preferences. No technical configuration or secrets can be overridden.</summary>
+public sealed class CachedOrgSettingsProvider(ISharedUnitOfWork unitOfWork) : IOrgSettingsProvider
 {
-    private readonly IDistributedCache _cache;
-    private readonly ICurrentTenantProvider _tenantProvider;
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IConfiguration _configuration;
-    private readonly IEncryptionService _encryptionService;
-    private readonly ILogger<CachedOrgSettingsProvider> _logger;
-
-    public CachedOrgSettingsProvider(
-        IDistributedCache cache,
-        ICurrentTenantProvider tenantProvider,
-        IServiceScopeFactory scopeFactory,
-        IConfiguration configuration,
-        IEncryptionService encryptionService,
-        ILogger<CachedOrgSettingsProvider> logger)
-    {
-        _cache = cache;
-        _tenantProvider = tenantProvider;
-        _scopeFactory = scopeFactory;
-        _configuration = configuration;
-        _encryptionService = encryptionService;
-        _logger = logger;
-    }
+    private Dictionary<string, string>? _values;
 
     public async Task<string?> GetSettingAsync(string key, CancellationToken ct = default)
     {
-        var tenantId = _tenantProvider.TenantId;
-        if (tenantId == Guid.Empty)
-        {
-            // If no tenant context, fallback to global appsettings
-            return _configuration[key];
-        }
+        var definition = OrganizationSettingCatalog.Find(key);
 
-        var cacheKey = $"tenant:{tenantId}:settings:{key}";
+        if (definition is null) return null;
 
-        try
+        if (_values is null)
         {
-            var cachedValue = await _cache.GetStringAsync(cacheKey, ct).ConfigureAwait(false);
-            if (!string.IsNullOrEmpty(cachedValue))
-            {
-                return cachedValue;
-            }
-        }
-        catch (Exception ex)
-        {
-            ServiceLogDefinitions.LogReadOrgSettingCacheWarning(_logger, ex);
-        }
+            var keys = OrganizationSettingCatalog.Definitions.Select(definition => definition.Key).ToArray();
+            var settings = await unitOfWork.OrgSettingRepository.ListAsync(
+                query => query.Where(setting => keys.Contains(setting.Key)), ct).ConfigureAwait(false);
 
-        // Cache miss, read from DB
-        string? plainTextValue = null;
-        try
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var unitOfWork = scope.ServiceProvider.GetRequiredService<ISharedUnitOfWork>();
-            var setting = await unitOfWork.OrgSettingRepository.FirstOrDefaultAsync(x => x.Key == key, ct).ConfigureAwait(false);
-
-            if (setting != null)
-            {
-                try
-                {
-                    plainTextValue = _encryptionService.Decrypt(setting.Value);
-                }
-                catch
-                {
-                    plainTextValue = setting.Value;
-                }
-            }
+            _values = settings.ToDictionary(setting => setting.Key, setting => setting.Value, StringComparer.Ordinal);
         }
-        catch (Exception ex)
-        {
-            ServiceLogDefinitions.LogReadOrgSettingDatabaseError(_logger, ex);
-        }
-
-        // Hierarchy Fallback: if not in DB, fallback to appsettings
-        if (string.IsNullOrEmpty(plainTextValue))
-        {
-            plainTextValue = _configuration[key];
-        }
-
-        // Cache it (even if null, cache empty string to prevent repeated DB hits)
-        if (plainTextValue != null)
-        {
-            try
-            {
-                var options = new DistributedCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
-                };
-                await _cache.SetStringAsync(cacheKey, plainTextValue, options, ct).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                ServiceLogDefinitions.LogWriteOrgSettingCacheWarning(_logger, ex);
-            }
-        }
-
-        return plainTextValue;
+        return _values.TryGetValue(key, out var value) && OrganizationSettingCatalog.IsValid(key, value) ? value : definition.DefaultValue;
     }
 
     public async Task<T?> GetSettingAsync<T>(string key, CancellationToken ct = default)
     {
-        var stringValue = await GetSettingAsync(key, ct).ConfigureAwait(false);
-        if (string.IsNullOrEmpty(stringValue))
-        {
-            return default;
-        }
+        var value = await GetSettingAsync(key, ct).ConfigureAwait(false);
 
-        try
-        {
-            // If T is a primitive type or string, try to convert directly
-            if (typeof(T) == typeof(string))
-            {
-                return (T)(object)stringValue;
-            }
-            
-            if (typeof(T) == typeof(Guid))
-            {
-                return (T)(object)Guid.Parse(stringValue);
-            }
+        if (value is null) return default;
 
-            if (typeof(T).IsPrimitive || typeof(T) == typeof(decimal))
-            {
-                return (T)Convert.ChangeType(stringValue, typeof(T), System.Globalization.CultureInfo.InvariantCulture);
-            }
-
-            // Otherwise assume JSON
-            return JsonSerializer.Deserialize<T>(stringValue);
-        }
-        catch (Exception ex)
-        {
-            ServiceLogDefinitions.LogDeserializeOrgSettingError(_logger, key, typeof(T).Name, ex);
-            return default;
-        }
+        if (typeof(T) == typeof(string)) return (T)(object)value;
+        return JsonSerializer.Deserialize<T>(value);
     }
 }

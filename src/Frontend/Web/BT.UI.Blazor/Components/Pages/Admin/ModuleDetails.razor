@@ -1,0 +1,95 @@
+@page "/control-panel/modules/{Id:guid}"
+@layout ControlPlaneLayout
+@attribute [Authorize(Policy = "modules.view")]
+@rendermode InteractiveServer
+@using BT.SharedKernel.Features.ControlPlane.Modules
+@using BT.UI.Blazor.Features.ControlPlane.Modules
+@inject ModuleService Modules
+@inject IAuthSession AuthSession
+<PageTitle>Module details | BaseTemplate</PageTitle>
+<MudButton Href="/control-panel/modules"
+           StartIcon="@Icons.Material.Filled.ArrowBack">Modules</MudButton>
+@if (_module is not null)
+{
+    <div class="list-page-actions">
+        @if (Tab == 1 && AuthSession.HasPermission("roles.create"))
+        {
+            <MudButton StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="@(() => _roles?.OpenCreateDialogAsync() ?? Task.CompletedTask)"
+                       Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       Size="Size.Small">Add default role</MudButton>
+        }
+        else if (Tab == 2 && AuthSession.HasPermission("permissions.manage"))
+        {
+            <MudButton StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="@(() => _permissions?.OpenCreateDialogAsync() ?? Task.CompletedTask)"
+                       Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       Size="Size.Small">Add permission</MudButton>
+        }
+    </div>
+    <MudPaper Class="poc-panel mt-3"
+              Elevation="0">
+        <div class="panel-heading">
+            <h2>@_module.Name</h2>
+        </div>
+        <MudTabs @bind-ActivePanelIndex="Tab"
+                 Rounded="true"
+                 Class="bt-catalog-tabs">
+            <MudTabPanel Text="Overview">
+                @foreach (var issue in _module.ReadinessIssues ?? [])
+                {
+                    <MudAlert Severity="Severity.Warning"
+                              Dense="true"
+                              Class="ma-3">@issue</MudAlert>
+                }
+                <MudText Class="pa-4">@_module.Description</MudText>
+                <MudText Class="pa-4">Status: @(_module.IsActive ? "Active" : "Disabled")</MudText>
+            </MudTabPanel>
+            <MudTabPanel Text="Default Roles"
+                         Disabled="@(!AuthSession.HasPermission("roles.view"))">@if (AuthSession.HasPermission("roles.view"))
+                {
+                    <AdminRoles @ref="_roles"
+                                ModuleKey="@_module.Key" />
+                }
+            </MudTabPanel>
+            <MudTabPanel Text="Permissions"
+                         Disabled="@(!AuthSession.HasPermission("roles.manage_permissions"))">@if (AuthSession.HasPermission("roles.manage_permissions"))
+                {
+                    <AdminPermissions @ref="_permissions"
+                                      ModuleKey="@_module.Key" />
+                }
+            </MudTabPanel>
+            <MudTabPanel Text="Menus"
+                         Disabled="@(!AuthSession.HasPermission("menus.view"))">@if (AuthSession.HasPermission("menus.view"))
+                {
+                    <AdminMenus ModuleKey="@_module.Key"
+                                Embedded="true" />
+                }
+            </MudTabPanel>
+        </MudTabs>
+    </MudPaper>
+}
+else if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [SupplyParameterFromQuery(Name = "tab")] public int Tab { get; set; }
+    private ModuleDefinitionResponse? _module;
+    private AdminRoles? _roles;
+    private AdminPermissions? _permissions;
+    private string? _error;
+    protected override async Task OnParametersSetAsync()
+    {
+        var response = await Modules.GetAsync();
+        _module = response.Data?.FirstOrDefault(module => module.Id == Id);
+        if (_module is null) _error = response.Message ?? "Module not found.";
+    }
+}

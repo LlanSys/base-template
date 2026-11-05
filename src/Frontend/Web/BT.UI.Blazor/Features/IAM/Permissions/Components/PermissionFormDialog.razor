@@ -1,30 +1,79 @@
 @inject IIamAdminService IamAdminService
 @inject IDepartmentService DepartmentService
 @inject ISnackbar Snackbar
+@inject ITenantService TenantService
+@inject IAuthSession AuthSession
 
 <MudDialog>
     <DialogContent>
-    <EditForm FormName="iam-permission-form" Model="_model" OnValidSubmit="SaveAsync">
-        <DataAnnotationsValidator />
+        <EditForm FormName="iam-permission-form"
+                  Model="_model"
+                  OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
             <MudGrid Spacing="2">
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="string" Value="_model.Context" ValueChanged="OnContextChanged" Label="Context" Margin="Margin.Dense" Variant="Variant.Outlined" Required>
+                <MudItem xs="12">
+                    <MudSelect T="Guid?"
+                               @bind-Value="_model.AvailableTenantId"
+                               Label="Availability"
+                               Clearable="true"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense">
+                        <MudSelectItem T="Guid?"
+                                       Value="null">All entitled tenants</MudSelectItem>
+                        @foreach (var tenant in _tenants)
+                        {
+                            <MudSelectItem T="Guid?"
+                                           Value="@tenant.Id">@tenant.DisplayName</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudSelect T="string"
+                               @bind-Value="_model.RequiredModule"
+                               Label="Required business module"
+                               Clearable="true"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense">
+                        @foreach (var key in BT.SharedKernel.Features.ControlPlane.Modules.ModuleCatalog.Keys)
+                        {
+                            <MudSelectItem T="string"
+                                           Value="@key">@key</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12"
+                         sm="4">
+                    <MudSelect T="string"
+                               Value="_model.Context"
+                               ValueChanged="OnContextChanged"
+                               Label="Context"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Required>
                         @foreach (var context in _referenceData.PermissionContexts)
                         {
                             <MudSelectItem Value="@context.Key">@context.Label</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudSelect @bind-Value="_model.Resource" Label="Resource" Margin="Margin.Dense" Variant="Variant.Outlined" Required>
+                <MudItem xs="12"
+                         sm="4">
+                    <MudSelect @bind-Value="_model.Resource"
+                               Label="Resource"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Required>
                         @foreach (var resource in ResourceOptions)
                         {
                             <MudSelectItem Value="@resource.Key">@resource.Label</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudSelect @bind-Value="_model.Action" Label="Action" Margin="Margin.Dense" Variant="Variant.Outlined" Required>
+                <MudItem xs="12"
+                         sm="4">
+                    <MudSelect @bind-Value="_model.Action"
+                               Label="Action"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Required>
                         @foreach (var action in _referenceData.PermissionActions)
                         {
                             <MudSelectItem Value="@action.Key">@action.Label</MudSelectItem>
@@ -32,37 +81,70 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12">
-                    <MudSelect T="Guid?" @bind-Value="_model.DepartmentId" Label="Department scope" Margin="Margin.Dense" Variant="Variant.Outlined" Clearable="true">
-                        <MudSelectItem T="Guid?" Value="null">Global</MudSelectItem>
+                    <MudSelect T="Guid?"
+                               @bind-Value="_model.DepartmentId"
+                               Label="Department scope"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Clearable="true">
+                        <MudSelectItem T="Guid?"
+                                       Value="null">Global</MudSelectItem>
                         @foreach (var department in _departments)
                         {
-                            <MudSelectItem T="Guid?" Value="@department.Id">@department.Name</MudSelectItem>
+                            <MudSelectItem T="Guid?"
+                                           Value="@department.Id">@department.Name</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField Value="@PreviewKey" Label="Generated key" Margin="Margin.Dense" Variant="Variant.Outlined" ReadOnly="true" />
+                    <MudSwitch T="bool"
+                               @bind-Value="_model.IsTenantDelegatable"
+                               Color="Color.Success"
+                               Label="Allow tenant administrators to delegate this permission" />
+                    <MudText Typo="Typo.caption">Delegation also requires the administrator's own effective permission and the tenant's entitlement.</MudText>
+                    <MudTextField Value="@PreviewKey"
+                                  Label="Generated key"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  ReadOnly="true" />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_model.Description" Label="Description" Lines="3" Margin="Margin.Dense" Variant="Variant.Outlined" />
+                    <MudTextField @bind-Value="_model.Description"
+                                  Label="Description"
+                                  Lines="3"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined" />
                 </MudItem>
                 @if (ExistingPermission is not null)
                 {
                     <MudItem xs="12">
-                        <MudSwitch T="bool" @bind-Value="_model.IsActive" Color="Color.Success" Label="Active" />
+                        <MudSwitch T="bool"
+                                   @bind-Value="_model.IsActive"
+                                   Color="Color.Success"
+                                   Label="Active"
+                                   Disabled="@(ExistingPermission?.IsProtected == true)" />
                     </MudItem>
                 }
             </MudGrid>
         </EditForm>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Success" Disabled="_isSaving" OnClick="SaveAsync">@(_isSaving ? "Saving..." : SaveLabel)</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   Variant="Variant.Text"
+                   Size="Size.Small"
+                   OnClick="Cancel">Cancel</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Save"
+                   Variant="Variant.Filled"
+                   Size="Size.Small"
+                   Color="Color.Success"
+                   Disabled="_isSaving"
+                   OnClick="SaveAsync">@(_isSaving ? "Saving..." : SaveLabel)</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     private readonly List<DepartmentResponse> _departments = [];
+    private List<TenantResponse> _tenants = [];
     private IamReferenceDataResponse _referenceData = new([], [], [], [], [], []);
     private PermissionFormModel _model = new();
     private bool _isSaving;
@@ -72,6 +154,7 @@
 
     [Parameter]
     public PermissionResponse? ExistingPermission { get; set; }
+    [Parameter] public string? ModuleKey { get; set; }
 
     private string SaveLabel => ExistingPermission is null ? "Create" : "Update";
 
@@ -86,18 +169,21 @@
     protected override async Task OnInitializedAsync()
     {
         _model = ExistingPermission is null
-            ? new PermissionFormModel()
+            ? new PermissionFormModel { RequiredModule = ModuleKey, Context = ModuleKey == "Payments" ? "Shared" : ModuleKey ?? string.Empty }
             : PermissionFormModel.From(ExistingPermission);
 
         await LoadReferenceDataAsync();
+        var tenants = await TenantService.GetAllAsync();
+        if (tenants.IsSuccess && tenants.Data is not null) _tenants = tenants.Data;
     }
 
     private async Task LoadReferenceDataAsync()
     {
-        var departmentsResponse = await DepartmentService.GetAsync();
-        if (departmentsResponse.IsSuccess && departmentsResponse.Data is not null)
+        if (AuthSession.HasPermission("departments.view") && AuthSession.CurrentUser?.IsPlatformStaff != true)
         {
-            _departments.AddRange(departmentsResponse.Data.Where(static department => department.IsActive).OrderBy(static department => department.Name));
+            var departmentsResponse = await DepartmentService.GetAsync();
+            if (departmentsResponse.IsSuccess && departmentsResponse.Data is not null)
+                _departments.AddRange(departmentsResponse.Data.Where(static department => department.IsActive).OrderBy(static department => department.Name));
         }
 
         var referenceResponse = await IamAdminService.GetReferenceDataAsync();
@@ -154,6 +240,9 @@
     {
         public Guid Id { get; set; }
         public Guid? DepartmentId { get; set; }
+        public Guid? AvailableTenantId { get; set; }
+        public string? RequiredModule { get; set; }
+        public bool IsTenantDelegatable { get; set; }
         public string Context { get; set; } = string.Empty;
         public string Resource { get; set; } = string.Empty;
         public string Action { get; set; } = string.Empty;
@@ -165,6 +254,9 @@
             {
                 Id = permission.Id,
                 DepartmentId = permission.DepartmentId,
+                AvailableTenantId = permission.AvailableTenantId,
+                IsTenantDelegatable = permission.IsTenantDelegatable,
+                RequiredModule = permission.RequiredModule ?? BT.SharedKernel.Features.ControlPlane.Modules.ModuleCatalog.ForPermission(permission.Key),
                 Context = permission.Context,
                 Resource = permission.Resource,
                 Action = permission.Action,
@@ -176,6 +268,9 @@
             => new()
             {
                 DepartmentId = DepartmentId,
+                AvailableTenantId = AvailableTenantId,
+                IsTenantDelegatable = IsTenantDelegatable,
+                RequiredModule = RequiredModule,
                 Context = Context,
                 Resource = Resource,
                 Action = Action,
@@ -187,6 +282,9 @@
             {
                 Id = Id,
                 DepartmentId = DepartmentId,
+                AvailableTenantId = AvailableTenantId,
+                IsTenantDelegatable = IsTenantDelegatable,
+                RequiredModule = RequiredModule,
                 Context = Context,
                 Resource = Resource,
                 Action = Action,

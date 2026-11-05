@@ -80,7 +80,7 @@ public sealed class PaymentsController(ISender sender, ILogger<PaymentsControlle
     public async Task<IActionResult> StripeWebhook(CancellationToken ct)
     {
         var signatureHeader = Request.Headers["Stripe-Signature"].ToString();
-        
+
         Request.EnableBuffering();
         Request.Body.Position = 0;
         using var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true);
@@ -137,7 +137,7 @@ public sealed class PaymentsController(ISender sender, ILogger<PaymentsControlle
             onError: error =>
             {
                 PaymentLogDefinitions.LogMpesaC2bConfirmationError(logger, error.Code);
-                return Ok(new { ResultCode = "0", ResultDesc = "Accepted" }); 
+                return Ok(new { ResultCode = "0", ResultDesc = "Accepted" });
             });
     }
 
@@ -155,7 +155,7 @@ public sealed class PaymentsController(ISender sender, ILogger<PaymentsControlle
 
     [HttpPost("mobile-money/admin/simulate-c2b")]
     [RequirePermission("payments.admin")]
-    [EnableRateLimiting("ApiPolicy")] 
+    [EnableRateLimiting("ApiPolicy")]
     public async Task<IActionResult> MpesaSimulateC2B([FromBody] SimulateMpesaC2BPaymentCommand command, CancellationToken ct)
     {
         var response = await sender

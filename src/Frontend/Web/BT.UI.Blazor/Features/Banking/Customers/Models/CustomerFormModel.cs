@@ -13,9 +13,9 @@ internal sealed class CustomerFormModel
     public string NatureOfBusiness { get; set; } = "Services";
     public string IdentificationType { get; set; } = "Certificate of Incorporation";
     public string RegistrationNumber { get; set; } = string.Empty;
-    public DateTime? DateOfRegistration { get; set; } = DateTime.Today;
+    public DateTime? DateOfRegistration { get; set; }
     public Guid RelationshipManagerId { get; set; }
-    public DateTime? OpenedOn { get; set; } = DateTime.Today;
+    public DateTime? OpenedOn { get; set; }
     public string ResidentialAddress { get; set; } = "Nairobi";
     public string Country { get; set; } = "Kenya";
     public string Region { get; set; } = "Nairobi";
@@ -60,7 +60,7 @@ internal sealed class CustomerFormModel
             MobileAlert = customer.MobileAlert
         };
 
-    public CreateCustomerRequest ToCreateRequest()
+    public CreateCustomerRequest ToCreateRequest(DateTime today)
         => new(
             Type,
             SegmentType,
@@ -72,7 +72,7 @@ internal sealed class CustomerFormModel
             NatureOfBusiness,
             IdentificationType,
             RegistrationNumber,
-            ToOffset(DateOfRegistration),
+            ToOffset(DateOfRegistration, today),
             null,
             null,
             null,
@@ -81,7 +81,7 @@ internal sealed class CustomerFormModel
             null,
             TinNumber,
             RelationshipManagerId,
-            ToOffset(OpenedOn),
+            ToOffset(OpenedOn, today),
             ResidentialAddress,
             Country,
             Region,
@@ -104,7 +104,7 @@ internal sealed class CustomerFormModel
             StatementOnline,
             MobileAlert);
 
-    public UpdateCustomerRequest ToUpdateRequest()
+    public UpdateCustomerRequest ToUpdateRequest(DateTime today)
         => new(
             Id,
             Type,
@@ -117,7 +117,7 @@ internal sealed class CustomerFormModel
             NatureOfBusiness,
             IdentificationType,
             RegistrationNumber,
-            ToOffset(DateOfRegistration),
+            ToOffset(DateOfRegistration, today),
             null,
             null,
             null,
@@ -126,7 +126,7 @@ internal sealed class CustomerFormModel
             null,
             TinNumber,
             RelationshipManagerId,
-            ToOffset(OpenedOn),
+            ToOffset(OpenedOn, today),
             ResidentialAddress,
             Country,
             Region,
@@ -149,6 +149,6 @@ internal sealed class CustomerFormModel
             StatementOnline,
             MobileAlert);
 
-    private static DateTimeOffset ToOffset(DateTime? value)
-        => new(value ?? DateTime.Today, TimeSpan.Zero);
+    private static DateTimeOffset ToOffset(DateTime? value, DateTime today)
+        => new(value ?? today, TimeSpan.Zero);
 }

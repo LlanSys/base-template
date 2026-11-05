@@ -1,0 +1,93 @@
+@using BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces
+@using BT.SharedKernel.Features.IAM.Users.Dtos
+@inject IBackendApiClient Client
+@inject IOptions<BackendApiSettings> Settings
+@inject NavigationManager Navigation
+@if (LinkAccount && _providers.Length > 0)
+{
+    <label for="connection-password">Confirm your current password</label>
+    <input id="connection-password"
+           type="password"
+           class="form-control"
+           @bind="_password"
+           autocomplete="current-password" />
+    @if (_message is not null)
+    {
+        <div class="alert alert-danger mt-2"
+             role="alert">@_message</div>
+    }
+}
+@foreach (var provider in _providers)
+{
+    @if (LinkAccount)
+    {
+        <button type="button"
+                class="btn btn-outline-secondary w-100 mt-2"
+                disabled="@_busy"
+                @onclick="@(() => ConnectAsync(provider))">Connect @provider.DisplayName</button>
+    }
+    else if (InvitationId.HasValue)
+    {
+        <form method="post"
+              action="@LoginEndpoint"
+              class="mt-2">
+            <input type="hidden"
+                   name="provider"
+                   value="@provider.Scheme" />
+            <input type="hidden"
+                   name="returnUrl"
+                   value="@ReturnUrl" />
+            <input type="hidden"
+                   name="invitationId"
+                   value="@InvitationId" />
+            <input type="hidden"
+                   name="invitationToken"
+                   value="@InvitationToken" />
+            <button type="submit"
+                    class="btn btn-outline-secondary btn-lg w-100">Accept invitation with @provider.DisplayName</button>
+        </form>
+    }
+    else
+    {
+        <a class="btn btn-outline-secondary btn-lg w-100 mt-2"
+           href="@(LoginEndpoint + "?provider=" + Uri.EscapeDataString(provider.Scheme) + "&returnUrl=" + Uri.EscapeDataString(ReturnUrl))">Sign in with @provider.DisplayName</a>
+    }
+}
+@code {
+    [Parameter] public Guid? InvitationId { get; set; }
+    [Parameter] public string? InvitationToken { get; set; }
+    [Parameter] public bool LinkAccount { get; set; }
+    private string _password = string.Empty;
+    private string? _message;
+    private bool _busy;
+    private SsoProviderResponse[] _providers = [];
+    private string ReturnUrl => new Uri(new Uri(Navigation.BaseUri), "iam/sso-callback").AbsoluteUri;
+    private string LoginEndpoint
+    {
+        get
+        {
+            var publicUrl = string.IsNullOrWhiteSpace(Settings.Value.PublicBaseUrl) ? Settings.Value.BaseUrl : Settings.Value.PublicBaseUrl;
+            var address = new UriBuilder(publicUrl) { Path = $"/api/v{Settings.Value.Version}/iam/auth/sso/login" };
+            return address.Uri.AbsoluteUri;
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await Client.SendAsync<SsoProviderResponse[]>(HttpMethod.Get, $"api/v{Settings.Value.Version}/iam/auth/sso/providers", requiresAuthentication: false);
+        _providers = response.IsSuccess ? response.Data ?? [] : [];
+    }
+    private async Task ConnectAsync(SsoProviderResponse provider)
+    {
+        if (_busy) return;
+        _busy = true;
+        try
+        {
+            var response = await Client.SendAsync<string>(HttpMethod.Post, $"api/v{Settings.Value.Version}/iam/auth/sso/connect", new ConnectExternalIdentityRequest(provider.Scheme, _password));
+            _password = string.Empty;
+            if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Data))
+            { _message = UserMessageSanitizer.Normalize(response.Message, "This sign-in method could not be connected."); return; }
+            Navigation.NavigateTo(LoginEndpoint + "?provider=" + Uri.EscapeDataString(provider.Scheme) + "&returnUrl=" + Uri.EscapeDataString(ReturnUrl) + "&connectionCode=" + Uri.EscapeDataString(response.Data), forceLoad: true);
+        }
+        finally { _busy = false; }
+    }
+}

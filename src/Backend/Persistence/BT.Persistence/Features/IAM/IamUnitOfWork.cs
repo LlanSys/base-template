@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 namespace BT.Persistence.Features.IAM;
 
 public sealed class IamUnitOfWork(
+    TimeProvider timeProvider,
     IamDBContext context,
     IUserRepository userRepository,
     ISessionRepository sessionRepository,
@@ -30,7 +31,7 @@ public sealed class IamUnitOfWork(
     IMenuRepository menuRepository,
     IPublisher publisher,
     ILogger<IamUnitOfWork> logger
-) : BaseUnitOfWork<IamDBContext>(context, publisher, logger), IIamUnitOfWork
+) : BaseUnitOfWork<IamDBContext>(context, publisher, logger, timeProvider), IIamUnitOfWork
 {
     public IUserRepository UserRepository { get; } = userRepository;
     public ISessionRepository SessionRepository { get; } = sessionRepository;

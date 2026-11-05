@@ -6,6 +6,9 @@ using BT.Api.Extensions;
 using BT.Api.Features.Shared.Realtime;
 using BT.Api.Health;
 using BT.Api.Utilities;
+using BT.Api.Middleware;
+using BT.Infrastructure.Logging;
+using BT.Infrastructure.Features.IAM.Authorization;
 using BT.Application.Extensions;
 using BT.Infrastructure.Extensions;
 using BT.Infrastructure.Features.Banking.Extensions;
@@ -75,7 +78,7 @@ try
         configuration
             .ReadFrom.Configuration(context.Configuration)
             .ReadFrom.Services(services)
-            .Destructure.With<BT.Infrastructure.Logging.PiiDestructuringPolicy>()
+            .Destructure.With<PiiDestructuringPolicy>()
             .Enrich.FromLogContext()
             .Enrich.WithMachineName()
             .Enrich.WithEnvironmentUserName()
@@ -83,17 +86,20 @@ try
             .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName);
 
         var otlpEndpoint = context.Configuration["Observability:Otlp:Endpoint"];
+
         if (!string.IsNullOrWhiteSpace(otlpEndpoint))
         {
             var headerString = context.Configuration["Observability:Otlp:Headers"];
             var headers = new Dictionary<string, string>();
-            
+
             if (!string.IsNullOrWhiteSpace(headerString))
             {
                 var pairs = headerString.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
                 foreach (var pair in pairs)
                 {
                     var parts = pair.Split('=', 2, StringSplitOptions.RemoveEmptyEntries);
+
                     if (parts.Length == 2)
                     {
                         headers[parts[0].Trim()] = parts[1].Trim();
@@ -288,6 +294,14 @@ try
 
     var app = builder.Build();
 
+    if (app.Configuration.GetValue("PlatformCatalog:InitializeDefaults", true))
+    {
+        var catalogScope = app.Services.CreateAsyncScope();
+        await using var catalogScopeLifetime = catalogScope.ConfigureAwait(false);
+        await catalogScope.ServiceProvider.GetRequiredService<PlatformCatalogInitializer>()
+            .InitializeAsync(CancellationToken.None).ConfigureAwait(false);
+    }
+
     await app.SeedDevelopmentIdentityAsync().ConfigureAwait(false);
 
     if (app.Environment.IsDevelopment())
@@ -336,6 +350,8 @@ try
 
     app.UseAuthentication();
 
+    app.UseMiddleware<EffectiveAccessMiddleware>();
+
     app.UsePostAuthMiddleware();
 
     app.UseAuthorization();
@@ -382,6 +398,7 @@ try
 
                 totalDuration = report.TotalDuration.TotalMilliseconds
             };
+
             await context.Response.WriteAsJsonAsync(response).ConfigureAwait(false);
         }
     });

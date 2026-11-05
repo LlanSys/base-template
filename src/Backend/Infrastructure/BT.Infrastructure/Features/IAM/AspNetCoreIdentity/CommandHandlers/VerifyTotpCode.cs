@@ -27,6 +27,10 @@ using Microsoft.Extensions.Options;
 using OtpNet;
 using System.Security.Cryptography;
 
+using RefreshTokenEntity = BT.Domain.Features.IAM.Users.Entities.RefreshToken;
+using BT.Application.Features.IAM.Authorization;
+using System.Globalization;
+
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
 internal sealed class VerifyTotpCode(
@@ -40,7 +44,7 @@ internal sealed class VerifyTotpCode(
     ISessionService sessionService,
     IHttpContextAccessor httpContextAccessor,
     IOptions<JwtSettings> jwtSettings,
-    ILogger<VerifyTotpCode> logger) : IRequestHandler<VerifyOtpCommand, AppResponse<VerifyOtpResponse>>
+    ILogger<VerifyTotpCode> logger, TimeProvider timeProvider) : IRequestHandler<VerifyOtpCommand, AppResponse<VerifyOtpResponse>>
 {
     private readonly JwtSettings _jwtSettings = jwtSettings.Value;
 
@@ -51,6 +55,7 @@ internal sealed class VerifyTotpCode(
         try
         {
             var user = await userManager.FindByIdAsync(request.UserId).ConfigureAwait(false);
+
             if (user == null)
             {
                 ServiceLogDefinitions.Log2FAVerificationAttemptNonExistentUser(logger, request.UserId);
@@ -82,6 +87,7 @@ internal sealed class VerifyTotpCode(
                     await iamUnitOfWork.AppUserTotpSecretRepository.DeactivateUserSecretsAsync(user.Id).ConfigureAwait(false);
 
                     var newSecret = AppUserTotpSecret.Create(
+                        timeProvider.GetUtcNow(),
                         user.Id,
                         tempSecret.EncryptedSecret,
                         user.Id);
@@ -90,8 +96,9 @@ internal sealed class VerifyTotpCode(
                     await iamUnitOfWork.TempTotpSecretRepository.DeleteAsync(tempSecret.Id, cancellationToken).ConfigureAwait(false);
                     await iamUnitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
 
-                    var isValid = await userManager.VerifyTwoFactorTokenAsync(user, userManager.Options.Tokens.AuthenticatorTokenProvider, request.Code.ToString(System.Globalization.CultureInfo.InvariantCulture)).ConfigureAwait(false);
+                    var isValid = await userManager.VerifyTwoFactorTokenAsync(user, userManager.Options.Tokens.AuthenticatorTokenProvider, request.Code.ToString(CultureInfo.InvariantCulture)).ConfigureAwait(false);
                     var enableResult = await userManager.SetTwoFactorEnabledAsync(user, true).ConfigureAwait(false);
+
                     if (!enableResult.Succeeded)
                     {
                         var errors = string.Join("; ", enableResult.Errors.Select(static error => error.Description));
@@ -104,6 +111,7 @@ internal sealed class VerifyTotpCode(
             else
             {
                 verification = await VerifyUserTotpAsync(user, request.Code, cancellationToken).ConfigureAwait(false);
+
                 if (verification.IsUnavailable)
                 {
                     return AppResponses.Failure<VerifyOtpResponse>(verification.Message!);
@@ -132,23 +140,26 @@ internal sealed class VerifyTotpCode(
             }
 
             var activeSessionId = sessionCreation.Data;
-            var userClaims = await claimsService.GetUserClaimsAsync(user, activeSessionId).ConfigureAwait(false);
+            var userClaims = await claimsService.GetUserClaimsAsync(user, activeSessionId, cancellationToken).ConfigureAwait(false);
+
             if (!userClaims.Any())
             {
                 return AppResponses.Failure<VerifyOtpResponse>("Could not retrieve user claims");
             }
 
+            MfaSessionClaims.MarkVerified(userClaims);
             var tokenResponse = await jwtService.CreateTokenAsync(userClaims).ConfigureAwait(false);
             var tokenExpiry = jwtService.GetTokenExpiry(tokenResponse);
             var refreshToken = jwtService.CreateRefreshToken();
-            var refreshTokenEntity = BT.Domain.Features.IAM.Users.Entities.RefreshToken.Create(
+            var refreshTokenEntity = RefreshTokenEntity.Create(
+                timeProvider.GetUtcNow(),
                 user.Id,
                 refreshToken,
-                DateTimeOffset.UtcNow.AddHours(_jwtSettings.RefreshTokenExpiryHours),
+                timeProvider.GetUtcNow().AddHours(_jwtSettings.RefreshTokenExpiryHours),
                 user.Id,
                 httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString());
 
-            user.RecordSuccessfulLogin();
+            user.RecordSuccessfulLogin(timeProvider.GetUtcNow());
             await userManager.UpdateAsync(user).ConfigureAwait(false);
             await iamUnitOfWork.ExecuteInTransactionWithRetryAsync(async () =>
             {
@@ -221,12 +232,13 @@ internal sealed class VerifyTotpCode(
         var userId = user.Id;
         var attemptKey = CacheKeys.TotpAttempts(userId);
         var attemptsStr = await cache.GetStringAsync(attemptKey, ct).ConfigureAwait(false);
-        var attempts = int.TryParse(attemptsStr, out var a) ? a : 0;
+        var attempts = int.TryParse(attemptsStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var a) ? a : 0;
 
         if (attempts >= 3)
             return TotpVerificationResult.Invalid();
 
         var secretEntity = await iamUnitOfWork.AppUserTotpSecretRepository.GetActiveSecretByUserIdAsync(userId).ConfigureAwait(false);
+
         if (secretEntity == null) return TotpVerificationResult.Invalid();
 
         var secretDecryption = TryDecryptTotpSecret(user, secretEntity.EncryptedSecret);
@@ -241,12 +253,12 @@ internal sealed class VerifyTotpCode(
         if (!isValid)
         {
             attempts++;
-            await cache.SetStringAsync(attemptKey, attempts.ToString(), new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) }, ct).ConfigureAwait(false);
+            await cache.SetStringAsync(attemptKey, attempts.ToString(CultureInfo.InvariantCulture), new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10) }, ct).ConfigureAwait(false);
             return TotpVerificationResult.Invalid();
         }
 
         await cache.RemoveAsync(attemptKey, ct).ConfigureAwait(false);
-        secretEntity.MarkAsUsed();
+        secretEntity.MarkAsUsed(timeProvider.GetUtcNow());
 
         await iamUnitOfWork.AppUserTotpSecretRepository.UpdateAsync(secretEntity, ct).ConfigureAwait(false);
         await iamUnitOfWork.CompleteAsync(ct).ConfigureAwait(false);
@@ -280,7 +292,7 @@ internal sealed class VerifyTotpCode(
             var secretBytes = Base32Encoding.ToBytes(secret);
             var totp = new Totp(secretBytes, step: 30, mode: OtpHashMode.Sha1, totpSize: 6);
             var window = new VerificationWindow(windowSize, windowSize);
-            return totp.VerifyTotp(code.Trim(), out _, window);
+            return totp.VerifyTotp(timeProvider.GetUtcNow().UtcDateTime, code.Trim(), out _, window);
         }
         catch (Exception ex)
         {

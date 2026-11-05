@@ -31,6 +31,8 @@ public class GetAllDeploymentStampsQueryHandler : IRequestHandler<GetAllDeployme
             .Select(s => new DeploymentStampResponse
             {
                 Id = s.Id,
+                Revision = s.Revision,
+                IsActive = s.IsActive,
                 Name = s.Name,
                 TargetResourceGroup = s.TargetResourceGroup,
                 IsolationTier = s.IsolationTier.ToDisplayString(),

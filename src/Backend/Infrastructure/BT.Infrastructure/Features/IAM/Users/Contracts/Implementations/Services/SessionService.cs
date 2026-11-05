@@ -22,7 +22,7 @@ namespace BT.Infrastructure.Features.IAM.Users.Contracts.Implementations.Service
 internal sealed class SessionService(
     IIamUnitOfWork iamUnitOfWork,
     ILogger<SessionService> logger,
-    IOptions<SessionSettings> sessionSettings) : ISessionService
+    IOptions<SessionSettings> sessionSettings, TimeProvider timeProvider) : ISessionService
 {
     private readonly IIamUnitOfWork _unitOfWork = iamUnitOfWork;
     private readonly ILogger<SessionService> _logger = logger;
@@ -53,10 +53,12 @@ internal sealed class SessionService(
         {
             // Check concurrent session limit
             var concurrentCheck = await CheckConcurrentSessionsAsync(userId, cancellationToken).ConfigureAwait(false);
+
             if (!concurrentCheck.IsSuccess)
             {
                 // If at limit, end the oldest sessions
                 var endSessionsResponse = await RevokeAllUserSessionsAsync(userId, null, cancellationToken).ConfigureAwait(false);
+
                 if (!endSessionsResponse.IsSuccess)
                 {
                     ServiceLogDefinitions.LogFailedToEndOldSessions(_logger, userId, endSessionsResponse.Message ?? string.Empty);
@@ -66,8 +68,9 @@ internal sealed class SessionService(
 
             }
 
-            var now = DateTimeOffset.UtcNow;
+            var now = timeProvider.GetUtcNow();
             var session = AppUserSession.Create(
+                now,
                 sessionId,
                 userId,
                 ipAddress,
@@ -90,6 +93,7 @@ internal sealed class SessionService(
     public async Task<AppResponse<Guid>> CreateSessionAsync(string userId, Guid sessionId, string ipAddress, string userAgent, string deviceFingerprint, CancellationToken cancellationToken = default)
     {
         const int maxRetries = 3;
+
         try
         {
             return await _unitOfWork.ExecuteInTransactionWithRetryAsync(async () =>
@@ -108,18 +112,19 @@ internal sealed class SessionService(
                 {
                     foreach (var session in sessionsToEnd)
                     {
-                        session.Revoke("New login from another device.");
+                        session.Revoke(timeProvider.GetUtcNow(), "New login from another device.");
                     }
 
                     await _unitOfWork.SessionRepository.UpdateRangeAsync(new Collection<AppUserSession>(sessionsToEnd), cancellationToken).ConfigureAwait(false);
                 }
 
-                var now = DateTimeOffset.UtcNow;
+                var now = timeProvider.GetUtcNow();
 
                 // Update existing session OR create new one (not both)
                 if (existingSessionForDevice is not null)
                 {
                     existingSessionForDevice.RefreshAccess(
+                        now,
                         now.AddMinutes(_sessionSettings.SessionTimeoutMinutes),
                         ipAddress,
                         userAgent);
@@ -130,6 +135,7 @@ internal sealed class SessionService(
                 else
                 {
                     var newSession = AppUserSession.Create(
+                        now,
                         sessionId,
                         userId,
                         ipAddress,
@@ -171,7 +177,7 @@ internal sealed class SessionService(
                 return AppResponses.Success("Session not found", true);
             }
 
-            session.Revoke("Session revoked by request");
+            session.Revoke(timeProvider.GetUtcNow(), "Session revoked by request");
 
             await _unitOfWork.SessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
@@ -193,6 +199,7 @@ internal sealed class SessionService(
                 .ConfigureAwait(false);
 
             Guid? excludeSessionGuid = null;
+
             if (!string.IsNullOrWhiteSpace(excludeSessionId) && Guid.TryParse(excludeSessionId, out var parsedExcludeSessionGuid))
             {
                 excludeSessionGuid = parsedExcludeSessionGuid;
@@ -206,7 +213,7 @@ internal sealed class SessionService(
             {
                 foreach (var session in sessionsToEnd)
                 {
-                    session.Revoke("Concurrent session limit exceeded");
+                    session.Revoke(timeProvider.GetUtcNow(), "Concurrent session limit exceeded");
                 }
 
                 await _unitOfWork.SessionRepository.UpdateRangeAsync(new Collection<AppUserSession>(sessionsToEnd), cancellationToken).ConfigureAwait(false);
@@ -246,7 +253,7 @@ internal sealed class SessionService(
     {
         try
         {
-            var now = DateTimeOffset.UtcNow;
+            var now = timeProvider.GetUtcNow();
             var retentionLimit = now.AddDays(-30);
             var expiredSessions = await _unitOfWork.SessionRepository
                 .GetExpiredSessionsAsync(now, cancellationToken)
@@ -256,7 +263,7 @@ internal sealed class SessionService(
             {
                 foreach (var session in expiredSessions)
                 {
-                    session.Revoke("Session expired");
+                    session.Revoke(now, "Session expired");
                 }
 
                 await _unitOfWork.SessionRepository.UpdateRangeAsync(new Collection<AppUserSession>(expiredSessions), cancellationToken).ConfigureAwait(false);
@@ -301,11 +308,12 @@ internal sealed class SessionService(
                 return AppResponses.Failure<bool>("Session is not active");
             }
 
-            var now = DateTimeOffset.UtcNow;
+            var now = timeProvider.GetUtcNow();
+
             if (session.ExpiresAt <= now)
             {
                 // Mark as expired
-                session.Expire();
+                session.Expire(now);
                 await _unitOfWork.SessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
                 await _unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
 
@@ -315,7 +323,7 @@ internal sealed class SessionService(
             // Optimize database writes: only write back if sliding expiration/access time is at least 1 minute old
             if (now - session.LastAccessedAt > TimeSpan.FromMinutes(1))
             {
-                session.Touch(_sessionSettings.SlidingExpiration
+                session.Touch(now, _sessionSettings.SlidingExpiration
                     ? now.AddMinutes(_sessionSettings.SessionTimeoutMinutes)
                     : null);
 
@@ -336,7 +344,7 @@ internal sealed class SessionService(
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-            return freshSession != null && freshSession.IsActive && freshSession.ExpiresAt > DateTimeOffset.UtcNow
+            return freshSession != null && freshSession.IsActive && freshSession.ExpiresAt > timeProvider.GetUtcNow()
                 ? AppResponses.Success("Session is valid (concurrency resolved)", true)
                 : AppResponses.Failure<bool>("Session has expired or is invalid");
         }
@@ -370,11 +378,12 @@ internal sealed class SessionService(
                 return AppResponses.Failure<bool>("Session is not active");
             }
 
-            var now = DateTimeOffset.UtcNow;
+            var now = timeProvider.GetUtcNow();
+
             if (session.ExpiresAt <= now)
             {
                 // Mark as expired
-                session.Expire();
+                session.Expire(now);
                 await _unitOfWork.SessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
                 await _unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
 
@@ -384,7 +393,7 @@ internal sealed class SessionService(
             // Optimize database writes: only write back if sliding expiration/access time is at least 1 minute old
             if (now - session.LastAccessedAt > TimeSpan.FromMinutes(1))
             {
-                session.Touch(_sessionSettings.SlidingExpiration
+                session.Touch(now, _sessionSettings.SlidingExpiration
                     ? now.AddMinutes(_sessionSettings.SessionTimeoutMinutes)
                     : null);
 
@@ -405,7 +414,7 @@ internal sealed class SessionService(
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-            if (freshSession != null && freshSession.IsActive && freshSession.ExpiresAt > DateTimeOffset.UtcNow)
+            if (freshSession != null && freshSession.IsActive && freshSession.ExpiresAt > timeProvider.GetUtcNow())
             {
                 return AppResponses.Success("Session is valid (concurrency resolved)", true);
             }

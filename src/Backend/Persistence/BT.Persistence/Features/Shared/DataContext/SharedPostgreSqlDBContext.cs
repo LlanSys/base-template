@@ -14,13 +14,15 @@ public class SharedPostgreSqlDBContext : SharedDBContext
         DbContextOptions<SharedPostgreSqlDBContext> options,
         ICurrentTenantProvider tenantProvider,
         ICurrentActorProvider actorProvider,
-        ILogger<SharedDBContext>? logger = null)
-        : base(options, tenantProvider, actorProvider, logger)
+        ILogger<SharedDBContext>? logger = null,
+        TimeProvider? timeProvider = null)
+        : base(options, tenantProvider, actorProvider, logger, timeProvider)
     {
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(
             typeof(SharedPostgreSqlDBContext).Assembly,

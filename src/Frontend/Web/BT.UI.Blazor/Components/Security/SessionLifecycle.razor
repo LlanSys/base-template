@@ -6,20 +6,30 @@
 @inject ISnackbar Snackbar
 @inject IOptions<SessionLifecycleSettings> SessionLifecycleOptions
 @inject ILogger<SessionLifecycle> Logger
+@inject TimeProvider Clock
 
 @if (_warningVisible)
 {
-    <div class="session-lifecycle-host" role="alert" aria-live="assertive">
+    <div class="session-lifecycle-host"
+         role="alert"
+         aria-live="assertive">
         <div class="session-lifecycle-dialog">
-            <MudPaper Class="session-lifecycle-warning" Elevation="10">
+            <MudPaper Class="session-lifecycle-warning"
+                      Elevation="10">
                 <MudStack Spacing="3">
-                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="session-lifecycle-header">
+                    <MudStack Row="true"
+                              Spacing="2"
+                              AlignItems="AlignItems.Center"
+                              Class="session-lifecycle-header">
                         <div class="session-lifecycle-icon">
-                            <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Medium" />
+                            <MudIcon Icon="@Icons.Material.Filled.Timer"
+                                     Size="Size.Medium" />
                         </div>
                         <div class="session-lifecycle-heading">
-                            <MudText Typo="Typo.h6" Class="session-lifecycle-title">Session timeout</MudText>
-                            <MudText Typo="Typo.caption" Class="session-lifecycle-kicker">Account security</MudText>
+                            <MudText Typo="Typo.h6"
+                                     Class="session-lifecycle-title">Session timeout</MudText>
+                            <MudText Typo="Typo.caption"
+                                     Class="session-lifecycle-kicker">Account security</MudText>
                         </div>
                         <div class="session-lifecycle-countdown">
                             <small>Signing out in</small>
@@ -27,17 +37,28 @@
                         </div>
                     </MudStack>
 
-                    <MudText Typo="Typo.body2" Class="session-lifecycle-copy">
+                    <MudText Typo="Typo.body2"
+                             Class="session-lifecycle-copy">
                         You have been inactive. Continue your session or we will sign you out to protect your account.
                     </MudText>
 
                     <MudDivider />
 
-                    <MudStack Row="true" Spacing="1" Justify="Justify.FlexEnd" Class="session-lifecycle-actions">
-                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ExpireAsync" Class="session-lifecycle-secondary">
+                    <MudStack Row="true"
+                              Spacing="1"
+                              Justify="Justify.FlexEnd"
+                              Class="session-lifecycle-actions">
+                        <MudButton Variant="Variant.Text"
+                                   Size="Size.Small"
+                                   OnClick="ExpireAsync"
+                                   Class="session-lifecycle-secondary">
                             Sign out
                         </MudButton>
-                        <MudButton Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Filled.TouchApp" OnClick="ContinueSessionAsync" Class="session-lifecycle-primary">
+                        <MudButton Variant="Variant.Filled"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.TouchApp"
+                                   OnClick="ContinueSessionAsync"
+                                   Class="session-lifecycle-primary">
                             I'm still here
                         </MudButton>
                     </MudStack>
@@ -50,8 +71,8 @@
 @code {
     private SessionLifecycleSettings Settings => SessionLifecycleOptions.Value;
 
-    private DateTimeOffset _lastActivityUtc = DateTimeOffset.UtcNow;
-    private DateTimeOffset _lastKeepAliveUtc = DateTimeOffset.UtcNow;
+    private DateTimeOffset _lastActivityUtc;
+    private DateTimeOffset _lastKeepAliveUtc;
     private DotNetObjectReference<SessionLifecycle>? _selfReference;
     private IJSObjectReference? _module;
     private CancellationTokenSource? _timerCancellation;
@@ -60,6 +81,12 @@
     private bool _expired;
     private bool _isDisposed;
     private string _remainingWarningText = "a few moments";
+
+    protected override void OnInitialized()
+    {
+        _lastActivityUtc = Clock.GetUtcNow();
+        _lastKeepAliveUtc = _lastActivityUtc;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -100,7 +127,7 @@
     {
         if (!_warningVisible && !_expired)
         {
-            _lastActivityUtc = DateTimeOffset.UtcNow;
+            _lastActivityUtc = Clock.GetUtcNow();
         }
 
         return Task.CompletedTask;
@@ -108,7 +135,7 @@
 
     private async Task RunLifecycleTimerAsync(CancellationToken cancellationToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(Settings.PollIntervalSeconds));
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(Settings.PollIntervalSeconds), Clock);
 
         while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
         {
@@ -150,7 +177,7 @@
             return;
         }
 
-        var now = DateTimeOffset.UtcNow;
+        var now = Clock.GetUtcNow();
         var idleFor = now - _lastActivityUtc;
         var idleTimeout = TimeSpan.FromMinutes(Settings.IdleTimeoutMinutes);
         var warningAt = idleTimeout - TimeSpan.FromMinutes(Settings.WarningBeforeTimeoutMinutes);
@@ -176,7 +203,7 @@
 
     private async Task ContinueSessionAsync()
     {
-        _lastActivityUtc = DateTimeOffset.UtcNow;
+        _lastActivityUtc = Clock.GetUtcNow();
         _warningVisible = false;
 
         await KeepSessionAliveAsync();
@@ -202,7 +229,7 @@
 
     private async Task KeepSessionAliveAsync()
     {
-        _lastKeepAliveUtc = DateTimeOffset.UtcNow;
+        _lastKeepAliveUtc = Clock.GetUtcNow();
         try
         {
             await AuthSession.RefreshAsync();

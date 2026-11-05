@@ -22,9 +22,11 @@ internal sealed record StripeCheckoutSessionRequest(
     {
         var unitAmount = decimal.Round(amount * 100m, 0, MidpointRounding.AwayFromZero)
             .ToString("0", CultureInfo.InvariantCulture);
+
         var successUrl = string.IsNullOrWhiteSpace(configuredSuccessUrl)
             ? callbackUrl
             : configuredSuccessUrl;
+
         var cancelUrl = string.IsNullOrWhiteSpace(configuredCancelUrl)
             ? callbackUrl
             : configuredCancelUrl;

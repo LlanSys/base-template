@@ -22,11 +22,15 @@ public class AddTenantModuleCommandHandler : IRequestHandler<AddTenantModuleComm
     private readonly ILogger<AddTenantModuleCommandHandler> _logger;
     private readonly ICurrentActorProvider _actorProvider;
 
+    private readonly TimeProvider _timeProvider;
+
     public AddTenantModuleCommandHandler(
+        TimeProvider timeProvider,
         IControlPlaneUnitOfWork unitOfWork,
         ILogger<AddTenantModuleCommandHandler> logger,
         ICurrentActorProvider actorProvider)
     {
+        _timeProvider = timeProvider;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _actorProvider = actorProvider;
@@ -34,6 +38,8 @@ public class AddTenantModuleCommandHandler : IRequestHandler<AddTenantModuleComm
 
     public async Task<AppResponse<TenantResponse>> Handle(AddTenantModuleCommand request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request, nameof(request));
+
         var tenant = await _unitOfWork.Tenants.FindAll()
             .Include(t => t.Modules)
             .FirstOrDefaultAsync(t => t.Id == request.TenantId, cancellationToken)
@@ -45,6 +51,12 @@ public class AddTenantModuleCommandHandler : IRequestHandler<AddTenantModuleComm
         }
 
         var moduleKey = request.Request.ModuleKey.Trim();
+        var definition = await _unitOfWork.Modules.FirstOrDefaultAsync(module => module.Key == moduleKey && module.IsActive, cancellationToken).ConfigureAwait(false);
+        var now = _timeProvider.GetUtcNow();
+
+        if (definition is null || !BT.SharedKernel.Features.ControlPlane.Modules.ModuleCatalog.IsImplemented(moduleKey)
+            || (request.Request.ExpiresAt is { } expiresAt && expiresAt <= now))
+            return AppResponses.Failure<TenantResponse>("Select an available business module and a future expiration date.");
         var existingModule = tenant.Modules.FirstOrDefault(m => string.Equals(m.ModuleKey, moduleKey, StringComparison.OrdinalIgnoreCase));
 
         if (existingModule != null)
@@ -53,7 +65,7 @@ public class AddTenantModuleCommandHandler : IRequestHandler<AddTenantModuleComm
             {
                 existingModule.IsActive = true;
                 existingModule.ExpiresAt = request.Request.ExpiresAt;
-                existingModule.UpdatedAt = DateTimeOffset.UtcNow;
+                existingModule.UpdatedAt = now;
                 existingModule.UpdatedBy = _actorProvider.ActorId;
             }
             else
@@ -80,6 +92,7 @@ public class AddTenantModuleCommandHandler : IRequestHandler<AddTenantModuleComm
         var dto = new TenantResponse
         {
             Id = tenant.Id,
+            Revision = tenant.Revision,
             Identifier = tenant.Identifier,
             DisplayName = tenant.DisplayName,
             HostName = tenant.HostName,

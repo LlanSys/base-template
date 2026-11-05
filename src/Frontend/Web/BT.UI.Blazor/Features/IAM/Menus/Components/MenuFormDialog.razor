@@ -1,64 +1,134 @@
 @inject IIamAdminService IamAdminService
 @inject IDepartmentService DepartmentService
 @inject ISnackbar Snackbar
+@inject ITenantService TenantService
+@inject IAuthSession AuthSession
 
 <MudDialog>
     <DialogContent>
-    <EditForm FormName="iam-menu-form" Model="_model" OnValidSubmit="SaveAsync">
-        <DataAnnotationsValidator />
+        <EditForm FormName="iam-menu-form"
+                  Model="_model"
+                  OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
             <MudGrid Spacing="2">
-                <MudItem xs="12" sm="4">
-                    <MudTextField @bind-Value="_model.Title" Label="Title" Margin="Margin.Dense" Variant="Variant.Outlined" Required />
+                <MudItem xs="12">
+                    <MudSelect T="Guid?"
+                               @bind-Value="_model.AvailableTenantId"
+                               Label="Availability"
+                               Clearable="true"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense">
+                        <MudSelectItem T="Guid?"
+                                       Value="null">All entitled tenants</MudSelectItem>
+                        @foreach (var tenant in _tenants)
+                        {
+                            <MudSelectItem T="Guid?"
+                                           Value="@tenant.Id">@tenant.DisplayName</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudTextField Value="@GeneratedKey" Label="Generated key" Margin="Margin.Dense" Variant="Variant.Outlined" ReadOnly="true" HelperText="Generated from the title. Use lowercase words separated by hyphens." />
+                <MudItem xs="12"
+                         sm="4">
+                    <MudTextField @bind-Value="_model.Title"
+                                  Label="Title"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  Required />
                 </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="string" Value="_model.Placement" ValueChanged="OnPlacementChanged" Label="Placement" Margin="Margin.Dense" Variant="Variant.Outlined" Required>
+                <MudItem xs="12"
+                         sm="4">
+                    <MudTextField Value="@GeneratedKey"
+                                  Label="Generated key"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  ReadOnly="true"
+                                  HelperText="Generated from the title. Use lowercase words separated by hyphens." />
+                </MudItem>
+                <MudItem xs="12"
+                         sm="4">
+                    <MudSelect T="string"
+                               Value="_model.Placement"
+                               ValueChanged="OnPlacementChanged"
+                               Label="Placement"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Required>
                         @foreach (var placement in _referenceData.MenuPlacements)
                         {
                             <MudSelectItem Value="@placement.Key">@placement.Label</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudSelect T="Guid?" Value="_model.DepartmentId" ValueChanged="OnDepartmentChanged" Label="Department scope" Margin="Margin.Dense" Variant="Variant.Outlined" Clearable="true">
-                        <MudSelectItem T="Guid?" Value="null">Global</MudSelectItem>
+                <MudItem xs="12"
+                         sm="6">
+                    <MudSelect T="Guid?"
+                               Value="_model.DepartmentId"
+                               ValueChanged="OnDepartmentChanged"
+                               Label="Department scope"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Clearable="true">
+                        <MudSelectItem T="Guid?"
+                                       Value="null">Global</MudSelectItem>
                         @foreach (var department in _departments)
                         {
-                            <MudSelectItem T="Guid?" Value="@department.Id">@department.Name</MudSelectItem>
+                            <MudSelectItem T="Guid?"
+                                           Value="@department.Id">@department.Name</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudSelect T="Guid?" @bind-Value="_model.ParentId" Label="Parent" Margin="Margin.Dense" Variant="Variant.Outlined" Clearable="true" ToStringFunc="ParentLabel">
+                <MudItem xs="12"
+                         sm="6">
+                    <MudSelect T="Guid?"
+                               @bind-Value="_model.ParentId"
+                               Label="Parent"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Clearable="true"
+                               ToStringFunc="ParentLabel">
                         @foreach (var menu in ParentOptions)
                         {
-                            <MudSelectItem T="Guid?" Value="@menu.Id">@menu.Title</MudSelectItem>
+                            <MudSelectItem T="Guid?"
+                                           Value="@menu.Id">@menu.Title</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudSelect @bind-Value="_model.Url" Label="Route" Margin="Margin.Dense" Variant="Variant.Outlined" Clearable="true">
+                <MudItem xs="12"
+                         sm="6">
+                    <MudSelect @bind-Value="_model.Url"
+                               Label="Route"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Clearable="true">
                         @foreach (var route in RouteOptions)
                         {
                             <MudSelectItem Value="@route.Key">@route.Label (@route.Key)</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudSelect @bind-Value="_model.Icon" Label="Icon" Margin="Margin.Dense" Variant="Variant.Outlined">
+                <MudItem xs="12"
+                         sm="6">
+                    <MudSelect @bind-Value="_model.Icon"
+                               Label="Icon"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined">
                         @foreach (var option in _referenceData.MenuIcons)
                         {
                             <MudSelectItem Value="@option.Key">
-                                <MudIcon Icon="@MenuIconMapper.Resolve(option.Key)" Size="Size.Small" Class="me-1" />
+                                <MudIcon Icon="@MenuIconMapper.Resolve(option.Key)"
+                                         Size="Size.Small"
+                                         Class="me-1" />
                                 @option.Label
                             </MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12">
-                    <MudSelect @bind-Value="_model.RequiredPermissionKey" Label="Required Permission" Margin="Margin.Dense" Variant="Variant.Outlined" Clearable="true">
+                    <MudSelect @bind-Value="_model.RequiredPermissionKey"
+                               Label="Required Permission"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Clearable="true">
                         @foreach (var permission in _permissions)
                         {
                             <MudSelectItem Value="@permission.Key">@permission.Key</MudSelectItem>
@@ -66,29 +136,49 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_model.RequiredModule" Label="Required Module (e.g. HR, Banking)" Margin="Margin.Dense" Variant="Variant.Outlined" Clearable="true" />
+                    <MudTextField @bind-Value="_model.RequiredModule"
+                                  Label="Required Module (e.g. HR, Banking)"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  Clearable="true" />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_model.Description" Label="Description" Lines="3" Margin="Margin.Dense" Variant="Variant.Outlined" />
+                    <MudTextField @bind-Value="_model.Description"
+                                  Label="Description"
+                                  Lines="3"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined" />
                 </MudItem>
                 @if (ExistingMenu is not null)
                 {
                     <MudItem xs="12">
-                        <MudSwitch T="bool" @bind-Value="_model.IsActive" Color="Color.Success" Label="Active" />
+                        <MudSwitch T="bool"
+                                   @bind-Value="_model.IsActive"
+                                   Color="Color.Success"
+                                   Label="Active" />
                     </MudItem>
                 }
             </MudGrid>
         </EditForm>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Success" Disabled="_isSaving" OnClick="SaveAsync">@(_isSaving ? "Saving..." : SaveLabel)</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   Variant="Variant.Text"
+                   Size="Size.Small"
+                   OnClick="Cancel">Cancel</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Save"
+                   Variant="Variant.Filled"
+                   Size="Size.Small"
+                   Color="Color.Success"
+                   Disabled="_isSaving"
+                   OnClick="SaveAsync">@(_isSaving ? "Saving..." : SaveLabel)</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     private readonly List<PermissionResponse> _permissions = [];
     private readonly List<DepartmentResponse> _departments = [];
+    private List<TenantResponse> _tenants = [];
     private IamReferenceDataResponse _referenceData = new([], [], [], [], [], []);
     private MenuFormModel _model = new();
     private bool _isSaving;
@@ -121,7 +211,9 @@
     {
         _model = ExistingMenu is null ? new MenuFormModel() : MenuFormModel.From(ExistingMenu);
         await LoadReferenceDataAsync();
-        await LoadDepartmentsAsync();
+        if (AuthSession.HasPermission("departments.view")) await LoadDepartmentsAsync();
+        var tenants = await TenantService.GetAllAsync();
+        if (tenants.IsSuccess && tenants.Data is not null) _tenants = tenants.Data;
         await LoadPermissionsAsync();
     }
 
@@ -232,6 +324,7 @@
         public Guid Id { get; set; }
         public Guid? ParentId { get; set; }
         public Guid? DepartmentId { get; set; }
+        public Guid? AvailableTenantId { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
@@ -247,6 +340,7 @@
                 Id = menu.Id,
                 ParentId = menu.ParentId,
                 DepartmentId = menu.DepartmentId,
+                AvailableTenantId = menu.AvailableTenantId,
                 Title = menu.Title,
                 Description = menu.Description,
                 Url = menu.Url,
@@ -262,6 +356,7 @@
             {
                 ParentId = ParentId,
                 DepartmentId = DepartmentId,
+                AvailableTenantId = AvailableTenantId,
                 Title = Title,
                 Description = Description,
                 Url = Url,
@@ -277,6 +372,7 @@
                 Id = Id,
                 ParentId = ParentId,
                 DepartmentId = DepartmentId,
+                AvailableTenantId = AvailableTenantId,
                 Title = Title,
                 Description = Description,
                 Url = Url,

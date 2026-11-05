@@ -34,6 +34,7 @@ internal sealed class ForgotPassword(
             _recoverySettings.Mode == PasswordRecoveryMode.EmailOtp);
 
         var user = await userManager.FindByEmailAsync(command.Request.Email).ConfigureAwait(false);
+
         if (user is null || !user.IsActive || user.IsDeleted || string.IsNullOrWhiteSpace(user.Email))
         {
             return AppResponses.Success(GenericMessage, response);

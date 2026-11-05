@@ -5,9 +5,15 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
+<div class="panel-heading">
+    <h3>Roles</h3>
+    <MudChip T="string"
+             Size="Size.Small">@(FilteredRoles.Count) shown</MudChip>
+</div>
 <div class="list-toolbar">
     <MudTextField @bind-Value="_searchText"
                   Placeholder="Search role name..."
+                  Label="Search roles"
                   Adornment="Adornment.Start"
                   AdornmentIcon="@Icons.Material.Filled.Search"
                   Margin="Margin.Dense"
@@ -15,60 +21,79 @@
                   Immediate="true" />
 </div>
 
-        @if (_isLoading)
-        {
-            <MudProgressLinear Color="Color.Success" Indeterminate="true" Class="my-2" />
-        }
+@if (_isLoading)
+{
+    <MudProgressLinear Color="Color.Success"
+                       Indeterminate="true"
+                       Class="my-2" />
+}
 
-        @if (!string.IsNullOrWhiteSpace(_message))
-        {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Class="my-2">@_message</MudAlert>
-        }
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <MudAlert Severity="Severity.Error"
+              Variant="Variant.Outlined"
+              Dense="true"
+              Class="my-2">@_message</MudAlert>
+}
 
-        <div class="bt-table-scroll">
-            <MudTable @ref="_table" Items="FilteredRoles" Dense="true" Hover="true" Elevation="0" FixedHeader="true" RowsPerPage="50" Height="calc(100vh - 24rem)" Style="min-width: 760px;" Breakpoint="Breakpoint.None">
-                <HeaderContent>
-                    <MudTh>Role</MudTh>
-                    <MudTh>Scope</MudTh>
-                    <MudTh>Normalized</MudTh>
-                    <MudTh>Users</MudTh>
-                    <MudTh>Status</MudTh>
-                    <MudTh>Actions</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Role">@context.Name</MudTd>
-                    <MudTd DataLabel="Scope">@context.DepartmentName</MudTd>
-                    <MudTd DataLabel="Normalized">@context.NormalizedName</MudTd>
-                    <MudTd DataLabel="Users">@context.UserCount</MudTd>
-                    <MudTd DataLabel="Status">
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info">Identity</MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="Actions">
-                        <TableRowActions OnView="@(() => ShowRoleSummary(context))"
-                                         OnEdit="@(() => OpenRoleDialogAsync(context))"
-                                         OnDelete="@(() => ConfirmDeleteRoleAsync(context))"
-                                         CanView="@AuthSession.HasPermission("roles.view")"
-                                         CanEdit="@AuthSession.HasPermission("roles.edit")"
-                                         CanDelete="@AuthSession.HasPermission("roles.delete")"
-                                         ExtraActions="@RoleExtraActions"
-                                         OnExtraAction="@((action) => HandleRoleActionAsync(context, action))" />
-                    </MudTd>
-                </RowTemplate>
-                <NoRecordsContent>
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No records found.</MudAlert>
-                </NoRecordsContent>
-                <PagerContent>
-                    <GlobalTablePager CurrentPage="(_table?.CurrentPage ?? 0) + 1"
-                                      TotalRecords="_table?.GetFilteredItemsCount() ?? 0"
-                                      PageSize="_table?.RowsPerPage ?? 50"
-                                      OnFirstPage="@(() => _table?.NavigateTo(0))"
-                                      OnPreviousPage="@(() => _table?.NavigateTo((_table?.CurrentPage ?? 1) - 1))"
-                                      OnNextPage="@(() => _table?.NavigateTo((_table?.CurrentPage ?? 0) + 1))" />
-                </PagerContent>
-            </MudTable>
-        </div>
+<div class="bt-table-scroll">
+    <MudTable @ref="_table"
+              Items="FilteredRoles"
+              Dense="true"
+              Hover="true"
+              Elevation="0"
+              FixedHeader="true"
+              RowsPerPage="50"
+              Height="calc(100vh - 24rem)"
+              Style="min-width: 760px;"
+              Breakpoint="Breakpoint.None">
+        <HeaderContent>
+            <MudTh>Role</MudTh>
+            <MudTh>Scope</MudTh>
+            <MudTh>Normalized</MudTh>
+            <MudTh>Users</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Role">@context.Name</MudTd>
+            <MudTd DataLabel="Scope">@context.DepartmentName</MudTd>
+            <MudTd DataLabel="Normalized">@context.NormalizedName</MudTd>
+            <MudTd DataLabel="Users">@context.UserCount</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@(context.IsActive ? Color.Success : Color.Default)">@(context.IsActive ? "Active" : "Disabled")</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <TableRowActions OnView="@(() => ShowRoleSummary(context))"
+                                 OnEdit="@(() => OpenRoleDialogAsync(context))"
+                                 OnDelete="@(() => ConfirmDeleteRoleAsync(context))"
+                                 CanView="@AuthSession.HasPermission("roles.view")"
+                                 CanEdit="@(AuthSession.HasPermission("roles.edit") && (!context.IsDefault || AuthSession.CurrentUser?.IsPlatformStaff == true))"
+                                 CanDelete="@(AuthSession.HasPermission("roles.delete") && !context.IsDefault)"
+                                 ExtraActions="@RoleExtraActions(context)"
+                                 OnExtraAction="@((action) => HandleRoleActionAsync(context, action))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudAlert Severity="Severity.Info"
+                      Variant="Variant.Outlined"
+                      Dense="true">No records found.</MudAlert>
+        </NoRecordsContent>
+        <PagerContent>
+            <GlobalTablePager CurrentPage="(_table?.CurrentPage ?? 0) + 1"
+                              TotalRecords="_table?.GetFilteredItemsCount() ?? 0"
+                              PageSize="_table?.RowsPerPage ?? 50"
+                              OnFirstPage="@(() => _table?.NavigateTo(0))"
+                              OnPreviousPage="@(() => _table?.NavigateTo((_table?.CurrentPage ?? 1) - 1))"
+                              OnNextPage="@(() => _table?.NavigateTo((_table?.CurrentPage ?? 0) + 1))" />
+        </PagerContent>
+    </MudTable>
+</div>
 
 @code {
+    [Parameter] public string? ModuleKey { get; set; }
     private readonly List<AdminRoleListResponse> _roles = [];
     private bool _isLoading = true;
     private string? _message;
@@ -79,16 +104,18 @@
 
 
     private IReadOnlyList<AdminRoleListResponse> FilteredRoles =>
-        string.IsNullOrWhiteSpace(_searchText)
-            ? _roles
-            : [.. _roles.Where(role => role.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
-                || role.NormalizedName.Contains(_searchText, StringComparison.OrdinalIgnoreCase))];
+        [.. _roles.Where(role => (ModuleKey == null || string.Equals(role.ModuleKey, ModuleKey, StringComparison.OrdinalIgnoreCase))
+            && (string.IsNullOrWhiteSpace(_searchText) || role.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+                || role.NormalizedName.Contains(_searchText, StringComparison.OrdinalIgnoreCase)))];
 
-    private IReadOnlyList<string> RoleExtraActions =>
-        AuthSession.HasPermission("roles.manage_permissions")
-            ? ["Manage permissions", "Review assignments"]
-            : ["Review assignments"];
-
+    private IReadOnlyList<string> RoleExtraActions(AdminRoleListResponse role)
+    {
+        var actions = new List<string>();
+        if (AuthSession.HasPermission("roles.manage_permissions") && (!role.IsDefault || AuthSession.CurrentUser?.IsPlatformStaff == true))
+            actions.Add("Manage permissions");
+        if (AuthSession.HasPermission("roles.edit") && !role.IsDefault) actions.Add(role.IsActive ? "Disable" : "Enable");
+        return actions;
+    }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -132,7 +159,8 @@
     {
         var parameters = new DialogParameters
         {
-            { nameof(RoleFormDialog.ExistingRole), role }
+            { nameof(RoleFormDialog.ExistingRole), role },
+            { nameof(RoleFormDialog.ModuleKey), ModuleKey }
         };
 
         var dialog = await DialogService.ShowAsync<RoleFormDialog>(
@@ -147,9 +175,9 @@
         }
     }
 
-    private void ShowRoleSummary(AdminRoleListResponse role)
-        => Snackbar.Add($"Role: {role.Name}. Users: {role.UserCount}", Severity.Info);
-
+    private async Task ShowRoleSummary(AdminRoleListResponse role)
+        => await DialogService.ShowAsync<RoleDetailsDialog>(role.Name, new DialogParameters
+        { [nameof(RoleDetailsDialog.Role)] = role }, new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
     private async Task HandleRoleActionAsync(AdminRoleListResponse role, string action)
     {
         if (action.Equals("Manage permissions", StringComparison.OrdinalIgnoreCase))
@@ -158,7 +186,10 @@
             return;
         }
 
-        Snackbar.Add($"Role {role.Name} currently has {role.UserCount} user assignment(s).", Severity.Info);
+        if (await DialogService.ShowMessageBoxAsync(action + " role", $"{action} {role.Name} for its assigned users?", yesText: action, cancelText: "Cancel") != true) return;
+        var response = await IamAdminService.UpdateRoleAsync(role.Id, new UpdateRoleRequest(role.Name, role.DepartmentId, !role.IsActive));
+        if (!response.IsSuccess) Snackbar.Add(response.Message ?? "Role could not be changed.", Severity.Error);
+        await LoadRolesAsync();
     }
 
     private async Task OpenRolePermissionsDialogAsync(AdminRoleListResponse role)

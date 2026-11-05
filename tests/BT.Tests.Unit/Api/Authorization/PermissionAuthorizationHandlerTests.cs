@@ -19,7 +19,7 @@ public sealed class PermissionAuthorizationHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_Should_Succeed_For_System_Administrator()
+    public async Task HandleAsync_Should_Not_Bypass_Permissions_For_System_Administrator()
     {
         var user = CreatePrincipal(new Claim(ClaimTypes.Role, PermissionAuthorizationConstants.SystemAdministratorRole));
         var requirement = new PermissionRequirement("roles.delete");
@@ -27,7 +27,7 @@ public sealed class PermissionAuthorizationHandlerTests
 
         await new PermissionAuthorizationHandler().HandleAsync(context);
 
-        Assert.True(context.HasSucceeded);
+        Assert.False(context.HasSucceeded);
     }
 
     [Fact]

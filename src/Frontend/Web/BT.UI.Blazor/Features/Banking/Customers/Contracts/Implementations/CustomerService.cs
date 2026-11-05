@@ -3,7 +3,7 @@ using BT.SharedKernel.Features.Banking.Customers.Dtos;
 using BT.UI.Blazor.Configuration;
 using BT.UI.Blazor.Features.Shared.BackendApi;
 using BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces;
-using BT.UI.Rcl.Features.Banking.Customers.Contracts.Interfaces;
+using BT.UI.Blazor.Features.Banking.Customers.Contracts.Interfaces;
 using Microsoft.Extensions.Options;
 
 namespace BT.UI.Blazor.Features.Banking.Customers.Contracts.Implementations;

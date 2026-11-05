@@ -1,10 +1,13 @@
-using BT.Domain.Features.IAM.Menus.Entities;
+using BT.Domain.Features.IAM.Users.Entities;
 using BT.Domain.Shared.Contracts.Common;
 using BT.Persistence.Features.IAM.DataContext;
 using BT.Tests.Integration.TestFixtures;
+
 using Microsoft.EntityFrameworkCore;
+
 using System;
 using System.Threading.Tasks;
+
 using Xunit;
 
 namespace BT.Tests.Integration;
@@ -41,24 +44,22 @@ public abstract class TenantIsolationMutationTests<TFixture> : IClassFixture<TFi
             await initContext.Database.EnsureCreatedAsync();
         }
 
-        var tenantId1 = Guid.NewGuid();
-        var tenantId2 = Guid.NewGuid();
+        var tenantId1 = Guid.CreateVersion7();
+        var tenantId2 = Guid.CreateVersion7();
 
         // Seed data for Tenant 1
         using (var seedContext1 = new IamDBContext(_options, new TestTenantProvider { TenantId = tenantId1 }))
         {
-            var menu = MenuItem.Create(null, null, "menu1", "Tenant 1 Menu", "Desc", "/t1", "icon", "left", null, null, 1, "test");
-            menu.TenantId = tenantId1;
-            seedContext1.MenuItems.Add(menu);
+            var role = new AppRole { Name = "Tenant 1 role", NormalizedName = "TENANT 1 ROLE", TenantId = tenantId1 };
+            seedContext1.Roles.Add(role);
             await seedContext1.SaveChangesAsync();
         }
 
         // Seed data for Tenant 2
         using (var seedContext2 = new IamDBContext(_options, new TestTenantProvider { TenantId = tenantId2 }))
         {
-            var menu = MenuItem.Create(null, null, "menu2", "Tenant 2 Menu", "Desc", "/t2", "icon", "left", null, null, 1, "test");
-            menu.TenantId = tenantId2;
-            seedContext2.MenuItems.Add(menu);
+            var role = new AppRole { Name = "Tenant 2 role", NormalizedName = "TENANT 2 ROLE", TenantId = tenantId2 };
+            seedContext2.Roles.Add(role);
             await seedContext2.SaveChangesAsync();
         }
 
@@ -66,14 +67,16 @@ public abstract class TenantIsolationMutationTests<TFixture> : IClassFixture<TFi
         // Tenant 1 should normally only see Tenant 1's data
         using (var testContext = new IamDBContext(_options, new TestTenantProvider { TenantId = tenantId1 }))
         {
-            var normallyVisible = await testContext.MenuItems.CountAsync();
-            Assert.Equal(1, normallyVisible);
+            // Menus are a vendor-owned global catalogue; roles carry tenant isolation.
+            var normallyVisible = await testContext.Roles.Select(role => role.TenantId).ToListAsync();
+            Assert.Single(normallyVisible, tenant => tenant == tenantId1);
+            Assert.DoesNotContain(tenantId2, normallyVisible);
 
             // MUTATION TEST: Deliberately bypass the global query filter
-            var rawVisible = await testContext.MenuItems.IgnoreQueryFilters().CountAsync();
-            
+            var rawVisible = await testContext.Roles.IgnoreQueryFilters().AnyAsync(role => role.TenantId == tenantId2);
+
             // The test suite catches the leak. This proves the query filter is actually doing the work.
-            Assert.True(rawVisible >= 2, "Ignoring query filters should expose data from other tenants.");
+            Assert.True(rawVisible, "Ignoring query filters should expose data from other tenants.");
         }
     }
 

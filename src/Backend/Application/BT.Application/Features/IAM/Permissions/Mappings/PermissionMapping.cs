@@ -17,6 +17,6 @@ public static class PermissionMapping
             permission.Resource,
             permission.Action,
             permission.Description,
-            permission.IsActive);
+            permission.IsActive, permission.AvailableTenantId, permission.RequiredModule, permission.IsTenantDelegatable);
     }
 }

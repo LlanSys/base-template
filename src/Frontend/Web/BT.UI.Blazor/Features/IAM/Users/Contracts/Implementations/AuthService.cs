@@ -1,11 +1,13 @@
 using System.Net;
+
 using BT.SharedKernel.Dtos.Common;
 using BT.SharedKernel.Features.Shared.Common.Enums;
 using BT.SharedKernel.Features.IAM.Users.Dtos;
 using BT.UI.Blazor.Configuration;
 using BT.UI.Blazor.Features.Shared.BackendApi;
 using BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces;
-using BT.UI.Rcl.Features.IAM.Users.Contracts.Interfaces;
+using BT.UI.Blazor.Features.IAM.Users.Contracts.Interfaces;
+
 using Microsoft.Extensions.Options;
 
 namespace BT.UI.Blazor.Features.IAM.Users.Contracts.Implementations;
@@ -13,6 +15,14 @@ namespace BT.UI.Blazor.Features.IAM.Users.Contracts.Implementations;
 internal sealed class AuthService(IBackendApiClient apiClient, ITokenStorage storage, IOptions<BackendApiSettings> apiSettings) : IAuthService
 {
     private readonly BackendApiSettings _apiSettings = apiSettings.Value;
+    public async Task<AppResponse<LoginResponse>> AcceptInvitationAsync(SharedKernel.Features.ControlPlane.Tenants.Dtos.AcceptAdministratorInvitationRequest request)
+    {
+        var response = await apiClient.SendAsync<LoginResponse>(HttpMethod.Post, Format(_apiSettings.Endpoints.Iam.Auth.AcceptInvitation), request, requiresAuthentication: false).ConfigureAwait(false);
+
+        if (response.IsSuccess && response.Data is { IsAuthenticated: true, Requires2FA: false } login)
+            await storage.SaveAsync(login.Token, login.RefreshToken, login.SessionId).ConfigureAwait(false);
+        return response;
+    }
 
     public async Task<AppResponse<LoginResponse>> LoginAsync(LoginRequest loginRequest)
     {
@@ -42,7 +52,7 @@ internal sealed class AuthService(IBackendApiClient apiClient, ITokenStorage sto
 
         var response = await apiClient.SendAsync<LoginResponse>(
             HttpMethod.Post,
-            Format("iam/auth/sso/exchange"),
+            Format(_apiSettings.Endpoints.Iam.Auth.ExchangeSsoCode),
             request,
             requiresAuthentication: false,
             unavailableMessage: "The identity service is unavailable. Please try again.",
@@ -215,7 +225,7 @@ internal sealed class AuthService(IBackendApiClient apiClient, ITokenStorage sto
 
     public Task<AppResponse<IReadOnlyList<PasskeyResponse>>> GetPasskeysAsync()
         => SendWithRefreshAsync<IReadOnlyList<PasskeyResponse>>(
-            HttpMethod.Get, 
+            HttpMethod.Get,
             Format(_apiSettings.Endpoints.Iam.Auth.Passkeys));
 
     public async Task<AppResponse<bool>> LogoutAsync()
@@ -236,18 +246,21 @@ internal sealed class AuthService(IBackendApiClient apiClient, ITokenStorage sto
     private async Task<AppResponse<T>> SendWithRefreshAsync<T>(HttpMethod method, string endpoint)
     {
         var response = await SendAuthenticatedAsync<T>(method, endpoint).ConfigureAwait(false);
+
         if (response.Error?.Type != ErrorType.Unauthorized)
         {
             return response;
         }
 
         var (accessToken, refreshToken, _) = await storage.GetAsync().ConfigureAwait(false);
+
         if (string.IsNullOrWhiteSpace(accessToken) || string.IsNullOrWhiteSpace(refreshToken))
         {
             return response;
         }
 
         var refreshResponse = await RefreshTokenAsync(new RefreshTokenRequest(accessToken, refreshToken)).ConfigureAwait(false);
+
         if (!refreshResponse.IsSuccess)
         {
             await storage.ClearAsync().ConfigureAwait(false);
@@ -281,12 +294,14 @@ internal sealed class AuthService(IBackendApiClient apiClient, ITokenStorage sto
         }
 
         var (accessToken, refreshToken, _) = await storage.GetAsync().ConfigureAwait(false);
+
         if (string.IsNullOrWhiteSpace(accessToken) || string.IsNullOrWhiteSpace(refreshToken))
         {
             return response;
         }
 
         var refreshResponse = await RefreshTokenAsync(new RefreshTokenRequest(accessToken, refreshToken)).ConfigureAwait(false);
+
         if (!refreshResponse.IsSuccess)
         {
             await storage.ClearAsync().ConfigureAwait(false);
@@ -330,12 +345,14 @@ internal sealed class AuthService(IBackendApiClient apiClient, ITokenStorage sto
         }
 
         var (accessToken, refreshToken, _) = await storage.GetAsync().ConfigureAwait(false);
+
         if (string.IsNullOrWhiteSpace(accessToken) || string.IsNullOrWhiteSpace(refreshToken))
         {
             return response;
         }
 
         var refreshResponse = await RefreshTokenAsync(new RefreshTokenRequest(accessToken, refreshToken)).ConfigureAwait(false);
+
         if (!refreshResponse.IsSuccess)
         {
             await storage.ClearAsync().ConfigureAwait(false);
@@ -365,12 +382,14 @@ internal sealed class AuthService(IBackendApiClient apiClient, ITokenStorage sto
         }
 
         var (accessToken, refreshToken, _) = await storage.GetAsync().ConfigureAwait(false);
+
         if (string.IsNullOrWhiteSpace(accessToken) || string.IsNullOrWhiteSpace(refreshToken))
         {
             return response;
         }
 
         var refreshResponse = await RefreshTokenAsync(new RefreshTokenRequest(accessToken, refreshToken)).ConfigureAwait(false);
+
         if (!refreshResponse.IsSuccess)
         {
             await storage.ClearAsync().ConfigureAwait(false);

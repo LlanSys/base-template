@@ -12,16 +12,19 @@ namespace BT.Persistence.Features.IAM.Users.Repositories;
 internal sealed class IamSessionRepository : Repository<AppUserSession>, ISessionRepository
 {
     private readonly IamDBContext _iamContext;
+    private readonly TimeProvider _timeProvider;
 
-    public IamSessionRepository(IamDBContext context) : base(context)
+    public IamSessionRepository(IamDBContext context, TimeProvider timeProvider) : base(context)
     {
         _iamContext = context;
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
     public async Task<List<AppUserSession>> GetActiveSessionsByUserIdAsync(string userId, CancellationToken cancellationToken = default)
     {
+        var now = _timeProvider.GetUtcNow();
         return await _iamContext.AppUserSessions
-            .Where(s => s.AppUserId == userId && s.IsActive && s.ExpiresAt > DateTimeOffset.UtcNow)
+            .Where(s => s.AppUserId == userId && s.IsActive && s.ExpiresAt > now)
             .OrderByDescending(s => s.LastAccessedAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
     }

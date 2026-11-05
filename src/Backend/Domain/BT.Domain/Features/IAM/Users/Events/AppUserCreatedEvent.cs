@@ -17,5 +17,5 @@ public sealed record AppUserCreatedEvent(
     string FullName,
     string Email) : IDomainEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }

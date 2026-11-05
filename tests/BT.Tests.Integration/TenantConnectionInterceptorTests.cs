@@ -1,12 +1,15 @@
 using BT.Domain.Shared.Contracts.Common;
 using BT.Persistence.Common.Interceptors;
+
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+
 using System;
 using System.Data;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Xunit;
 
 namespace BT.Tests.Integration;
@@ -21,9 +24,9 @@ public class TenantConnectionInterceptorTests
         public override string DataSource => "DataSource";
         public override string ServerVersion => "1.0";
         public override ConnectionState State => ConnectionState.Closed;
-        public override void ChangeDatabase(string databaseName) {}
-        public override void Close() {}
-        public override void Open() {}
+        public override void ChangeDatabase(string databaseName) { }
+        public override void Close() { }
+        public override void Open() { }
         protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel) => null!;
         protected override DbCommand CreateDbCommand() => null!;
     }
@@ -69,7 +72,7 @@ public class TenantConnectionInterceptorTests
         // Assert
         Assert.Equal("Server=NewServer;Database=TenantDB;", fakeConnection.ConnectionString);
     }
-    
+
     [Fact]
     public async Task ConnectionOpeningAsync_ShouldNotChangeConnectionString_WhenResolverProvidesNullOrEmpty()
     {

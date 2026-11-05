@@ -14,7 +14,8 @@ namespace BT.Application.Features.IAM.Permissions.Queries;
 
 
 
-internal sealed class SearchPermissionsQueryHandler(IIamUnitOfWork unitOfWork, ILogger<SearchPermissionsQueryHandler> logger)
+internal sealed class SearchPermissionsQueryHandler(IIamUnitOfWork unitOfWork, ILogger<SearchPermissionsQueryHandler> logger,
+    Authorization.IEffectiveAccessService accessService)
     : IRequestHandler<SearchPermissionsQuery, AppResponse<PagedResponse<PermissionResponse, Guid>>>
 {
     public async Task<AppResponse<PagedResponse<PermissionResponse, Guid>>> Handle(SearchPermissionsQuery query, CancellationToken cancellationToken)
@@ -23,9 +24,13 @@ internal sealed class SearchPermissionsQueryHandler(IIamUnitOfWork unitOfWork, I
         {
             var request = query.SearchRequest;
             var pageSize = Math.Clamp(request.PageSize, 1, 50);
+            var access = await accessService.GetAsync(query.UserId, cancellationToken).ConfigureAwait(false);
+            var allowedKeys = access.Permissions.ToArray();
 
             IQueryable<Permission> ApplyFilters(IQueryable<Permission> permissions)
             {
+                if (!access.IsPlatformStaff) permissions = permissions.Where(permission => allowedKeys.Contains(permission.Key));
+
                 if (!string.IsNullOrWhiteSpace(request.GlobalSearch))
                 {
                     var search = request.GlobalSearch.Trim();
@@ -79,6 +84,7 @@ internal sealed class SearchPermissionsQueryHandler(IIamUnitOfWork unitOfWork, I
             var page = await unitOfWork.PermissionRepository.ListAsync(ApplyPaging, cancellationToken).ConfigureAwait(false);
 
             var hasNextPage = page.Count > pageSize;
+
             if (hasNextPage)
             {
                 page.RemoveAt(page.Count - 1);

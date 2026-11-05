@@ -14,13 +14,15 @@ public class IamSqlServerDBContext : IamDBContext
         DbContextOptions<IamSqlServerDBContext> options,
         ICurrentTenantProvider? tenantProvider = null,
         ICurrentActorProvider? actorProvider = null,
-        ILogger<IamDBContext>? logger = null)
-        : base(options, tenantProvider, actorProvider, logger)
+        ILogger<IamDBContext>? logger = null,
+        TimeProvider? timeProvider = null)
+        : base(options, tenantProvider, actorProvider, logger, timeProvider)
     {
     }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        ArgumentNullException.ThrowIfNull(builder);
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(
             typeof(IamSqlServerDBContext).Assembly,

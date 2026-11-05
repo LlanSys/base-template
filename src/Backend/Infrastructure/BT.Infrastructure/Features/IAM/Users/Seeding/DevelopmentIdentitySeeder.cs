@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 namespace BT.Infrastructure.Features.IAM.Users.Seeding;
 
 internal sealed class DevelopmentIdentitySeeder(
+    TimeProvider timeProvider,
     RoleManager<AppRole> roleManager,
     UserManager<AppUser> userManager,
     IOptions<DevelopmentSeedSettings> options,
@@ -62,6 +63,7 @@ internal sealed class DevelopmentIdentitySeeder(
             }
 
             var result = await roleManager.CreateAsync(new AppRole { Name = roleName }).ConfigureAwait(false);
+
             if (!result.Succeeded)
             {
                 throw new InvalidOperationException($"Failed to seed role '{roleName}': {FormatErrors(result)}");
@@ -87,6 +89,7 @@ internal sealed class DevelopmentIdentitySeeder(
             if (createdNewUser)
             {
                 user = AppUser.CreateForEmployee(
+                    timeProvider.GetUtcNow(),
                     _settings.TenantId,
                     employeeUser.EmployeeId,
                     employeeUser.Email,
@@ -114,6 +117,7 @@ internal sealed class DevelopmentIdentitySeeder(
             if (createdNewUser)
             {
                 var createResult = await userManager.CreateAsync(user, _settings.AdminPassword).ConfigureAwait(false);
+
                 if (!createResult.Succeeded)
                 {
                     throw new InvalidOperationException($"Failed to seed development user '{employeeUser.Email}': {FormatErrors(createResult)}");
@@ -122,6 +126,7 @@ internal sealed class DevelopmentIdentitySeeder(
             else
             {
                 var updateResult = await userManager.UpdateAsync(user).ConfigureAwait(false);
+
                 if (!updateResult.Succeeded)
                 {
                     throw new InvalidOperationException($"Failed to update development user '{employeeUser.Email}': {FormatErrors(updateResult)}");
@@ -152,13 +157,14 @@ internal sealed class DevelopmentIdentitySeeder(
 
         var resetToken = await userManager.GeneratePasswordResetTokenAsync(user).ConfigureAwait(false);
         var resetResult = await userManager.ResetPasswordAsync(user, resetToken, _settings.AdminPassword).ConfigureAwait(false);
+
         if (!resetResult.Succeeded)
         {
             throw new InvalidOperationException($"Failed to reset development admin password: {FormatErrors(resetResult)}");
         }
     }
 
-    private static void ApplyDevelopmentUserState(
+    private void ApplyDevelopmentUserState(
         AppUser user,
         DevelopmentEmployeeUser employeeUser,
         Guid tenantId,
@@ -167,9 +173,10 @@ internal sealed class DevelopmentIdentitySeeder(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(seedActorId);
 
-        var now = DateTimeOffset.UtcNow;
+        var now = timeProvider.GetUtcNow();
 
         user.TenantId = tenantId;
+        user.IsPlatformStaff = employeeUser.IsBootstrapAdmin;
         user.EmployeeId = employeeUser.EmployeeId;
         user.CustomerId = null;
         user.UserName = employeeUser.Email;
@@ -220,6 +227,7 @@ internal sealed class DevelopmentIdentitySeeder(
             user.ActivatedBy = user.ActivatedBy == "DevelopmentSeed"
                 ? seedActorId
                 : user.ActivatedBy;
+
             return;
         }
 
@@ -238,12 +246,14 @@ internal sealed class DevelopmentIdentitySeeder(
     private async Task EnsureAdminRoleAsync(AppUser user)
     {
         var adminRole = Roles.SysAdmin.ToDisplayString();
+
         if (await userManager.IsInRoleAsync(user, adminRole).ConfigureAwait(false))
         {
             return;
         }
 
         var addRoleResult = await userManager.AddToRoleAsync(user, adminRole).ConfigureAwait(false);
+
         if (!addRoleResult.Succeeded)
         {
             throw new InvalidOperationException($"Failed to assign development admin role: {FormatErrors(addRoleResult)}");
@@ -272,6 +282,7 @@ internal sealed class DevelopmentIdentitySeeder(
         foreach (var staleUser in staleUsers)
         {
             var deleteResult = await userManager.DeleteAsync(staleUser).ConfigureAwait(false);
+
             if (!deleteResult.Succeeded)
             {
                 throw new InvalidOperationException($"Failed to remove stale development user '{staleUser.Email}': {FormatErrors(deleteResult)}");

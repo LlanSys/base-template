@@ -322,6 +322,50 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                     b.ToTable("PaymentRecords", (string)null);
                 });
 
+            modelBuilder.Entity("BT.Domain.Shared.Entities.AdministrationAuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ChangedFields")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "OccurredAt");
+
+                    b.ToTable("OrganizationSettingsAudit", (string)null);
+                });
+
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.InboxState", b =>
                 {
                     b.Property<long>("Id")
@@ -448,6 +492,10 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
 
                     b.HasKey("SequenceNumber");
 
+                    b.HasIndex("EnqueueTime");
+
+                    b.HasIndex("ExpirationTime");
+
                     b.HasIndex("OutboxId", "SequenceNumber")
                         .IsUnique();
 
@@ -486,6 +534,8 @@ namespace BT.Persistence.Features.Shared.Migrations.PostgreSql
                         .HasDefaultValue(new byte[0]);
 
                     b.HasKey("OutboxId");
+
+                    b.HasIndex("Created");
 
                     b.HasIndex("BusName", "Created");
 

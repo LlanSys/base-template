@@ -22,5 +22,5 @@ public sealed record RequestPasswordResetEvent(
 
 ) : IDomainEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }

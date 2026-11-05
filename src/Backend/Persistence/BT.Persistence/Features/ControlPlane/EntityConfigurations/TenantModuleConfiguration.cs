@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BT.Persistence.Features.ControlPlane.EntityConfigurations;
 
-internal class TenantModuleConfiguration : IEntityTypeConfiguration<TenantModule>
+internal sealed class TenantModuleConfiguration : IEntityTypeConfiguration<TenantModule>
 {
     public void Configure(EntityTypeBuilder<TenantModule> builder)
     {

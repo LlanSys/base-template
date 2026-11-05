@@ -9,6 +9,7 @@ using BT.Application.Contracts.Interfaces.Common;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -29,10 +30,12 @@ public static class DependencyInjection
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
+        services.TryAddSingleton(TimeProvider.System);
         services.Configure<MediatRSettings>(configuration.GetSection(MediatRSettings.SectionName));
 
         var mediatrSettings = configuration.GetSection(MediatRSettings.SectionName).Get<MediatRSettings>() ?? new MediatRSettings();
         var licenseKey = mediatrSettings.LicenseKey;
+
         if (string.IsNullOrWhiteSpace(licenseKey))
         {
             licenseKey = "your-community-license-key-here";

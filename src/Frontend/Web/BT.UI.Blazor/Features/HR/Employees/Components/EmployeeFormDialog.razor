@@ -1,52 +1,122 @@
 @inject IDepartmentService DepartmentService
 @inject IEmployeeService EmployeeService
 @inject ISnackbar Snackbar
+@inject TimeProvider Clock
 
 <MudDialog>
     <DialogContent>
-    <EditForm FormName="hr-employee-form" Model="_model" OnValidSubmit="SaveAsync">
-        <DataAnnotationsValidator />
+        <EditForm FormName="hr-employee-form"
+                  Model="_model"
+                  OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
             <MudGrid Spacing="2">
-                <MudItem xs="12" sm="4">
-                    <MudTextField Value="@EmployeeNumberDisplay" Label="Employee No." Margin="Margin.Dense" Variant="Variant.Outlined" ReadOnly="true" HelperText="@EmployeeNumberHelpText" />
+                <MudItem xs="12"
+                         sm="4">
+                    <MudTextField Value="@EmployeeNumberDisplay"
+                                  Label="Employee No."
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  ReadOnly="true"
+                                  HelperText="@EmployeeNumberHelpText" />
                 </MudItem>
-                <MudItem xs="12" sm="4"><MudTextField @bind-Value="_model.FirstName" Label="First Name" Margin="Margin.Dense" Variant="Variant.Outlined" Required /></MudItem>
-                <MudItem xs="12" sm="4"><MudTextField @bind-Value="_model.LastName" Label="Last Name" Margin="Margin.Dense" Variant="Variant.Outlined" Required /></MudItem>
-                <MudItem xs="12" sm="4"><MudTextField @bind-Value="_model.Email" Label="Email" Margin="Margin.Dense" Variant="Variant.Outlined" Required /></MudItem>
-                <MudItem xs="12" sm="8">
+                <MudItem xs="12"
+                         sm="4">
+                    <MudTextField @bind-Value="_model.FirstName"
+                                  Label="First Name"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  Required />
+                </MudItem>
+                <MudItem xs="12"
+                         sm="4">
+                    <MudTextField @bind-Value="_model.LastName"
+                                  Label="Last Name"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  Required />
+                </MudItem>
+                <MudItem xs="12"
+                         sm="4">
+                    <MudTextField @bind-Value="_model.Email"
+                                  Label="Email"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  Required />
+                </MudItem>
+                <MudItem xs="12"
+                         sm="8">
                     <PhoneNumberInput @bind-CountryCode="_model.CountryCode"
                                       @bind-NationalNumber="_model.PhoneNationalNumber"
                                       @bind-E164="_model.PhoneNumber"
                                       CountryColumns="6"
                                       PhoneColumns="6" />
                 </MudItem>
-                <MudItem xs="12" sm="4"><MudTextField @bind-Value="_model.IdNumber" Label="ID Number" Margin="Margin.Dense" Variant="Variant.Outlined" Required /></MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="Guid" Value="_model.DepartmentId" ValueChanged="OnDepartmentChangedAsync" Label="Department" Margin="Margin.Dense" Variant="Variant.Outlined" Required Disabled="@(!_departments.Any())" ToStringFunc="DepartmentLabel">
+                <MudItem xs="12"
+                         sm="4">
+                    <MudTextField @bind-Value="_model.IdNumber"
+                                  Label="ID Number"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  Required />
+                </MudItem>
+                <MudItem xs="12"
+                         sm="4">
+                    <MudSelect T="Guid"
+                               Value="_model.DepartmentId"
+                               ValueChanged="OnDepartmentChangedAsync"
+                               Label="Department"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Required
+                               Disabled="@(!_departments.Any())"
+                               ToStringFunc="DepartmentLabel">
                         @foreach (var department in _departments)
                         {
-                            <MudSelectItem T="Guid" Value="@department.Id">@department.Name</MudSelectItem>
+                            <MudSelectItem T="Guid"
+                                           Value="@department.Id">@department.Name</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="Guid?" @bind-Value="_model.ManagerId" Label="Manager" Margin="Margin.Dense" Variant="Variant.Outlined" Clearable="true" Disabled="_isLoadingManagers" ToStringFunc="ManagerLabel">
+                <MudItem xs="12"
+                         sm="4">
+                    <MudSelect T="Guid?"
+                               @bind-Value="_model.ManagerId"
+                               Label="Manager"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Clearable="true"
+                               Disabled="_isLoadingManagers"
+                               ToStringFunc="ManagerLabel">
                         @foreach (var manager in _managers)
                         {
-                            <MudSelectItem T="Guid?" Value="@((Guid?)manager.Id)">@manager.FullName</MudSelectItem>
+                            <MudSelectItem T="Guid?"
+                                           Value="@((Guid? )manager.Id)">@manager.FullName</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
                 @if (ExistingEmployee is null)
                 {
-                    <MudItem xs="12" sm="6"><MudDatePicker @bind-Date="_model.HireDate" Label="Hire Date" Margin="Margin.Dense" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12"
+                             sm="6">
+                        <MudDatePicker @bind-Date="_model.HireDate"
+                                       Label="Hire Date"
+                                       Margin="Margin.Dense"
+                                       Variant="Variant.Outlined" />
+                    </MudItem>
                 }
             </MudGrid>
         </EditForm>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Default" OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Success" Disabled="_isSaving" OnClick="SaveAsync">@(_isSaving ? "Saving..." : "Save")</MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Size="Size.Small"
+                   Color="Color.Default"
+                   OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Size="Size.Small"
+                   Color="Color.Success"
+                   Disabled="_isSaving"
+                   OnClick="SaveAsync">@(_isSaving ? "Saving..." : "Save")</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -71,7 +141,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _model = ExistingEmployee is null ? new EmployeeFormModel() : EmployeeFormModel.From(ExistingEmployee);
+        _model = ExistingEmployee is null ? new EmployeeFormModel { HireDate = Clock.GetLocalNow().Date } : EmployeeFormModel.From(ExistingEmployee);
         await LoadDepartmentsAsync();
         await LoadManagersAsync();
     }
@@ -112,7 +182,7 @@
 
         _isSaving = true;
         var response = ExistingEmployee is null
-            ? await EmployeeService.CreateAsync(_model.ToCreateRequest())
+            ? await EmployeeService.CreateAsync(_model.ToCreateRequest(Clock.GetLocalNow().Date))
             : await EmployeeService.UpdateAsync(_model.Id, _model.ToUpdateRequest());
 
         _isSaving = false;

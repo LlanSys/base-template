@@ -16,23 +16,32 @@ namespace BT.Api.Features.ControlPlane.Stamps.Controllers;
 [Authorize]
 public sealed class DeploymentStampsController(ISender sender) : BaseController
 {
+    [HttpDelete("{id:guid}")]
+    [RequirePermission("controlplane.manage_stamps")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+        => HandleResponse(await sender.Send(new ChangeStampAvailabilityCommand(id, false, true), cancellationToken).ConfigureAwait(false));
+
+    [HttpPut("{id:guid}/availability")]
+    [RequirePermission("controlplane.manage_stamps")]
+    public async Task<IActionResult> SetAvailability(Guid id, [FromBody] bool isActive, CancellationToken cancellationToken)
+        => HandleResponse(await sender.Send(new ChangeStampAvailabilityCommand(id, isActive), cancellationToken).ConfigureAwait(false));
     [HttpGet]
-    [RequirePermission("control_plane.manage")]
+    [RequirePermission("controlplane.view_stamps")]
     public async Task<IActionResult> GetAllDeploymentStamps()
         => HandleResponse(await sender.Send(new GetAllDeploymentStampsQuery()).ConfigureAwait(false));
 
     [HttpGet("{id:guid}")]
-    [RequirePermission("control_plane.manage")]
+    [RequirePermission("controlplane.view_stamps")]
     public async Task<IActionResult> GetDeploymentStampById(Guid id)
         => HandleResponse(await sender.Send(new GetDeploymentStampByIdQuery(id)).ConfigureAwait(false));
 
     [HttpPost]
-    [RequirePermission("control_plane.manage")]
+    [RequirePermission("controlplane.manage_stamps")]
     public async Task<IActionResult> CreateDeploymentStamp(CreateDeploymentStampRequest request)
         => HandleResponse(await sender.Send(new CreateDeploymentStampCommand(request)).ConfigureAwait(false));
 
     [HttpPut("{id:guid}")]
-    [RequirePermission("control_plane.manage")]
+    [RequirePermission("controlplane.manage_stamps")]
     public async Task<IActionResult> UpdateDeploymentStamp(Guid id, UpdateDeploymentStampRequest request)
         => HandleResponse(await sender.Send(new UpdateDeploymentStampCommand(id, request)).ConfigureAwait(false));
 }

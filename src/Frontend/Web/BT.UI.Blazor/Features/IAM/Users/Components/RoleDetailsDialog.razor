@@ -1,0 +1,95 @@
+@inject IIamAdminService IamAdminService
+@inject BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces.IBackendApiClient Client
+@inject IAuthSession AuthSession
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+<MudDialog>
+    <DialogContent>
+        <MudTabs Rounded="true"
+                 Class="bt-catalog-tabs">
+            <MudTabPanel Text="Overview">
+                <MudText Class="pa-3">@Role.Name</MudText>
+                <MudText Class="pa-3">Scope: @Role.DepartmentName | @(Role.IsDefault ? "Vendor-managed default" : "Custom role") | @(Role.IsActive ? "Active" : "Disabled")</MudText>
+            </MudTabPanel>
+            <MudTabPanel Text="Permissions">
+                @if (AuthSession.HasPermission("roles.manage_permissions") && (!Role.IsDefault || AuthSession.CurrentUser?.IsPlatformStaff == true))
+                {
+                    <MudButton StartIcon="@Icons.Material.Filled.Security"
+                               OnClick="ManageAsync"
+                               Class="my-2">Manage permissions</MudButton>
+                }
+                <div class="bt-table-scroll">
+                    <MudTable Items="_permissions"
+                              Dense="true"
+                              RowsPerPage="20"
+                              Breakpoint="Breakpoint.None">
+                        <HeaderContent>
+                            <MudTh>Permission</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context</MudTd>
+                        </RowTemplate>
+                        <PagerContent>
+                            <MudTablePager />
+                        </PagerContent>
+                    </MudTable>
+                </div>
+            </MudTabPanel>
+            <MudTabPanel Text="Assigned Users">
+                <div class="bt-table-scroll">
+                    <MudTable Items="_users"
+                              Dense="true"
+                              Breakpoint="Breakpoint.None">
+                        <HeaderContent>
+                            <MudTh>Name</MudTh>
+                            <MudTh>Email</MudTh>
+                            <MudTh>Status</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Name</MudTd>
+                            <MudTd>@context.Email</MudTd>
+                            <MudTd>@(context.IsActive ? "Active" : "Inactive")</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </div>
+                <MudButton Disabled="@(_cursor == null || _busy)"
+                           OnClick="LoadUsersAsync"
+                           Class="mt-2">Load more users</MudButton>
+            </MudTabPanel>
+        </MudTabs>
+    </DialogContent>
+    <DialogActions>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   OnClick="@(() => Dialog.Close())">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Parameter, EditorRequired] public AdminRoleListResponse Role { get; set; } = default!;
+    private List<string> _permissions = [];
+    private readonly List<AssignedUserResponse> _users = [];
+    private string? _cursor;
+    private bool _busy;
+    protected override async Task OnInitializedAsync() { await LoadPermissionsAsync(); await LoadUsersAsync(); }
+    private async Task LoadPermissionsAsync()
+    {
+        var response = await IamAdminService.GetRolePermissionsAsync(Role.Id);
+        if (response.IsSuccess && response.Data is not null) _permissions = response.Data.PermissionKeys.ToList();
+        else Snackbar.Add(response.Message ?? "Role permissions could not be loaded.", Severity.Error);
+    }
+    private async Task LoadUsersAsync()
+    {
+        _busy = true;
+        var url = "api/v1/iam/admin/roles/" + Uri.EscapeDataString(Role.Id) + "/assigned-users" + (_cursor is null ? string.Empty : "?cursor=" + Uri.EscapeDataString(_cursor));
+        var response = await Client.SendAsync<AssignedUsersPage>(HttpMethod.Get, url);
+        if (response.IsSuccess && response.Data is { } page) { _users.AddRange(page.Items); _cursor = page.NextCursor; }
+        else Snackbar.Add(response.Message ?? "Assigned users could not be loaded.", Severity.Error);
+        _busy = false;
+    }
+    private async Task ManageAsync()
+    {
+        var dialog = await Dialogs.ShowAsync<BT.UI.Blazor.Features.IAM.Permissions.Components.RolePermissionsDialog>("Role permissions", new DialogParameters { ["Role"] = Role }, new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+        await dialog.Result;
+        await LoadPermissionsAsync();
+    }
+}

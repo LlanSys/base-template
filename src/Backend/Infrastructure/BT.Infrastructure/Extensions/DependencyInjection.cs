@@ -58,6 +58,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Quartz;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Quartz.Simpl;
 using QuestPDF.Infrastructure;
 using Serilog;
@@ -82,72 +83,83 @@ public static class DependencyInjection
     public static IServiceCollection AddSharedInfrastructure(this IServiceCollection services, IConfiguration configuration, IWebHostEnvironment environment)
     {
         ArgumentNullException.ThrowIfNull(configuration, nameof(configuration));
+        services.TryAddSingleton(TimeProvider.System);
 
-            services.AddSingleton(JsonSerializerOptionsFactory.Create());
-            services.Configure<ObservabilitySettings>(configuration.GetSection(ObservabilitySettings.SectionName));
-            services.Configure<AuthProviderSettings>(configuration.GetSection(AuthProviderSettings.SectionName));
-            services.Configure<ApiSettings>(configuration.GetSection(ApiSettings.SectionName));
-            services.Configure<IamProvisioningSettings>(configuration.GetSection(IamProvisioningSettings.SectionName));
-            services.Configure<MfaSettings>(configuration.GetSection(MfaSettings.SectionName));
-            services
-                .AddOptions<PasswordRecoverySettings>()
-                .Bind(configuration.GetSection(PasswordRecoverySettings.SectionName))
-                .ValidateDataAnnotations()
-                .ValidateOnStart();
-            services
-                .AddOptions<FeatureFlagSettings>()
-                .Bind(configuration.GetSection(FeatureFlagSettings.SectionName))
-                .Validate(IsValidFeatureFlagProvider, "FeatureFlags:Provider must be Configuration.")
-                .ValidateOnStart();
-            services
-                .AddOptions<ReportingSettings>()
-                .Bind(configuration.GetSection(ReportingSettings.SectionName))
-                .Validate(IsValidReportingSettings, "Reporting:QuestPdf:License must be Community, Professional, or Enterprise.")
-                .ValidateOnStart();
-            services
-                .AddOptions<PaymentSettings>()
-                .Bind(configuration.GetSection(PaymentSettings.SectionName))
-                .Validate(IsValidPaymentProvider, "Payments:Provider must be NoOp, Stripe, or Mpesa.")
-                .ValidateOnStart();
-            ConfigurePaymentGateways(services, configuration);
-            ConfigureQuestPdf(configuration);
-            services
-                .AddOptions<ProfileImageStorageSettings>()
-                .Bind(configuration.GetSection(ProfileImageStorageSettings.SectionName))
-                .ValidateDataAnnotations()
-                .Validate(
-                    IsValidProfileImageStorageProvider,
-                    "ProfileImageStorage:Provider must be Local, Azurite, AzureBlob, or S3. Blob providers require ContainerUri or ConnectionString plus ContainerName. S3 requires ServiceUrl, BucketName, AccessKey, and SecretKey.")
-                .ValidateOnStart();
-            services.AddOptions<OrgSettings>()
-                .Bind(configuration.GetSection(OrgSettings.SectionName))
-                .ValidateDataAnnotations()
-                .Validate(settings => settings.DefaultTenantId != Guid.Empty, "Tenant:DefaultTenantId must be configured.")
-                .ValidateOnStart();
-            services.AddOptions<PasskeySettings>()
-                .Bind(configuration.GetSection(PasskeySettings.SectionName))
-                .ValidateDataAnnotations()
-                .ValidateOnStart();
+        services.AddSingleton(JsonSerializerOptionsFactory.Create());
+        services.Configure<ObservabilitySettings>(configuration.GetSection(ObservabilitySettings.SectionName));
+        services.Configure<AuthProviderSettings>(configuration.GetSection(AuthProviderSettings.SectionName));
+        services.Configure<ApiSettings>(configuration.GetSection(ApiSettings.SectionName));
+        services.Configure<IamProvisioningSettings>(configuration.GetSection(IamProvisioningSettings.SectionName));
+        services.Configure<MfaSettings>(configuration.GetSection(MfaSettings.SectionName));
+        services
+            .AddOptions<PasswordRecoverySettings>()
+            .Bind(configuration.GetSection(PasswordRecoverySettings.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
-            var cacheSettings = configuration.GetSection(CacheSettings.SectionName).Get<CacheSettings>()
-                ?? throw new InvalidOperationException("CacheSettings not found.");
+        services
+            .AddOptions<FeatureFlagSettings>()
+            .Bind(configuration.GetSection(FeatureFlagSettings.SectionName))
+            .Validate(IsValidFeatureFlagProvider, "FeatureFlags:Provider must be Configuration.")
+            .ValidateOnStart();
 
-            services.Configure<SessionSettings>(configuration.GetSection(SessionSettings.SectionName));
-            ConfigureDistributedCache(services, configuration, cacheSettings);
-            ConfigureEmailDelivery(services, configuration);
-            ConfigureSms(services, configuration);
-            ConfigureSerilogEnrichers(services);
-            var observabilitySettings = configuration.GetSection(ObservabilitySettings.SectionName).Get<ObservabilitySettings>() ?? new ObservabilitySettings();
-            var authProviderSettings = configuration.GetSection(AuthProviderSettings.SectionName).Get<AuthProviderSettings>() ?? new AuthProviderSettings();
-            var messagingSettings = configuration.GetSection(MessagingSettings.SectionName).Get<MessagingSettings>() ?? new MessagingSettings();
-            var backgroundJobSettings = configuration.GetSection(BackgroundJobSettings.SectionName).Get<BackgroundJobSettings>() ?? new BackgroundJobSettings();
-            ConfigureObservability(services, configuration, environment, observabilitySettings);
-            if (backgroundJobSettings.Enabled)
-            {
-                ConfigureQuartz(services, configuration);
-            }
+        services
+            .AddOptions<ReportingSettings>()
+            .Bind(configuration.GetSection(ReportingSettings.SectionName))
+            .Validate(IsValidReportingSettings, "Reporting:QuestPdf:License must be Community, Professional, or Enterprise.")
+            .ValidateOnStart();
 
-            AddServices(services, authProviderSettings, messagingSettings, backgroundJobSettings);
+        services
+            .AddOptions<PaymentSettings>()
+            .Bind(configuration.GetSection(PaymentSettings.SectionName))
+            .Validate(IsValidPaymentProvider, "Payments:Provider must be NoOp, Stripe, or Mpesa.")
+            .ValidateOnStart();
+
+        ConfigurePaymentGateways(services, configuration);
+        ConfigureQuestPdf(configuration);
+        services
+            .AddOptions<ProfileImageStorageSettings>()
+            .Bind(configuration.GetSection(ProfileImageStorageSettings.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(
+                IsValidProfileImageStorageProvider,
+                "ProfileImageStorage:Provider must be Local, Azurite, AzureBlob, or S3. Blob providers require ContainerUri or ConnectionString plus ContainerName. S3 requires ServiceUrl, BucketName, AccessKey, and SecretKey.")
+            .ValidateOnStart();
+
+        services.AddOptions<OrgSettings>()
+            .Bind(configuration.GetSection(OrgSettings.SectionName))
+            .ValidateDataAnnotations()
+            .Validate(settings => settings.DefaultTenantId != Guid.Empty, "Tenant:DefaultTenantId must be configured.")
+            .ValidateOnStart();
+
+        services.AddOptions<PasskeySettings>()
+            .Bind(configuration.GetSection(PasskeySettings.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        var cacheSettings = configuration.GetSection(CacheSettings.SectionName).Get<CacheSettings>()
+            ?? throw new InvalidOperationException("CacheSettings not found.");
+
+        services.Configure<SessionSettings>(configuration.GetSection(SessionSettings.SectionName));
+        services.AddOptions<AdministratorInvitationSettings>()
+            .Bind(configuration.GetSection(AdministratorInvitationSettings.SectionName)).ValidateDataAnnotations().ValidateOnStart();
+
+        ConfigureDistributedCache(services, configuration, cacheSettings);
+        ConfigureEmailDelivery(services, configuration);
+        ConfigureSms(services, configuration);
+        ConfigureSerilogEnrichers(services);
+        var observabilitySettings = configuration.GetSection(ObservabilitySettings.SectionName).Get<ObservabilitySettings>() ?? new ObservabilitySettings();
+        var authProviderSettings = configuration.GetSection(AuthProviderSettings.SectionName).Get<AuthProviderSettings>() ?? new AuthProviderSettings();
+        var messagingSettings = configuration.GetSection(MessagingSettings.SectionName).Get<MessagingSettings>() ?? new MessagingSettings();
+        var backgroundJobSettings = configuration.GetSection(BackgroundJobSettings.SectionName).Get<BackgroundJobSettings>() ?? new BackgroundJobSettings();
+        ConfigureObservability(services, configuration, environment, observabilitySettings);
+
+        if (backgroundJobSettings.Enabled)
+        {
+            ConfigureQuartz(services, configuration);
+        }
+
+        AddServices(services, authProviderSettings, messagingSettings, backgroundJobSettings);
 
         return services;
     }
@@ -168,7 +180,13 @@ public static class DependencyInjection
         }
 
         services.AddHttpClient<IApiService, ApiService>();
-        services.AddHttpClient<BT.Application.Features.ControlPlane.Tenants.Contracts.IStampProvisioner, BT.Infrastructure.Features.ControlPlane.Provisioning.GitHubActionsStampProvisioner>();
+        services.AddHttpClient<Application.Features.ControlPlane.Tenants.Contracts.IStampProvisioner, Features.ControlPlane.Provisioning.GitHubActionsStampProvisioner>();
+        services.AddScoped<Features.ControlPlane.Tenants.Services.TenantAdministratorProvisioner>();
+        services.AddScoped<Features.ControlPlane.Tenants.Services.AdministratorInvitationAcceptance>();
+        services.AddScoped<Features.IAM.Users.Services.SignInResponseFactory>();
+        services.AddScoped<IExternalAccountLinkService, Features.IAM.Users.Services.ExternalAccountLinkService>();
+        services.AddScoped<Features.ControlPlane.Tenants.Services.TenantInvitationDispatcher>();
+        services.AddHostedService<Features.ControlPlane.Tenants.Services.TenantInvitationWorker>();
         services.AddScoped<ICurrentTenantProvider, CurrentTenantProvider>();
         services.AddScoped<ITenantConnectionResolver, TenantConnectionResolver>();
         services.AddScoped<ITenantModuleResolver, TenantModuleResolver>();
@@ -222,16 +240,17 @@ public static class DependencyInjection
                     _.GetRequiredService<ISchedulerFactory>(),
                     _.GetRequiredService<ILogger<BackgroundJobService>>())
                 : new NoOpBackgroundJobService());
+
         services.AddScoped<IEncryptionService, EncryptionService>();
         services.AddScoped<IOrgSettingsProvider, CachedOrgSettingsProvider>();
-        
+
         services.AddFido2(options =>
         {
-            options.ServerDomain = "localhost";
-            options.ServerName = "BaseTemplate";
+            options.RPID = "localhost";
+            options.RPName = "BaseTemplate";
             options.Origins = new HashSet<string> { "https://localhost:7049", "https://localhost:7129", "http://localhost:5157", "http://localhost:5106" };
         });
-        
+
         services.AddScoped<IPasskeyService, PasskeyService>();
 
         return services;
@@ -247,70 +266,91 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         var jwtSettings = new JwtSettings();
-            configuration.GetSection(JwtSettings.SectionName).Bind(jwtSettings);
+        services.AddOptions<GoogleSsoSettings>()
+            .Bind(configuration.GetSection(GoogleSsoSettings.SectionName))
+            .Validate(settings => !settings.Enabled || (!string.IsNullOrWhiteSpace(settings.ClientId)
+                && !string.IsNullOrWhiteSpace(settings.ClientSecret) && settings.CallbackPath.StartsWith('/')),
+                "GoogleSso requires ClientId, ClientSecret and a local CallbackPath when enabled.")
+            .ValidateOnStart();
 
-            services.AddSingleton(jwtSettings);
+        configuration.GetSection(JwtSettings.SectionName).Bind(jwtSettings);
 
-            if (jwtSettings == null)
-                throw new InvalidOperationException("JwtSettings not found in configuration");
+        services.AddSingleton(jwtSettings);
 
-            services.AddSingleton(sp =>
+        if (jwtSettings == null)
+            throw new InvalidOperationException("JwtSettings not found in configuration");
+
+        services.AddSingleton(sp =>
+        {
+            var jwtSettings = sp.GetRequiredService<JwtSettings>();
+
+            return new TokenValidationParameters
             {
-                var jwtSettings = sp.GetRequiredService<JwtSettings>();
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = jwtSettings.GetSymmetricSecurityKey(),
+                ValidateIssuer = true,
+                ValidIssuer = jwtSettings.Issuer,
+                ValidateAudience = true,
+                ValidAudience = jwtSettings.Audience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromMinutes(jwtSettings.ClockSkew),
+                RequireExpirationTime = true,
+                RequireSignedTokens = true,
+            };
+        });
 
-                return new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = jwtSettings.GetSymmetricSecurityKey(),
-                    ValidateIssuer = true,
-                    ValidIssuer = jwtSettings.Issuer,
-                    ValidateAudience = true,
-                    ValidAudience = jwtSettings.Audience,
-                    ValidateLifetime = true,
-                    ClockSkew = TimeSpan.FromMinutes(jwtSettings.ClockSkew),
-                    RequireExpirationTime = true,
-                    RequireSignedTokens = true,
-                };
+        services.Configure<IdentityOptions>(ConfigureIdentityOptions);
+
+        var entraIdSettings = configuration.GetSection(EntraIdSettings.SectionName).Get<EntraIdSettings>()
+            ?? new EntraIdSettings();
+
+        // Authentication with JWT
+        var authenticationBuilder = services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer();
+
+        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+            .Configure<TimeProvider>((options, timeProvider) => ConfigureJwtBearer(options, jwtSettings, timeProvider));
+
+        if (entraIdSettings.Enabled)
+        {
+            authenticationBuilder.AddOpenIdConnect("EntraId", options =>
+            {
+                ConfigureEntraId(options, entraIdSettings);
             });
+        }
 
-            services.Configure<IdentityOptions>(ConfigureIdentityOptions);
+        var googleSettings = configuration.GetSection(GoogleSsoSettings.SectionName).Get<GoogleSsoSettings>() ?? new GoogleSsoSettings();
 
-            var entraIdSettings = configuration.GetSection(EntraIdSettings.SectionName).Get<EntraIdSettings>()
-                ?? new EntraIdSettings();
-
-            // Authentication with JWT
-            var authenticationBuilder = services.AddAuthentication(options =>
+        if (googleSettings.Enabled)
+        {
+            authenticationBuilder.AddOpenIdConnect("Google", options =>
             {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer(options =>
-            {
-                ConfigureJwtBearer(options, jwtSettings);
+                options.Authority = "https://accounts.google.com";
+                options.ClientId = googleSettings.ClientId;
+                options.ClientSecret = googleSettings.ClientSecret;
+                options.CallbackPath = googleSettings.CallbackPath;
+                ConfigureExternalIdentity(options);
             });
+        }
 
-            if (entraIdSettings.Enabled)
+        var passkeySettings = configuration.GetSection(PasskeySettings.SectionName).Get<PasskeySettings>()
+            ?? new PasskeySettings();
+
+        if (passkeySettings.Enabled)
+        {
+            services.AddFido2(options =>
             {
-                authenticationBuilder.AddOpenIdConnect("EntraId", options =>
-                {
-                    ConfigureEntraId(options, entraIdSettings);
-                });
-            }
-
-            var passkeySettings = configuration.GetSection(PasskeySettings.SectionName).Get<PasskeySettings>() 
-                ?? new PasskeySettings();
-
-            if (passkeySettings.Enabled)
-            {
-                services.AddFido2(options =>
-                {
-                    options.ServerDomain = passkeySettings.ServerDomain;
-                    options.ServerName = passkeySettings.ServerName;
-                    options.Origins = new System.Collections.Generic.HashSet<string>(passkeySettings.Origins);
-                    options.TimestampDriftTolerance = 300000;
-                });
-            }
+                options.RPID = passkeySettings.ServerDomain;
+                options.RPName = passkeySettings.ServerName;
+                options.Origins = new HashSet<string>(passkeySettings.Origins);
+                options.TimestampDriftTolerance = 300000;
+            });
+        }
 
         services.Configure<DataProtectionTokenProviderOptions>(options =>
         {
@@ -353,7 +393,7 @@ public static class DependencyInjection
         options.Tokens.ChangeEmailTokenProvider = TokenOptions.DefaultEmailProvider;
     }
 
-    internal static void ConfigureJwtBearer(JwtBearerOptions options, JwtSettings jwtSettings)
+    internal static void ConfigureJwtBearer(JwtBearerOptions options, JwtSettings jwtSettings, TimeProvider timeProvider)
     {
         options.SaveToken = true;
         options.RequireHttpsMetadata = false;
@@ -374,7 +414,7 @@ public static class DependencyInjection
             // CUSTOM LIFETIME VALIDATOR to handle NotBefore issues
             LifetimeValidator = (notBefore, expires, token, parameters) =>
             {
-                var now = DateTime.UtcNow;
+                var now = timeProvider.GetUtcNow().UtcDateTime;
 
                 // Check expiration (required)
                 if (expires.HasValue && expires.Value < now)
@@ -410,7 +450,7 @@ public static class DependencyInjection
                         context.Response.StatusCode,
                         Message = "Token has expired.",
                         ExpirationTime = expirationTime,
-                        CurrentTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture),
+                        CurrentTime = timeProvider.GetUtcNow().UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture),
                         Error = context.Exception.Message
                     };
 
@@ -478,6 +518,7 @@ public static class DependencyInjection
             {
                 Expiration = TimeSpan.FromHours(1)
             };
+
             options.MaximumPayloadBytes = 1024 * 1024; // 1MB limit for L2
         });
 
@@ -503,8 +544,29 @@ public static class DependencyInjection
         options.ClientId = settings.ClientId;
         options.ClientSecret = settings.ClientSecret;
         options.CallbackPath = settings.CallbackPath;
+        ConfigureExternalIdentity(options);
+    }
+
+    private static void ConfigureExternalIdentity(OpenIdConnectOptions options)
+    {
         options.SignInScheme = IdentityConstants.ExternalScheme;
         options.ResponseType = "code";
+        options.UsePkce = true;
+        options.MapInboundClaims = false;
+        options.Events.OnTokenValidated = context =>
+        {
+            if (context.Principal?.Identity is System.Security.Claims.ClaimsIdentity identity)
+                identity.AddClaim(new System.Security.Claims.Claim("bt_issuer", context.SecurityToken.Issuer));
+            return Task.CompletedTask;
+        };
+
+        options.Events.OnRedirectToIdentityProvider = context =>
+        {
+            context.ProtocolMessage.Prompt = "select_account";
+            return Task.CompletedTask;
+        };
+
+        options.TokenValidationParameters.NameClaimType = "name";
         options.SaveTokens = false;
         options.GetClaimsFromUserInfoEndpoint = true;
         options.Scope.Clear();
@@ -515,7 +577,7 @@ public static class DependencyInjection
 
     private static void RegisterRedisCache(IServiceCollection services, string connectionString)
     {
-        services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(_ =>
+        services.AddSingleton<IConnectionMultiplexer>(_ =>
         {
             var configOptions = StackExchange.Redis.ConfigurationOptions.Parse(connectionString);
             configOptions.AbortOnConnectFail = false;
@@ -529,7 +591,7 @@ public static class DependencyInjection
         IServiceCollection services,
         AzureCacheSettings settings)
     {
-        services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(_ =>
+        services.AddSingleton<IConnectionMultiplexer>(_ =>
         {
             var configOptions = StackExchange.Redis.ConfigurationOptions.Parse(settings.ConnectionString!);
             configOptions.Protocol = StackExchange.Redis.RedisProtocol.Resp3;
@@ -538,6 +600,7 @@ public static class DependencyInjection
             configOptions.Password = null;
 
             var credentialOptions = new Azure.Identity.DefaultAzureCredentialOptions();
+
             if (!string.IsNullOrWhiteSpace(settings.PrincipalId))
             {
                 credentialOptions.ManagedIdentityClientId = settings.PrincipalId;
@@ -556,7 +619,7 @@ public static class DependencyInjection
     {
         services.AddStackExchangeRedisCache(options => { });
         services.AddOptions<RedisCacheOptions>()
-            .Configure<StackExchange.Redis.IConnectionMultiplexer>((options, multiplexer) =>
+            .Configure<IConnectionMultiplexer>((options, multiplexer) =>
             {
                 options.ConnectionMultiplexerFactory = () => Task.FromResult(multiplexer);
             });
@@ -573,6 +636,7 @@ public static class DependencyInjection
     private static CacheProvider GetCacheProvider(CacheSettings settings)
     {
         var configuredProvider = settings.Provider?.Trim() ?? "Auto";
+
         if (configuredProvider.Equals("Auto", StringComparison.OrdinalIgnoreCase))
         {
             if (IsConfiguredConnectionString(settings.Azure?.ConnectionString))
@@ -711,12 +775,14 @@ public static class DependencyInjection
     {
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(observabilitySettings, nameof(observabilitySettings));
+
         if (!observabilitySettings.Enabled)
         {
             return services;
         }
 
         var connectionString = observabilitySettings.AzureMonitor.ConnectionString;
+
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             connectionString =
@@ -731,6 +797,7 @@ public static class DependencyInjection
             Console.WriteLine(
                 "[WARN] Observability is enabled but no exporter (AzureMonitor or Otlp) is configured. " +
                 "OpenTelemetry export is disabled.");
+
             return services;
         }
 
@@ -766,6 +833,7 @@ public static class DependencyInjection
                 tracing.AddOtlpExporter(options =>
                 {
                     options.Endpoint = new Uri(observabilitySettings.Otlp!.Endpoint);
+
                     if (!string.IsNullOrWhiteSpace(observabilitySettings.Otlp.Headers))
                     {
                         options.Headers = observabilitySettings.Otlp.Headers;
@@ -788,6 +856,7 @@ public static class DependencyInjection
                 metrics.AddOtlpExporter(options =>
                 {
                     options.Endpoint = new Uri(observabilitySettings.Otlp!.Endpoint);
+
                     if (!string.IsNullOrWhiteSpace(observabilitySettings.Otlp.Headers))
                     {
                         options.Headers = observabilitySettings.Otlp.Headers;
@@ -852,7 +921,7 @@ public static class DependencyInjection
             }
         });
 
-        if (!string.IsNullOrWhiteSpace(settings.AzureCommunication.ConnectionString) && 
+        if (!string.IsNullOrWhiteSpace(settings.AzureCommunication.ConnectionString) &&
             settings.AzureCommunication.ConnectionString != "SET_IN_USER_SECRETS")
         {
             try
@@ -871,17 +940,17 @@ public static class DependencyInjection
         return settings is not null && (string.IsNullOrWhiteSpace(settings.FromAddress)
             ? false
             : GetEmailProvider(settings) switch
-              {
-                  EmailProvider.NoOp => true,
-                  EmailProvider.LocalMailpit => !string.IsNullOrWhiteSpace(settings.LocalMailpit.Host) &&
-                      settings.LocalMailpit.Port > 0,
-                  EmailProvider.SendGrid => !string.IsNullOrWhiteSpace(settings.SendGrid.Endpoint) &&
-                      Uri.TryCreate(settings.SendGrid.Endpoint, UriKind.Absolute, out _),
-                  EmailProvider.AzureCommunication => !string.IsNullOrWhiteSpace(settings.AzureCommunication.ConnectionString),
-                  EmailProvider.Resend => !string.IsNullOrWhiteSpace(settings.Resend.Endpoint) &&
-                      Uri.TryCreate(settings.Resend.Endpoint, UriKind.Absolute, out _),
-                  _ => false
-              });
+            {
+                EmailProvider.NoOp => true,
+                EmailProvider.LocalMailpit => !string.IsNullOrWhiteSpace(settings.LocalMailpit.Host) &&
+                    settings.LocalMailpit.Port > 0,
+                EmailProvider.SendGrid => !string.IsNullOrWhiteSpace(settings.SendGrid.Endpoint) &&
+                    Uri.TryCreate(settings.SendGrid.Endpoint, UriKind.Absolute, out _),
+                EmailProvider.AzureCommunication => !string.IsNullOrWhiteSpace(settings.AzureCommunication.ConnectionString),
+                EmailProvider.Resend => !string.IsNullOrWhiteSpace(settings.Resend.Endpoint) &&
+                    Uri.TryCreate(settings.Resend.Endpoint, UriKind.Absolute, out _),
+                _ => false
+            });
     }
 
     private static bool IsValidFeatureFlagProvider(FeatureFlagSettings settings)

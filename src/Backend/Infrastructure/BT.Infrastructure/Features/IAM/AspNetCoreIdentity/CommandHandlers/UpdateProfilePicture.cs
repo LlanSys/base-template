@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
 internal sealed class UpdateProfilePicture(
+    TimeProvider timeProvider,
     UserManager<AppUser> userManager,
     IProfilePictureStorage storage,
     IOptions<ProfileImageStorageSettings> storageOptions,
@@ -29,12 +30,14 @@ internal sealed class UpdateProfilePicture(
         try
         {
             var validationError = Validate(command);
+
             if (validationError is not null)
             {
                 return AppResponses.Failure<ProfilePictureResponse>(validationError);
             }
 
             var user = await userManager.FindByIdAsync(command.UserId).ConfigureAwait(false);
+
             if (user is null)
             {
                 return AppResponses.Failure<ProfilePictureResponse>("User account was not found.");
@@ -44,9 +47,10 @@ internal sealed class UpdateProfilePicture(
                 .SaveAsync(command.UserId, command.Content, command.FileName, command.ContentType, cancellationToken)
                 .ConfigureAwait(false);
 
-            user.SetProfilePicture(profilePictureUrl, command.UpdatedBy);
+            user.SetProfilePicture(timeProvider.GetUtcNow(), profilePictureUrl, command.UpdatedBy);
 
             var result = await userManager.UpdateAsync(user).ConfigureAwait(false);
+
             if (!result.Succeeded)
             {
                 var errors = string.Join("; ", result.Errors.Select(static error => error.Description));

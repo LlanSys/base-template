@@ -1,0 +1,150 @@
+@page "/control-panel/modules"
+@layout ControlPlaneLayout
+@attribute [Authorize(Policy = "modules.view")]
+@rendermode InteractiveServer
+@using BT.SharedKernel.Features.ControlPlane.Modules
+@using BT.UI.Blazor.Features.ControlPlane.Modules
+@inject ModuleService Modules
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject IAuthSession AuthSession
+@inject NavigationManager Navigation
+
+<PageTitle>Modules | BaseTemplate</PageTitle>
+<section class="dashboard-page">
+    <div class="list-page-actions">
+        @if (AuthSession.HasPermission("modules.create"))
+        {
+            <MudButton StartIcon="@Icons.Material.Filled.Add"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Size="Size.Small"
+                       OnClick="@(() => EditAsync(null))">Add module</MudButton>
+        }
+    </div>
+    <MudPaper Class="poc-panel"
+              Elevation="0">
+        <div class="panel-heading">
+            <h2>Modules</h2>
+            <MudChip T="string"
+                     Size="Size.Small">@Filtered.Count() shown</MudChip>
+        </div>
+        <div class="list-toolbar">
+            <MudTextField @bind-Value="_search"
+                          Label="Search modules"
+                          Placeholder="Search modules..."
+                          Immediate="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+        </div>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        <div class="bt-table-scroll">
+            <MudTable @ref="_table"
+                      Items="Filtered"
+                      Dense="true"
+                      Hover="true"
+                      RowsPerPage="50"
+                      Breakpoint="Breakpoint.None">
+                <HeaderContent>
+                    <MudTh>Module</MudTh>
+                    <MudTh>Key</MudTh>
+                    <MudTh>Description</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.Name</MudTd>
+                    <MudTd>@context.Key</MudTd>
+                    <MudTd>@context.Description</MudTd>
+                    <MudTd>
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Color="@(context.IsActive ? Color.Success : Color.Default)">@(context.IsActive ? "Active" : "Disabled")</MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <TableRowActions OnView="@(() => Navigation.NavigateTo($"/control-panel/modules/{context.Id}"))"
+                                         OnEdit="@(() => EditAsync(context))"
+                                         OnDelete="@(() => DeleteAsync(context))"
+                                         CanEdit="@AuthSession.HasPermission("modules.manage")"
+                                         CanDelete="@AuthSession.HasPermission("modules.manage")"
+                                         ExtraActions="@ModuleActions(context)"
+                                         OnExtraAction="@(action => ActionAsync(context, action))" />
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>No modules found.</MudText>
+                </NoRecordsContent>
+                <PagerContent>
+                    <GlobalTablePager CurrentPage="(_table?.CurrentPage ?? 0) + 1"
+                                      TotalRecords="_table?.GetFilteredItemsCount() ?? 0"
+                                      PageSize="_table?.RowsPerPage ?? 50"
+                                      OnFirstPage="@(() => _table?.NavigateTo(0))"
+                                      OnPreviousPage="@(() => _table?.NavigateTo((_table?.CurrentPage ?? 1) - 1))"
+                                      OnNextPage="@(() => _table?.NavigateTo((_table?.CurrentPage ?? 0) + 1))" />
+                </PagerContent>
+            </MudTable>
+        </div>
+    </MudPaper>
+</section>
+@code {
+    private List<ModuleDefinitionResponse> _modules = [];
+    private MudTable<ModuleDefinitionResponse>? _table;
+    private string _search = string.Empty;
+    private bool _loading = true;
+    private IEnumerable<ModuleDefinitionResponse> Filtered => _modules.Where(module => string.IsNullOrWhiteSpace(_search)
+        || module.Name.Contains(_search, StringComparison.OrdinalIgnoreCase) || module.Key.Contains(_search, StringComparison.OrdinalIgnoreCase));
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await AuthSession.InitializeAsync();
+        await LoadAsync();
+    }
+    private async Task LoadAsync()
+    {
+        var response = await Modules.GetAsync();
+        if (response.IsSuccess && response.Data is not null) _modules = response.Data;
+        else Snackbar.Add(response.Message ?? "Modules could not be loaded.", Severity.Error);
+        _loading = false; StateHasChanged();
+    }
+    private async Task EditAsync(ModuleDefinitionResponse? module)
+    {
+        var dialog = await Dialogs.ShowAsync<ModuleFormDialog>(module is null ? "Add module" : "Edit module",
+            new DialogParameters { [nameof(ModuleFormDialog.Existing)] = module },
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true });
+        if (await dialog.Result is { Canceled: false }) await LoadAsync();
+    }
+    private async Task DeleteAsync(ModuleDefinitionResponse module)
+    {
+        if (await Dialogs.ShowMessageBoxAsync("Delete module", $"Delete {module.Name}? Organizations using this module will lose access to it.", yesText: "Delete", cancelText: "Cancel") != true) return;
+        var response = await Modules.DeleteAsync(module.Id);
+        if (!response.IsSuccess) Snackbar.Add(response.Message ?? "Module could not be deleted.", Severity.Error);
+        await LoadAsync();
+    }
+    private IReadOnlyList<string> ModuleActions(ModuleDefinitionResponse module)
+    {
+        var actions = new List<string>();
+        if (AuthSession.HasPermission("roles.view")) actions.Add("Manage roles");
+        if (AuthSession.HasPermission("roles.manage_permissions")) actions.Add("Manage permissions");
+        if (AuthSession.HasPermission("menus.view")) actions.Add("Manage menus");
+        if (AuthSession.HasPermission("modules.manage")) actions.Add(module.IsActive ? "Disable" : "Enable");
+        return actions;
+    }
+    private async Task ActionAsync(ModuleDefinitionResponse module, string action)
+    {
+        if (action.StartsWith("Manage", StringComparison.Ordinal))
+        {
+            var tab = action == "Manage roles" ? 1 : action == "Manage permissions" ? 2 : 3;
+            Navigation.NavigateTo($"/control-panel/modules/{module.Id}?tab={tab}");
+            return;
+        }
+        if (await Dialogs.ShowMessageBoxAsync(action + " module", $"{action} {module.Name} for all tenants?", yesText: action, cancelText: "Cancel") != true) return;
+        var response = await Modules.SaveAsync(module.Id, new(module.Key, module.Name, module.Description, !module.IsActive, module.Revision));
+        if (!response.IsSuccess) Snackbar.Add(response.Message ?? "Availability could not be changed.", Severity.Error);
+        await LoadAsync();
+    }
+}

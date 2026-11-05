@@ -1,7 +1,7 @@
 using BT.UI.Blazor.Features.IAM.Users.Contracts.Interfaces;
 using BT.UI.Blazor.Features.IAM.Users.Implementations;
 using BT.UI.Blazor.Logging;
-using BT.UI.Rcl.Features.IAM.Users.Contracts.Interfaces;
+
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.JSInterop;
 
@@ -21,6 +21,7 @@ internal sealed class TokenStorage(
     public async Task<bool> ClearAsync()
     {
         var browserCleared = false;
+
         try
         {
             await storage.DeleteAsync(AccessKey).ConfigureAwait(false);
@@ -48,7 +49,7 @@ internal sealed class TokenStorage(
             var access = await storage.GetAsync<string>(AccessKey).ConfigureAwait(false);
             var refresh = await storage.GetAsync<string>(RefreshKey).ConfigureAwait(false);
             var session = await storage.GetAsync<string>(SessionKey).ConfigureAwait(false);
-            
+
             var result = (
                 AccessToken: access.Success ? access.Value : null,
                 RefreshToken: refresh.Success ? refresh.Value : null,
@@ -72,6 +73,7 @@ internal sealed class TokenStorage(
     public async Task<bool> SaveAsync(string? accessToken, string? refreshToken, string? sessionId)
     {
         var browserSaved = false;
+
         try
         {
             await storage.SetAsync(AccessKey, accessToken ?? "").ConfigureAwait(false);
@@ -94,9 +96,9 @@ internal sealed class TokenStorage(
             || !string.IsNullOrWhiteSpace(tokens.SessionId);
 
     private static bool IsBrowserStorageUnavailable(Exception exception)
-        => exception is 
-        OperationCanceledException or 
-        JSDisconnectedException or 
+        => exception is
+        OperationCanceledException or
+        JSDisconnectedException or
         InvalidOperationException or
         CryptographicException;
 }

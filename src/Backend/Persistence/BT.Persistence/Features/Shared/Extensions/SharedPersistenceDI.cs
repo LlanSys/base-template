@@ -36,6 +36,10 @@ public static class SharedPersistenceDI
             ?? configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("SharedConnection (or DefaultConnection) not found.");
 
+        ArgumentNullException.ThrowIfNull(services, nameof(services));
+        ArgumentNullException.ThrowIfNull(configuration, nameof(configuration));
+        ArgumentNullException.ThrowIfNull(environment, nameof(environment));
+
         services.Configure<DatabaseSettings>(configuration.GetSection(DatabaseSettings.SectionName));
         var dbSettings = configuration.GetSection(DatabaseSettings.SectionName).Get<DatabaseSettings>() ?? new DatabaseSettings();
 
@@ -69,7 +73,7 @@ public static class SharedPersistenceDI
             {
                 options.EnableSensitiveDataLogging();
             }
-            
+
             options.AddInterceptors(provider.GetRequiredService<TenantConnectionInterceptor>());
         }
 

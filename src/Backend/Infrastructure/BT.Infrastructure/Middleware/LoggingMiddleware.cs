@@ -1,6 +1,8 @@
 using BT.Infrastructure.Logging;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -20,7 +22,7 @@ namespace BT.Infrastructure.Middleware;
 /// The <c>partial</c> modifier was removed — it was misleading and served no purpose.
 /// </para>
 /// </remarks>
-internal sealed class LoggingMiddleware(RequestDelegate next,ILogger<LoggingMiddleware> logger)
+internal sealed class LoggingMiddleware(RequestDelegate next, ILogger<LoggingMiddleware> logger)
 {
     private static readonly HashSet<string> SensitiveFieldNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -60,6 +62,7 @@ internal sealed class LoggingMiddleware(RequestDelegate next,ILogger<LoggingMidd
                 leaveOpen: true);              // must leave open — downstream still needs it
 
             string body = string.Empty;
+
             try
             {
                 body = await reader.ReadToEndAsync(context.RequestAborted).ConfigureAwait(false);
@@ -93,6 +96,7 @@ internal sealed class LoggingMiddleware(RequestDelegate next,ILogger<LoggingMidd
         try
         {
             var json = JsonNode.Parse(body);
+
             if (json is null)
             {
                 return "[empty-json-body]";

@@ -1,5 +1,6 @@
 @page "/control-panel/tenants"
 @layout ControlPlaneLayout
+@attribute [Authorize(Policy = "controlplane.view_tenants")]
 @rendermode InteractiveServer
 @inject IAuthSession AuthSession
 @inject ITenantService TenantService
@@ -12,37 +13,86 @@
 
 <section class="dashboard-page">
     <div class="mb-4">
-        <MudButton Href="/control-panel" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Primary" Class="px-0">Back to Control Panel</MudButton>
+        <MudButton Href="/control-panel"
+                   Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   Color="Color.Primary"
+                   Class="px-0">Back to Control Panel</MudButton>
     </div>
 
-    <MudPaper Class="poc-panel" Elevation="0">
+    <div class="list-page-actions">
+        @if (AuthSession.HasPermission("controlplane.create_tenants"))
+        {
+            <MudButton Variant="Variant.Filled"
+                       Size="Size.Small"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="@(() => OpenFormDialogAsync(null))">Create tenant</MudButton>
+        }
+
+    </div>
+    <MudPaper Class="poc-panel"
+              Elevation="0">
         <div class="panel-heading">
             <h2 style="color: var(--bt-moss); font-weight: 700;">Tenant List</h2>
-            <div class="d-flex align-center gap-3">
-                @if (AuthSession.HasPermission("controlplane.manage"))
-                {
-                    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Business" OnClick="@(() => OpenFormDialogAsync(null))">Create tenant</MudButton>
-                }
-            </div>
+            <MudChip T="string"
+                     Size="Size.Small">@(FilteredTenants.Count()) shown</MudChip>
         </div>
 
+        <div class="list-toolbar">
+            <MudTextField @bind-Value="_search"
+                          Immediate="true"
+                          Label="Search tenants"
+                          Placeholder="Search tenants..."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" />
+            <MudSelect T="string"
+                       @bind-Value="_status"
+                       Label="Status"
+                       Clearable="true"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                @foreach (var status in _tenants.Select(tenant => tenant.Status).Distinct())
+                {
+                    <MudSelectItem T="string"
+                                   Value="@status">@status</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
         @if (_isLoading)
         {
-            <MudProgressLinear Color="Color.Success" Indeterminate="true" Class="my-2" />
+            <MudProgressLinear Color="Color.Success"
+                               Indeterminate="true"
+                               Class="my-2" />
         }
 
         @if (!string.IsNullOrWhiteSpace(_message))
         {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Class="my-2">@_message</MudAlert>
+            <MudAlert Severity="Severity.Error"
+                      Variant="Variant.Outlined"
+                      Dense="true"
+                      Class="my-2">@_message</MudAlert>
         }
 
         <div class="bt-table-scroll">
-            <MudTable @ref="_table" Items="_tenants" Dense="true" Hover="true" Elevation="0" FixedHeader="true" RowsPerPage="50" Height="calc(100vh - 25rem)" Style="min-width: 900px;" Breakpoint="Breakpoint.None">
+            <MudTable @ref="_table"
+                      Items="FilteredTenants"
+                      Dense="true"
+                      Hover="true"
+                      Elevation="0"
+                      FixedHeader="true"
+                      RowsPerPage="50"
+                      Height="calc(100vh - 25rem)"
+                      Style="min-width: 900px;"
+                      Breakpoint="Breakpoint.None">
                 <HeaderContent>
                     <MudTh Style="width: 15rem;">Name</MudTh>
                     <MudTh>Hostname</MudTh>
                     <MudTh>Stamp</MudTh>
                     <MudTh Style="width: 10rem;">Status</MudTh>
+                    <MudTh>Administrator onboarding</MudTh>
                     <MudTh Style="width: 10rem;">Actions</MudTh>
                 </HeaderContent>
                 <RowTemplate>
@@ -50,22 +100,28 @@
                     <MudTd DataLabel="Hostname">@context.HostName</MudTd>
                     <MudTd DataLabel="Stamp">@context.DeploymentStampId</MudTd>
                     <MudTd DataLabel="Status">
-                        <MudChip T="string" Size="Size.Small" Color="@(context.Status == "Active" ? Color.Success : Color.Error)">
+                        <MudChip T="string"
+                                 Size="Size.Small"
+                                 Color="@(context.Status == "Active" ? Color.Success : Color.Error)">
                             @context.Status
                         </MudChip>
                     </MudTd>
+                    <MudTd>@context.AdministratorOnboarding</MudTd>
                     <MudTd DataLabel="Actions">
                         <TableRowActions OnEdit="@(() => OpenFormDialogAsync(context))"
-                                         CanEdit="@AuthSession.HasPermission("controlplane.manage")" 
+                                         CanEdit="@AuthSession.HasPermission("controlplane.edit_tenants")"
                                          CanView="true"
-                                         OnView="@(() => Snackbar.Add($"Tenant: {context.DisplayName} ({context.Status})", Severity.Info))"
-                                         CanDelete="false"
+                                         OnView="@(() => ViewAsync(context))"
+                                         OnDelete="@(() => DeleteAsync(context))"
+                                         CanDelete="@AuthSession.HasPermission("controlplane.delete_tenants")"
                                          ExtraActions="@GetExtraActions(context)"
                                          OnExtraAction="@((action) => HandleExtraActionAsync(action, context))" />
                     </MudTd>
                 </RowTemplate>
                 <NoRecordsContent>
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No records found.</MudAlert>
+                    <MudAlert Severity="Severity.Info"
+                              Variant="Variant.Outlined"
+                              Dense="true">No records found.</MudAlert>
                 </NoRecordsContent>
                 <PagerContent>
                     <GlobalTablePager CurrentPage="(_table?.CurrentPage ?? 0) + 1"
@@ -81,6 +137,28 @@
 </section>
 
 @code {
+    private string _search = string.Empty;
+    [SupplyParameterFromQuery(Name = "status")] public string? StatusFilter { get; set; }
+    private string? _status;
+    protected override void OnParametersSet() => _status = StatusFilter;
+    private IEnumerable<TenantResponse> FilteredTenants => _tenants.Where(tenant =>
+        (string.IsNullOrWhiteSpace(_status) || tenant.Status == _status)
+        && (string.IsNullOrWhiteSpace(_search) || tenant.DisplayName.Contains(_search, StringComparison.OrdinalIgnoreCase)
+            || tenant.HostName.Contains(_search, StringComparison.OrdinalIgnoreCase)));
+
+    private Task ViewAsync(TenantResponse tenant)
+    {
+        Navigation.NavigateTo($"/control-panel/tenants/{tenant.Id}");
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteAsync(TenantResponse tenant)
+    {
+        if (await DialogService.ShowMessageBoxAsync("Delete tenant", $"Delete {tenant.DisplayName}? Users will lose access to this organization.", yesText: "Delete", cancelText: "Cancel") != true) return;
+        var response = await TenantService.DeleteAsync(tenant.Id);
+        if (!response.IsSuccess) Snackbar.Add(response.Message ?? "Tenant could not be deleted.", Severity.Error);
+        await LoadTenantsAsync();
+    }
     private readonly List<TenantResponse> _tenants = [];
     private bool _isLoading = true;
     private string? _message;
@@ -140,6 +218,13 @@
 
     private async Task HandleExtraActionAsync(string action, TenantResponse tenant)
     {
+        if (action == "Invite administrator")
+        {
+            await DialogService.ShowAsync<InviteTenantAdministratorDialog>("Invite tenant administrator",
+                new DialogParameters { [nameof(InviteTenantAdministratorDialog.Tenant)] = tenant },
+                new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+            return;
+        }
         if (action == "Manage modules")
         {
             await OpenModulesDialogAsync(tenant);
@@ -165,24 +250,15 @@
     private IReadOnlyList<string> GetExtraActions(TenantResponse tenant)
     {
         var actions = new List<string>();
-        if (AuthSession.HasPermission("controlplane.manage"))
+        if (AuthSession.HasPermission("controlplane.manage_tenant_modules")) actions.Add("Manage modules");
+        if (tenant.Status == "Active" && AuthSession.HasPermission("controlplane.manage_tenant_administrators")) actions.Add("Invite administrator");
+        if (AuthSession.HasPermission("controlplane.manage_tenant_lifecycle"))
         {
-            actions.Add("Manage modules");
-            
-            if (tenant.Status == "PendingKYC")
-            {
-                actions.Add("Verify KYC");
-            }
-            else if (tenant.Status == "Active")
-            {
-                actions.Add("Suspend tenant");
-                actions.Add("Impersonate tenant");
-            }
-            else if (tenant.Status == "Suspended")
-            {
-                actions.Add("Activate tenant");
-            }
+            if (tenant.Status == "PendingKYC") actions.Add("Verify KYC");
+            else if (tenant.Status == "Active") actions.Add("Suspend tenant");
+            else if (tenant.Status == "Suspended") actions.Add("Activate tenant");
         }
+        if (tenant.Status == "Active" && AuthSession.HasPermission("controlplane.impersonate")) actions.Add("Impersonate tenant");
         return actions;
     }
 
@@ -263,12 +339,12 @@
     {
         var parameters = new DialogParameters
         {
-            { nameof(ConfirmDialog.Message), $"Verify KYC for tenant {tenant.DisplayName}? This will approve them for infrastructure provisioning." },
-            { nameof(ConfirmDialog.ConfirmText), "Verify" }
+            { nameof(ConfirmDialog.Message), $"Approve KYC for {tenant.DisplayName}? Workspace setup will begin." },
+            { nameof(ConfirmDialog.ConfirmText), "Approve" }
         };
 
         var dialog = await DialogService.ShowAsync<ConfirmDialog>(
-            "Confirm KYC Verification",
+            "Approve KYC",
             parameters,
             new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, CloseOnEscapeKey = true });
 
@@ -282,7 +358,7 @@
             return;
         }
 
-        Snackbar.Add($"KYC verified for {tenant.DisplayName}. Provisioning started.", Severity.Success);
+        Snackbar.Add($"KYC approved for {tenant.DisplayName}. Workspace setup is underway.", Severity.Success);
         await LoadTenantsAsync();
     }
 

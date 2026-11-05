@@ -23,7 +23,12 @@ public sealed class ApiAuthorizationTests
         "PaymentsController.MpesaC2BValidation",
         "PaymentsController.MpesaC2BConfirmation",
         "ProfileController.GetProfilePicture",
-        "ProfileController.UpdateProfilePicture"
+        "ProfileController.UpdateProfilePicture",
+        "ExternalSignInController.Providers",
+        "ExternalSignInController.Login",
+        "ExternalSignInController.AcceptWithProvider",
+        "ExternalSignInController.Callback",
+        "ExternalSignInController.Connect"
     ];
 
     private static readonly string[] AuthControllerAllowedActions =
@@ -47,7 +52,10 @@ public sealed class ApiAuthorizationTests
         "RegisterPasskey",
         "RequestPasskeyLoginOptions",
         "RequestPasskeyRegistrationOptions",
-        "GetPasskeys"
+        "GetPasskeys",
+        "InspectInvitation",
+        "AcceptInvitation",
+        "CompleteOnboarding"
     ];
 
     [Fact]
@@ -93,6 +101,32 @@ public sealed class ApiAuthorizationTests
         unexpectedActions.Should().BeEmpty(
             because: "AuthController must stay limited to authentication/session endpoints. Admin or provisioning endpoints belong in IamAdminController. Found: {0}",
             string.Join(", ", unexpectedActions));
+    }
+
+    [Fact]
+    public void Account_connection_and_onboarding_completion_require_authentication_without_an_anonymous_override()
+    {
+        foreach (var (controller, name) in new[]
+        {
+            (typeof(Api.Features.IAM.Users.Controllers.ExternalSignInController), "Connect"),
+            (typeof(Api.Features.IAM.Users.Controllers.AuthController), "CompleteOnboarding")
+        })
+        {
+            var method = controller.GetMethod(name)!;
+            Assert.True(HasAttribute<AuthorizeAttribute>(controller, method));
+            Assert.False(HasAttribute<AllowAnonymousAttribute>(controller, method));
+        }
+    }
+
+    [Fact]
+    public void Shipped_endpoint_permissions_must_be_registered_for_retirement_protection()
+    {
+        var unprotected = GetControllerActions().SelectMany(action => action.Controller.GetCustomAttributes<RequirePermissionAttribute>()
+                .Concat(action.Method.GetCustomAttributes<RequirePermissionAttribute>()))
+            .Select(attribute => attribute.Policy!["Permission:".Length..])
+            .Where(key => !BT.SharedKernel.Features.IAM.Permissions.ImplementedPermissions.IsProtected(key)).Distinct().ToArray();
+
+        Assert.Empty(unprotected);
     }
 
     private static IEnumerable<(Type Controller, MethodInfo Method)> GetControllerActions()

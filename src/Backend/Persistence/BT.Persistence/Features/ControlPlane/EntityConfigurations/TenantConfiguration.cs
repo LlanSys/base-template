@@ -5,13 +5,16 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BT.Persistence.Features.ControlPlane.EntityConfigurations;
 
-internal class TenantConfiguration : IEntityTypeConfiguration<Tenant>
+internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 {
     public void Configure(EntityTypeBuilder<Tenant> builder)
     {
         builder.ToTable("Tenants");
 
         builder.HasKey(x => x.Id);
+        builder.Property(tenant => tenant.Revision).IsConcurrencyToken();
+        builder.HasQueryFilter(tenant => !tenant.IsDeleted);
+        builder.Property(tenant => tenant.DeletedBy).HasMaxLength(128);
 
         builder.Property(x => x.DisplayName)
             .IsRequired()

@@ -15,7 +15,7 @@
 
   <PropertyGroup Label="Target Framework">
     <!-- Single source of truth for the target framework across all projects. -->
-    <!-- Override per-project only when targeting multiple frameworks (e.g. BT.UI.Mobile). -->
+    <!-- Override per-project only when an explicitly supported target requires it. -->
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
@@ -62,7 +62,13 @@
     <NoWarn>$(NoWarn);CA1860</NoWarn>
   </PropertyGroup>
 
+  <ItemGroup Label="Repository formatting analyzers">
+    <PackageReference Include="Roslynator.Formatting.Analyzers" Version="[5.0.1]" PrivateAssets="all" />
+  </ItemGroup>
+
   <PropertyGroup Label="NuGet and Packaging">
+    <!-- Keep the approved messaging line aligned across hosts, libraries, and tests. -->
+    <MassTransitVersion>8.5.12</MassTransitVersion>
     <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
     <IsPackable>false</IsPackable>
     <NuGetAudit>true</NuGetAudit>

@@ -17,7 +17,7 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -57,7 +57,6 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea");
 
                     b.Property<DateTimeOffset>("StartTime")
@@ -90,6 +89,105 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
                     b.ToTable("ImpersonationRecords", (string)null);
                 });
 
+            modelBuilder.Entity("BT.Domain.Features.ControlPlane.Modules.Entities.ModuleDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.ToTable("Modules", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("0194f700-0000-7000-8000-000000000101"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "00000000-0000-0000-0000-000000000001",
+                            Description = "",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "Banking",
+                            Name = "Banking",
+                            Revision = new Guid("0194f700-0000-7000-8000-000000000101")
+                        },
+                        new
+                        {
+                            Id = new Guid("0194f700-0000-7000-8000-000000000102"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "00000000-0000-0000-0000-000000000001",
+                            Description = "",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "HR",
+                            Name = "Human Resources",
+                            Revision = new Guid("0194f700-0000-7000-8000-000000000102")
+                        },
+                        new
+                        {
+                            Id = new Guid("0194f700-0000-7000-8000-000000000103"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedBy = "00000000-0000-0000-0000-000000000001",
+                            Description = "",
+                            IsActive = true,
+                            IsDeleted = false,
+                            Key = "Payments",
+                            Name = "Payments",
+                            Revision = new Guid("0194f700-0000-7000-8000-000000000103")
+                        });
+                });
+
             modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.DeploymentStamp", b =>
                 {
                     b.Property<Guid>("Id")
@@ -110,6 +208,21 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
                     b.Property<string>("DatabaseProvider")
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("IsolationTier")
                         .HasColumnType("integer");
 
@@ -122,10 +235,13 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea");
 
                     b.Property<string>("TargetResourceGroup")
@@ -153,8 +269,11 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
                             Id = new Guid("0194f700-0000-7000-8000-000000000001"),
                             CreatedAt = new DateTimeOffset(new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             CreatedBy = "System",
+                            IsActive = true,
+                            IsDeleted = false,
                             IsolationTier = 0,
                             Name = "default-pooled-stamp",
+                            Revision = new Guid("00000000-0000-0000-0000-000000000000"),
                             RowVersion = new byte[0],
                             TargetResourceGroup = "rg-basetemplate-dev"
                         });
@@ -184,6 +303,13 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
                     b.Property<string>("DatabaseProvider")
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<Guid>("DeploymentStampId")
                         .HasColumnType("uuid");
 
@@ -202,13 +328,19 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("MaxUsers")
                         .HasColumnType("integer");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea");
 
                     b.Property<int>("Status")
@@ -247,11 +379,110 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
                             DisplayName = "Default Tenant",
                             HostName = "localhost",
                             Identifier = "default",
+                            IsDeleted = false,
                             MaxUsers = 100,
+                            Revision = new Guid("00000000-0000-0000-0000-000000000000"),
                             RowVersion = new byte[0],
                             Status = 3,
                             SubscriptionTier = 0
                         });
+                });
+
+            modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.TenantAdministratorInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AcceptanceStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ClaimedUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("LastFailure")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "NextAttemptAt");
+
+                    b.HasIndex("TenantId", "NormalizedEmail")
+                        .IsUnique();
+
+                    b.ToTable("TenantAdministratorInvitations", (string)null);
                 });
 
             modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.TenantModule", b =>
@@ -282,7 +513,6 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea");
 
                     b.Property<Guid>("TenantId")
@@ -345,6 +575,50 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
                         });
                 });
 
+            modelBuilder.Entity("BT.Domain.Shared.Entities.AdministrationAuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ChangedFields")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "OccurredAt");
+
+                    b.ToTable("ControlPlaneAdministrationAudit", (string)null);
+                });
+
             modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.Tenant", b =>
                 {
                     b.HasOne("BT.Domain.Features.ControlPlane.Tenants.Entities.DeploymentStamp", "DeploymentStamp")
@@ -354,6 +628,17 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
                         .IsRequired();
 
                     b.Navigation("DeploymentStamp");
+                });
+
+            modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.TenantAdministratorInvitation", b =>
+                {
+                    b.HasOne("BT.Domain.Features.ControlPlane.Tenants.Entities.Tenant", "Tenant")
+                        .WithMany("AdministratorInvitations")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.TenantModule", b =>
@@ -369,6 +654,8 @@ namespace BT.Persistence.Features.ControlPlane.Migrations.PostgreSql
 
             modelBuilder.Entity("BT.Domain.Features.ControlPlane.Tenants.Entities.Tenant", b =>
                 {
+                    b.Navigation("AdministratorInvitations");
+
                     b.Navigation("Modules");
                 });
 #pragma warning restore 612, 618

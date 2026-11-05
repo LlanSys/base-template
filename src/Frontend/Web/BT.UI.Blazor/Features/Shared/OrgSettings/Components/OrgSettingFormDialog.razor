@@ -1,158 +1,89 @@
 @inject IOrgSettingsService OrgSettingsService
 @inject ISnackbar Snackbar
+@using BT.SharedKernel.Features.Shared.OrgSettings
 
 <MudDialog>
     <DialogContent>
-        @if (_isLoading)
+        <MudText Typo="Typo.subtitle1">@Definition?.Label</MudText>
+        <MudText Typo="Typo.body2"
+                 Class="mb-3">@Definition?.Description</MudText>
+        @if (Definition?.Kind == "TimeZone")
         {
-            <MudProgressLinear Color="Color.Success" Indeterminate="true" Class="my-2" />
+            <MudSelect T="string"
+                       @bind-Value="_value"
+                       Label="Time zone"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                @foreach (var zone in TimeZoneInfo.GetSystemTimeZones())
+                {
+                    <MudSelectItem T="string"
+                                   Value="@zone.Id">@zone.DisplayName</MudSelectItem>
+                }
+            </MudSelect>
         }
-        
-        @if (!string.IsNullOrWhiteSpace(_message))
+        else if (Definition?.Kind == "Culture")
         {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true" Class="mb-4">@_message</MudAlert>
+            <MudSelect T="string"
+                       @bind-Value="_value"
+                       Label="Regional format"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                @foreach (var culture in System.Globalization.CultureInfo.GetCultures(System.Globalization.CultureTypes.SpecificCultures).OrderBy(culture => culture.DisplayName))
+                {
+                    <MudSelectItem T="string"
+                                   Value="@culture.Name">@culture.DisplayName</MudSelectItem>
+                }
+            </MudSelect>
         }
-
-        <MudForm @ref="_form" @bind-IsValid="@_isValid" Model="@_model">
-            <MudTextField @bind-Value="_model.Key"
-                          For="@(() => _model.Key)"
-                          Label="Key"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Required="true"
-                          RequiredError="Key is required"
-                          Class="mb-3" />
-
-            <MudTextField @bind-Value="_model.Value"
-                          For="@(() => _model.Value)"
+        else if (Definition?.Kind == "DateFormat")
+        {
+            <MudSelect T="string"
+                       @bind-Value="_value"
+                       Label="Date format"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                @foreach (var format in new[] {  "dd/MM/yyyy",  "MM/dd/yyyy",  "yyyy-MM-dd" }  )
+                {
+                    <MudSelectItem T="string"
+                                   Value="@format">@format</MudSelectItem>
+                }
+            </MudSelect>
+        }
+        else
+        {
+            <MudTextField @bind-Value="_value"
                           Label="Value"
+                          MaxLength="120"
                           Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Required="true"
-                          RequiredError="Value is required"
-                          Lines="3"
-                          HelperText="@(IsEditMode && ExistingSetting?.Value == "***" ? "Leave as '***' to keep existing secret value." : null)"
-                          Class="mb-3" />
-
-            <MudTextField @bind-Value="_model.Description"
-                          For="@(() => _model.Description)"
-                          Label="Description"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Lines="2"
-                          Class="mb-3" />
-
-            @if (IsEditMode)
-            {
-                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mb-3">
-                    Editing existing configuration key.
-                </MudAlert>
-            }
-        </MudForm>
+                          Margin="Margin.Dense" />
+        }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SubmitAsync" Disabled="@(!_isValid || _isLoading)">
-            @(IsEditMode ? "Save Changes" : "Create")
-        </MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   OnClick="@(() => Dialog.Cancel())"
+                   Disabled="_busy">Cancel</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Save"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   OnClick="SaveAsync"
+                   Disabled="_busy">Save</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
-    
-    [Parameter] public OrgSettingResponse? ExistingSetting { get; set; }
-    
-    private MudForm _form = default!;
-    private bool _isValid;
-    private bool _isLoading;
-    private string? _message;
-    
-    private SettingFormModel _model = new();
-    
-    private bool IsEditMode => ExistingSetting != null;
-
-    protected override void OnInitialized()
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Parameter, EditorRequired] public OrgSettingResponse ExistingSetting { get; set; } = default!;
+    private OrganizationSettingDefinition? Definition => OrganizationSettingCatalog.Find(ExistingSetting.Key);
+    private string _value = string.Empty;
+    private bool _busy;
+    protected override void OnInitialized() => _value = ExistingSetting.Value;
+    private async Task SaveAsync()
     {
-        if (ExistingSetting != null)
-        {
-            _model = new SettingFormModel
-            {
-                Id = ExistingSetting.Id,
-                Key = ExistingSetting.Key,
-                Value = ExistingSetting.Value,
-                Description = ExistingSetting.Description
-            };
-        }
+        if (!OrganizationSettingCatalog.IsValid(ExistingSetting.Key, _value)) { Snackbar.Add("Enter a valid value.", Severity.Warning); return; }
+        _busy = true;
+        var response = await OrgSettingsService.UpdateOrgSettingAsync(new UpdateOrgSettingRequest(ExistingSetting.Id, ExistingSetting.Key, _value, Definition?.Description));
+        _busy = false;
+        if (response.IsSuccess) Dialog.Close(DialogResult.Ok(true));
+        else Snackbar.Add(response.Message ?? "Setting could not be saved.", Severity.Error);
     }
-
-    private void Cancel() => MudDialog.Cancel();
-
-    private async Task SubmitAsync()
-    {
-        await _form.ValidateAsync();
-        
-        if (!_form.IsValid)
-            return;
-            
-        _isLoading = true;
-        _message = null;
-        StateHasChanged();
-        
-        try
-        {
-            if (IsEditMode)
-            {
-                var request = new UpdateOrgSettingRequest(
-                    _model.Id,
-                    _model.Key,
-                    _model.Value,
-                    _model.Description
-                );
-                
-                var response = await OrgSettingsService.UpdateOrgSettingAsync(request);
-                
-                if (response.IsSuccess)
-                {
-                    Snackbar.Add(response.Message ?? "Setting updated successfully.", Severity.Success);
-                    MudDialog.Close(DialogResult.Ok(response.Data));
-                }
-                else
-                {
-                    _message = response.Message ?? "Failed to update setting.";
-                }
-            }
-            else
-            {
-                var request = new CreateOrgSettingRequest(
-                    _model.Key,
-                    _model.Value,
-                    _model.Description
-                );
-                
-                var response = await OrgSettingsService.CreateOrgSettingAsync(request);
-                
-                if (response.IsSuccess)
-                {
-                    Snackbar.Add(response.Message ?? "Setting created successfully.", Severity.Success);
-                    MudDialog.Close(DialogResult.Ok(response.Data));
-                }
-                else
-                {
-                    _message = response.Message ?? "Failed to create setting.";
-                }
-            }
-        }
-        catch (Exception)
-        {
-            _message = "An unexpected error occurred.";
-        }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
-        }
-    }
-    
-
 }

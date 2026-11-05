@@ -1,10 +1,13 @@
 
 <MudDialog>
     <DialogContent>
-    <EditForm FormName="iam-reference-catalog-form" Model="_model" OnValidSubmit="Save">
-        <DataAnnotationsValidator />
+        <EditForm FormName="iam-reference-catalog-form"
+                  Model="_model"
+                  OnValidSubmit="Save">
+            <DataAnnotationsValidator />
             <MudGrid Spacing="2">
-                <MudItem xs="12" sm="6">
+                <MudItem xs="12"
+                         sm="6">
                     <MudTextField @bind-Value="_model.Key"
                                   Label="Key"
                                   Margin="Margin.Dense"
@@ -13,13 +16,23 @@
                                   Required="true"
                                   HelperText="Stable system identifier. It cannot be changed after creation." />
                 </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_model.Label" Label="Label" Margin="Margin.Dense" Variant="Variant.Outlined" Required="true" />
+                <MudItem xs="12"
+                         sm="6">
+                    <MudTextField @bind-Value="_model.Label"
+                                  Label="Label"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  Required="true" />
                 </MudItem>
                 @if (RequiresParent)
                 {
-                    <MudItem xs="12" sm="6">
-                        <MudSelect @bind-Value="_model.ParentKey" Label="@ParentLabel" Margin="Margin.Dense" Variant="Variant.Outlined" Required="true">
+                    <MudItem xs="12"
+                             sm="6">
+                        <MudSelect @bind-Value="_model.ParentKey"
+                                   Label="@ParentLabel"
+                                   Margin="Margin.Dense"
+                                   Variant="Variant.Outlined"
+                                   Required="true">
                             @foreach (var option in ParentOptions)
                             {
                                 <MudSelectItem Value="@option.Key">@option.Label</MudSelectItem>
@@ -29,25 +42,43 @@
                 }
                 @if (CatalogType == "menu-routes")
                 {
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.Url" Label="Route URL" Margin="Margin.Dense" Variant="Variant.Outlined" Required="true" />
+                    <MudItem xs="12"
+                             sm="6">
+                        <MudTextField @bind-Value="_model.Url"
+                                      Label="Route URL"
+                                      Margin="Margin.Dense"
+                                      Variant="Variant.Outlined"
+                                      Required="true" />
                     </MudItem>
                 }
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_model.Description" Label="Description" Lines="3" Margin="Margin.Dense" Variant="Variant.Outlined" />
+                    <MudTextField @bind-Value="_model.Description"
+                                  Label="Description"
+                                  Lines="3"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined" />
                 </MudItem>
                 @if (ExistingItem is not null)
                 {
                     <MudItem xs="12">
-                        <MudSwitch T="bool" @bind-Value="_model.IsActive" Color="Color.Success" Label="Active" />
+                        <MudSwitch T="bool"
+                                   @bind-Value="_model.IsActive"
+                                   Color="Color.Success"
+                                   Label="Active" />
                     </MudItem>
                 }
             </MudGrid>
         </EditForm>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Success" OnClick="Save">@SaveLabel</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   Variant="Variant.Text"
+                   Size="Size.Small"
+                   OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Size="Size.Small"
+                   Color="Color.Success"
+                   OnClick="Save">@SaveLabel</MudButton>
     </DialogActions>
 </MudDialog>
 

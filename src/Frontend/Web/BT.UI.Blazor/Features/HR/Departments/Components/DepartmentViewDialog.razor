@@ -3,21 +3,27 @@
     <DialogContent>
         <div class="user-detail-dialog">
             <div class="user-detail-header">
-                <MudAvatar Size="Size.Large" Class="profile-avatar">@Initials</MudAvatar>
+                <MudAvatar Size="Size.Large"
+                           Class="profile-avatar">@Initials</MudAvatar>
                 <div>
                     <MudText Typo="Typo.h6">@Department.Name</MudText>
-                    <MudText Typo="Typo.caption" Class="text-muted">@Department.Code</MudText>
+                    <MudText Typo="Typo.caption"
+                             Class="text-muted">@Department.Code</MudText>
                 </div>
             </div>
 
             <MudGrid Spacing="2">
-                <MudItem xs="12" sm="6">
+                <MudItem xs="12"
+                         sm="6">
                     <div class="detail-label">Status</div>
-                    <MudChip T="string" Size="Size.Small" Color="@(Department.IsActive ? Color.Success : Color.Default)">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Color="@(Department.IsActive ? Color.Success : Color.Default)">
                         @(Department.IsActive ? "Active" : "Inactive")
                     </MudChip>
                 </MudItem>
-                <MudItem xs="12" sm="6">
+                <MudItem xs="12"
+                         sm="6">
                     <div class="detail-label">Code</div>
                     <div>@Department.Code</div>
                 </MudItem>
@@ -29,7 +35,10 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Default" OnClick="Close">Close</MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Size="Size.Small"
+                   Color="Color.Default"
+                   OnClick="Close">Close</MudButton>
     </DialogActions>
 </MudDialog>
 

@@ -7,7 +7,7 @@ namespace BT.SharedKernel.Validation.Features.HR.Employees.Validators;
 
 public sealed class CreateEmployeeRequestValidator : Validator<CreateEmployeeRequest>
 {
-    public CreateEmployeeRequestValidator()
+    public CreateEmployeeRequestValidator(TimeProvider timeProvider)
     {
         RuleLevelCascadeMode = CascadeMode.Stop;
         ClassLevelCascadeMode = CascadeMode.Stop;
@@ -37,7 +37,7 @@ public sealed class CreateEmployeeRequestValidator : Validator<CreateEmployeeReq
 
         RuleFor(x => x.HireDate)
             .NotEmpty().WithMessage("Hire date is required.")
-            .LessThanOrEqualTo(DateOnly.FromDateTime(DateTime.Today.AddDays(1)))
+            .LessThanOrEqualTo(_ => DateOnly.FromDateTime(timeProvider.GetLocalNow().Date).AddDays(1))
             .WithMessage("Hire date cannot be in the future.");
 
         RuleFor(x => x)

@@ -21,30 +21,35 @@ public class IamDBContext : IdentityDbContext<AppUser, AppRole, string>, ITenant
 {
     private readonly ICurrentTenantProvider? _tenantProvider;
     private readonly ICurrentActorProvider? _actorProvider;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<IamDBContext>? _logger;
 
     public IamDBContext(
         DbContextOptions<IamDBContext> options,
         ICurrentTenantProvider? tenantProvider = null,
         ICurrentActorProvider? actorProvider = null,
-        ILogger<IamDBContext>? logger = null
+        ILogger<IamDBContext>? logger = null,
+        TimeProvider? timeProvider = null
     ) : base(options)
     {
         _tenantProvider = tenantProvider;
         _actorProvider = actorProvider;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     protected IamDBContext(
         DbContextOptions options,
         ICurrentTenantProvider? tenantProvider = null,
         ICurrentActorProvider? actorProvider = null,
-        ILogger<IamDBContext>? logger = null
+        ILogger<IamDBContext>? logger = null,
+        TimeProvider? timeProvider = null
     ) : base(options)
     {
         _tenantProvider = tenantProvider;
         _actorProvider = actorProvider;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
     public DbSet<AppUserProfile> AppUserProfiles { get; set; }
     public DbSet<AppUserTotpSecret> AppUserTotpSecrets { get; set; }
@@ -82,6 +87,8 @@ public class IamDBContext : IdentityDbContext<AppUser, AppRole, string>, ITenant
 
         builder.Entity<AppUser>(entity => entity.ToTable("Users"));
         builder.Entity<AppRole>(entity => entity.ToTable("Roles"));
+        builder.Entity<AppRole>().HasQueryFilter(role => !role.IsDeleted && (role.IsDefault || role.TenantId == CurrentTenantId));
+        builder.Entity<AdministrationAuditEntry>().HasQueryFilter(entry => entry.TenantId == CurrentTenantId);
         builder.Entity<IdentityUserRole<string>>(entity => entity.ToTable("UserRoles"));
         builder.Entity<IdentityRoleClaim<string>>(entity => entity.ToTable("RoleClaims"));
         builder.Entity<IdentityUserClaim<string>>(entity => entity.ToTable("UserClaims"));
@@ -95,7 +102,16 @@ public class IamDBContext : IdentityDbContext<AppUser, AppRole, string>, ITenant
         {
             var domainEvents = DBContextHelper.CollectDomainEvents(ChangeTracker);
             DBContextHelper.ClearDomainEventsFromAggregates(ChangeTracker);
-            DBContextHelper.UpdateAuditAndSoftDelete(ChangeTracker, _actorProvider?.ActorId ?? ICurrentActorProvider.SystemActor, CurrentTenantId);
+            var now = _timeProvider.GetUtcNow();
+            DBContextHelper.UpdateAuditAndSoftDelete(ChangeTracker, _actorProvider?.ActorId ?? ICurrentActorProvider.SystemActor, CurrentTenantId, now);
+
+            foreach (var entry in ChangeTracker.Entries<AppUser>())
+            {
+                if (entry.State == EntityState.Added && entry.Entity.CreatedAt == default)
+                    entry.Entity.CreatedAt = now;
+            }
+
+            Set<AdministrationAuditEntry>().AddRange(AdministrationAuditCollector.Collect(ChangeTracker, _actorProvider?.ActorId ?? ICurrentActorProvider.SystemActor, CurrentTenantId, now));
 
             var result = await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -109,6 +125,7 @@ public class IamDBContext : IdentityDbContext<AppUser, AppRole, string>, ITenant
             foreach (var entry in ex.Entries)
             {
                 var entityId = entry.Entity is BaseEntity b ? b.Id.ToString() : "(unknown)";
+
                 if (_logger is not null)
                     PersistenceLogDefinitions.LogConcurrencyConflict(_logger, entry.Entity.GetType().Name, entityId);
                 _ = await entry.GetDatabaseValuesAsync(cancellationToken).ConfigureAwait(false);

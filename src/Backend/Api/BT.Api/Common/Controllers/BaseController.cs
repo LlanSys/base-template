@@ -13,7 +13,7 @@ namespace BT.Api.Common.Controllers;
 public abstract class BaseController : ControllerBase
 {
     protected IActionResult HandleResponse<T>(
-        AppResponse<T> response, 
+        AppResponse<T> response,
         Func<AppResponse<T>, IActionResult>? onSuccess = null,
         Func<AppError, IActionResult>? onError = null)
     {

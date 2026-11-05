@@ -11,6 +11,7 @@ internal sealed class ConfigurationFeatureFlagService(IOptionsSnapshot<FeatureFl
         ArgumentException.ThrowIfNullOrWhiteSpace(flagKey);
 
         var settings = options.Value;
+
         if (!settings.Provider.Equals("Configuration", StringComparison.OrdinalIgnoreCase))
         {
             return ValueTask.FromResult(!settings.FailClosed);

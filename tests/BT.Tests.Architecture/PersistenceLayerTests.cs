@@ -1,6 +1,9 @@
 using BT.Domain.Shared.Contracts.Common;
+
 using FluentAssertions;
+
 using Microsoft.EntityFrameworkCore;
+
 using NetArchTest.Rules;
 
 namespace BT.Tests.Architecture;
@@ -105,7 +108,7 @@ public sealed class PersistenceLayerTests
     public void Declared_DbSet_Entities_Should_Be_Tenant_Scoped()
     {
         var entitiesWithoutTenantId = GetDeclaredDbSetEntityTypes()
-            .Where(t => t.GetProperty("TenantId") is null && 
+            .Where(t => t.GetProperty("TenantId") is null &&
                         !(t.Namespace?.Contains(".ControlPlane.") ?? false))
             .Select(t => t.FullName)
             .ToList();
@@ -171,6 +174,7 @@ public sealed class PersistenceLayerTests
                     interfaceType.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>))
                 {
                     var configuredType = interfaceType.GetGenericArguments()[0];
+
                     if (!configuredType.IsGenericParameter)
                     {
                         yield return configuredType;

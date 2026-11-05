@@ -14,8 +14,9 @@ public class IamPostgreSqlDBContext : IamDBContext
         DbContextOptions<IamPostgreSqlDBContext> options,
         ICurrentTenantProvider? tenantProvider = null,
         ICurrentActorProvider? actorProvider = null,
-        ILogger<IamDBContext>? logger = null)
-        : base(options, tenantProvider, actorProvider, logger)
+        ILogger<IamDBContext>? logger = null,
+        TimeProvider? timeProvider = null)
+        : base(options, tenantProvider, actorProvider, logger, timeProvider)
     {
     }
 

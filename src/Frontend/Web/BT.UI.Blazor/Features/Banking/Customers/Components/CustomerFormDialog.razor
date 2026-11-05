@@ -1,52 +1,222 @@
 @inject ICustomerService CustomerService
 @inject ISnackbar Snackbar
+@inject TimeProvider Clock
 
 <MudDialog>
     <DialogContent>
-    <EditForm FormName="banking-customer-form" Model="_model" OnValidSubmit="SaveAsync">
-        <DataAnnotationsValidator />
-            <MudTabs Rounded="true" ActivePanelIndex="@InitialTab">
+        <EditForm FormName="banking-customer-form"
+                  Model="_model"
+                  OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+            <MudTabs Rounded="true"
+                     ActivePanelIndex="@InitialTab">
                 <MudTabPanel Text="Corporate Details">
                     <MudGrid Spacing="2">
-                        <MudItem xs="12" sm="6"><MudTextField @bind-Value="_model.CompanyName" Label="Company Name" Margin="Margin.Dense" Variant="Variant.Outlined" Required /></MudItem>
-                        <MudItem xs="12" sm="6"><MudTextField @bind-Value="_model.RegistrationNumber" Label="Registration No." Margin="Margin.Dense" Variant="Variant.Outlined" Required /></MudItem>
-                        <MudItem xs="12" sm="4"><MudSelect @bind-Value="_model.Type" Label="Type" Margin="Margin.Dense" Variant="Variant.Outlined">@foreach (var item in CustomerTypes) { <MudSelectItem Value="@item">@item</MudSelectItem> }</MudSelect></MudItem>
-                        <MudItem xs="12" sm="4"><MudSelect @bind-Value="_model.SegmentType" Label="Segment" Margin="Margin.Dense" Variant="Variant.Outlined">@foreach (var item in SegmentTypes) { <MudSelectItem Value="@item">@item</MudSelectItem> }</MudSelect></MudItem>
-                        <MudItem xs="12" sm="4"><MudSelect @bind-Value="_model.SubSegmentType" Label="Sub Segment" Margin="Margin.Dense" Variant="Variant.Outlined">@foreach (var item in SubSegmentTypes) { <MudSelectItem Value="@item">@item</MudSelectItem> }</MudSelect></MudItem>
-                        <MudItem xs="12" sm="6"><MudSelect @bind-Value="_model.LineOfBusiness" Label="Line of Business" Margin="Margin.Dense" Variant="Variant.Outlined">@foreach (var item in LinesOfBusiness) { <MudSelectItem Value="@item">@item</MudSelectItem> }</MudSelect></MudItem>
-                        <MudItem xs="12" sm="6"><MudSelect @bind-Value="_model.IdentificationType" Label="Identification Type" Margin="Margin.Dense" Variant="Variant.Outlined">@foreach (var item in IdentificationTypes) { <MudSelectItem Value="@item">@item</MudSelectItem> }</MudSelect></MudItem>
-                        <MudItem xs="12" sm="6"><MudDatePicker @bind-Date="_model.DateOfRegistration" Label="Registration Date" Margin="Margin.Dense" Variant="Variant.Outlined" /></MudItem>
-                        <MudItem xs="12" sm="6"><MudDatePicker @bind-Date="_model.OpenedOn" Label="Opened On" Margin="Margin.Dense" Variant="Variant.Outlined" /></MudItem>
-                        <MudItem xs="12" sm="6"><MudSelect @bind-Value="_model.RelationshipManagerId" Label="Relationship Manager" Margin="Margin.Dense" Variant="Variant.Outlined">@foreach (var item in RelationshipManagers) { <MudSelectItem Value="@item.Id">@item.Name</MudSelectItem> }</MudSelect></MudItem>
-                        <MudItem xs="12" sm="6"><MudTextField @bind-Value="_model.TinNumber" Label="TIN" Margin="Margin.Dense" Variant="Variant.Outlined" /></MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudTextField @bind-Value="_model.CompanyName"
+                                          Label="Company Name"
+                                          Margin="Margin.Dense"
+                                          Variant="Variant.Outlined"
+                                          Required />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudTextField @bind-Value="_model.RegistrationNumber"
+                                          Label="Registration No."
+                                          Margin="Margin.Dense"
+                                          Variant="Variant.Outlined"
+                                          Required />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="4">
+                            <MudSelect @bind-Value="_model.Type"
+                                       Label="Type"
+                                       Margin="Margin.Dense"
+                                       Variant="Variant.Outlined">@foreach (var item in CustomerTypes)
+                                {
+                                    <MudSelectItem Value="@item">@item</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="4">
+                            <MudSelect @bind-Value="_model.SegmentType"
+                                       Label="Segment"
+                                       Margin="Margin.Dense"
+                                       Variant="Variant.Outlined">@foreach (var item in SegmentTypes)
+                                {
+                                    <MudSelectItem Value="@item">@item</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="4">
+                            <MudSelect @bind-Value="_model.SubSegmentType"
+                                       Label="Sub Segment"
+                                       Margin="Margin.Dense"
+                                       Variant="Variant.Outlined">@foreach (var item in SubSegmentTypes)
+                                {
+                                    <MudSelectItem Value="@item">@item</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudSelect @bind-Value="_model.LineOfBusiness"
+                                       Label="Line of Business"
+                                       Margin="Margin.Dense"
+                                       Variant="Variant.Outlined">@foreach (var item in LinesOfBusiness)
+                                {
+                                    <MudSelectItem Value="@item">@item</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudSelect @bind-Value="_model.IdentificationType"
+                                       Label="Identification Type"
+                                       Margin="Margin.Dense"
+                                       Variant="Variant.Outlined">@foreach (var item in IdentificationTypes)
+                                {
+                                    <MudSelectItem Value="@item">@item</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudDatePicker @bind-Date="_model.DateOfRegistration"
+                                           Label="Registration Date"
+                                           Margin="Margin.Dense"
+                                           Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudDatePicker @bind-Date="_model.OpenedOn"
+                                           Label="Opened On"
+                                           Margin="Margin.Dense"
+                                           Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudSelect @bind-Value="_model.RelationshipManagerId"
+                                       Label="Relationship Manager"
+                                       Margin="Margin.Dense"
+                                       Variant="Variant.Outlined">@foreach (var item in RelationshipManagers)
+                                {
+                                    <MudSelectItem Value="@item.Id">@item.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudTextField @bind-Value="_model.TinNumber"
+                                          Label="TIN"
+                                          Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
                     </MudGrid>
                 </MudTabPanel>
                 <MudTabPanel Text="Address">
                     <MudGrid Spacing="2">
-                        <MudItem xs="12" sm="6"><MudTextField @bind-Value="_model.Country" Label="Country" Margin="Margin.Dense" Variant="Variant.Outlined" /></MudItem>
-                        <MudItem xs="12" sm="6"><MudTextField @bind-Value="_model.Region" Label="Region" Margin="Margin.Dense" Variant="Variant.Outlined" /></MudItem>
-                        <MudItem xs="12" sm="6"><MudTextField @bind-Value="_model.Ward" Label="Ward" Margin="Margin.Dense" Variant="Variant.Outlined" /></MudItem>
-                        <MudItem xs="12" sm="6"><MudTextField @bind-Value="_model.District" Label="District" Margin="Margin.Dense" Variant="Variant.Outlined" /></MudItem>
-                        <MudItem xs="12" sm="6"><MudTextField @bind-Value="_model.Mobile" Label="Mobile" Margin="Margin.Dense" Variant="Variant.Outlined" /></MudItem>
-                        <MudItem xs="12" sm="6"><MudTextField @bind-Value="_model.Email" Label="Email" Margin="Margin.Dense" Variant="Variant.Outlined" /></MudItem>
-                        <MudItem xs="12"><MudTextField @bind-Value="_model.ResidentialAddress" Label="Residential Address" Margin="Margin.Dense" Variant="Variant.Outlined" Lines="2" /></MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudTextField @bind-Value="_model.Country"
+                                          Label="Country"
+                                          Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudTextField @bind-Value="_model.Region"
+                                          Label="Region"
+                                          Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudTextField @bind-Value="_model.Ward"
+                                          Label="Ward"
+                                          Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudTextField @bind-Value="_model.District"
+                                          Label="District"
+                                          Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudTextField @bind-Value="_model.Mobile"
+                                          Label="Mobile"
+                                          Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudTextField @bind-Value="_model.Email"
+                                          Label="Email"
+                                          Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_model.ResidentialAddress"
+                                          Label="Residential Address"
+                                          Margin="Margin.Dense"
+                                          Variant="Variant.Outlined"
+                                          Lines="2" />
+                        </MudItem>
                     </MudGrid>
                 </MudTabPanel>
                 <MudTabPanel Text="Communication">
                     <MudGrid Spacing="2">
-                        <MudItem xs="12" sm="6"><MudCheckBox @bind-Value="_model.CanSendGreetings" Label="Send greetings" Dense="true" /></MudItem>
-                        <MudItem xs="12" sm="6"><MudCheckBox @bind-Value="_model.CanSendAssociateSpecialOffer" Label="Associate special offers" Dense="true" /></MudItem>
-                        <MudItem xs="12" sm="6"><MudCheckBox @bind-Value="_model.CanSendOurSpecialOffers" Label="Our special offers" Dense="true" /></MudItem>
-                        <MudItem xs="12" sm="6"><MudCheckBox @bind-Value="_model.StatementOnline" Label="Online statement" Dense="true" /></MudItem>
-                        <MudItem xs="12" sm="6"><MudCheckBox @bind-Value="_model.MobileAlert" Label="Mobile alert" Dense="true" /></MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudCheckBox @bind-Value="_model.CanSendGreetings"
+                                         Label="Send greetings"
+                                         Dense="true" />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudCheckBox @bind-Value="_model.CanSendAssociateSpecialOffer"
+                                         Label="Associate special offers"
+                                         Dense="true" />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudCheckBox @bind-Value="_model.CanSendOurSpecialOffers"
+                                         Label="Our special offers"
+                                         Dense="true" />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudCheckBox @bind-Value="_model.StatementOnline"
+                                         Label="Online statement"
+                                         Dense="true" />
+                        </MudItem>
+                        <MudItem xs="12"
+                                 sm="6">
+                            <MudCheckBox @bind-Value="_model.MobileAlert"
+                                         Label="Mobile alert"
+                                         Dense="true" />
+                        </MudItem>
                     </MudGrid>
                 </MudTabPanel>
             </MudTabs>
         </EditForm>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Default" OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Success" Disabled="_isSaving" OnClick="SaveAsync">@(_isSaving ? "Saving..." : "Save")</MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Size="Size.Small"
+                   Color="Color.Default"
+                   OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Size="Size.Small"
+                   Color="Color.Success"
+                   Disabled="_isSaving"
+                   OnClick="SaveAsync">@(_isSaving ? "Saving..." : "Save")</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -73,7 +243,8 @@
 
     protected override void OnInitialized()
     {
-        _model = ExistingCustomer is null ? new CustomerFormModel() : CustomerFormModel.From(ExistingCustomer);
+        var today = Clock.GetLocalNow().Date;
+        _model = ExistingCustomer is null ? new CustomerFormModel { DateOfRegistration = today, OpenedOn = today } : CustomerFormModel.From(ExistingCustomer);
         if (_model.RelationshipManagerId == Guid.Empty && RelationshipManagers.Count > 0)
         {
             _model.RelationshipManagerId = RelationshipManagers[0].Id;
@@ -96,8 +267,8 @@
 
         _isSaving = true;
         var response = ExistingCustomer is null
-            ? await CustomerService.CreateAsync(_model.ToCreateRequest())
-            : await CustomerService.UpdateAsync(_model.Id, _model.ToUpdateRequest());
+            ? await CustomerService.CreateAsync(_model.ToCreateRequest(Clock.GetLocalNow().Date))
+            : await CustomerService.UpdateAsync(_model.Id, _model.ToUpdateRequest(Clock.GetLocalNow().Date));
 
         _isSaving = false;
         if (!response.IsSuccess)

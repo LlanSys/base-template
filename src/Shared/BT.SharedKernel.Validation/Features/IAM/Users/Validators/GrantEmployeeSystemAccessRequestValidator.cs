@@ -10,6 +10,7 @@ public sealed class GrantEmployeeSystemAccessRequestValidator : Validator<GrantE
     {
         RuleFor(request => request.Roles).NotNull().Must(static roles => roles != null && roles.Count > 0)
             .WithMessage("At least one role is required.");
+
         RuleForEach(request => request.Roles).NotEmpty().MaximumLength(80);
     }
 }

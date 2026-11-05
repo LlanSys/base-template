@@ -14,6 +14,7 @@ using System.Security.Claims;
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
 internal sealed class Logout(
+    TimeProvider timeProvider,
     SignInManager<AppUser> signInManager,
     IHttpContextAccessor httpContextAccessor,
     ISessionService sessionService,
@@ -45,11 +46,12 @@ internal sealed class Logout(
                     await iamUnitOfWork.TokenRepository
                         .RevokeAllUserTokensAsync(userId, "User signed out", httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString())
                         .ConfigureAwait(false);
+
                     await iamUnitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
                     return true;
                 }).ConfigureAwait(false);
 
-                await publisher.Publish(new UserLogoutEvent(userId, sessionId), cancellationToken).ConfigureAwait(false);
+                await publisher.Publish(new UserLogoutEvent(userId, sessionId) { OccurredAt = timeProvider.GetUtcNow() }, cancellationToken).ConfigureAwait(false);
             }
 
             return AppResponses.Success("Signed out successfully", true);

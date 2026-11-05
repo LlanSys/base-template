@@ -2,13 +2,14 @@ using BT.SharedKernel.Dtos.Common;
 using BT.SharedKernel.Features.IAM.Users.Dtos;
 using BT.UI.Blazor.Features.Shared.Messaging;
 using BT.UI.Blazor.Logging;
-using BT.UI.Rcl.Features.IAM.Users.Contracts.Interfaces;
+using BT.UI.Blazor.Features.IAM.Users.Contracts.Interfaces;
 
 namespace BT.UI.Blazor.Features.IAM.Users.Contracts.Implementations;
 
 internal sealed class AuthSession(IAuthService authService, ITokenStorage storage, ILogger<AuthSession> logger) : IAuthSession, IDisposable
 {
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
+    public event Func<Task>? Changed;
 
     public bool IsInitialized { get; private set; }
 
@@ -22,7 +23,7 @@ internal sealed class AuthSession(IAuthService authService, ITokenStorage storag
 
     public string? LastError { get; private set; }
 
-    public bool HasFullAccess => IsInRole("System Administrator");
+    public bool HasFullAccess => false;
 
     public bool MfaEnrollmentRequired => CurrentUser?.MfaEnrollmentRequired == true;
 
@@ -34,6 +35,7 @@ internal sealed class AuthSession(IAuthService authService, ITokenStorage storag
         }
 
         await _initializationLock.WaitAsync().ConfigureAwait(false);
+
         try
         {
             if (IsInitialized)
@@ -44,17 +46,20 @@ internal sealed class AuthSession(IAuthService authService, ITokenStorage storag
             try
             {
                 var (accessToken, _, _) = await storage.GetAsync().ConfigureAwait(false);
+
                 if (!string.IsNullOrWhiteSpace(accessToken))
                 {
                     var currentUser = await authService.GetCurrentUserAsync().ConfigureAwait(false);
+
                     if (currentUser.IsSuccess)
                     {
                         CurrentUser = currentUser.Data;
                         LastError = null;
-                        
+
                         if (CurrentUser?.ProfilePictureUrl is not null)
                         {
                             var picture = await authService.GetProfilePictureAsync().ConfigureAwait(false);
+
                             if (picture.IsSuccess && picture.Data is not null)
                             {
                                 ProfilePictureDataUri = $"data:{picture.Data.ContentType};base64,{Convert.ToBase64String(picture.Data.Content)}";
@@ -83,12 +88,20 @@ internal sealed class AuthSession(IAuthService authService, ITokenStorage storag
         {
             _initializationLock.Release();
         }
+
+        if (Changed is { } changed)
+            foreach (Func<Task> subscriber in changed.GetInvocationList())
+                await subscriber().ConfigureAwait(false);
     }
 
     public async Task RefreshAsync()
     {
         await RefreshCurrentUserAsync().ConfigureAwait(false);
         IsInitialized = true;
+
+        if (Changed is { } changed)
+            foreach (Func<Task> subscriber in changed.GetInvocationList())
+                await subscriber().ConfigureAwait(false);
     }
 
     public async Task<AppResponse<LoginResponse>> SignInAsync(LoginRequest request)
@@ -96,6 +109,7 @@ internal sealed class AuthSession(IAuthService authService, ITokenStorage storag
         ArgumentNullException.ThrowIfNull(request);
 
         var response = await authService.LoginAsync(request).ConfigureAwait(false);
+
         if (!response.IsSuccess || response.Data is null)
         {
             LastError = response.Message;
@@ -147,6 +161,7 @@ internal sealed class AuthSession(IAuthService authService, ITokenStorage storag
         ArgumentNullException.ThrowIfNull(request);
 
         var response = await authService.LoginWithPasskeyAsync(request).ConfigureAwait(false);
+
         if (!response.IsSuccess || response.Data is null)
         {
             LastError = response.Message;
@@ -198,6 +213,14 @@ internal sealed class AuthSession(IAuthService authService, ITokenStorage storag
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
 
         var response = await authService.ExchangeSsoCodeAsync(code).ConfigureAwait(false);
+        return await ApplyPrimaryResponseAsync(response).ConfigureAwait(false);
+    }
+
+    public async Task<AppResponse<LoginResponse>> AcceptInvitationAsync(SharedKernel.Features.ControlPlane.Tenants.Dtos.AcceptAdministratorInvitationRequest request)
+        => await ApplyPrimaryResponseAsync(await authService.AcceptInvitationAsync(request).ConfigureAwait(false)).ConfigureAwait(false);
+
+    private async Task<AppResponse<LoginResponse>> ApplyPrimaryResponseAsync(AppResponse<LoginResponse> response)
+    {
         if (!response.IsSuccess || response.Data is null)
         {
             LastError = response.Message;
@@ -249,6 +272,7 @@ internal sealed class AuthSession(IAuthService authService, ITokenStorage storag
         ArgumentNullException.ThrowIfNull(request);
 
         var response = await authService.VerifyTotpAsync(request).ConfigureAwait(false);
+
         if (!response.IsSuccess || response.Data is null)
         {
             LastError = response.Message;
@@ -280,8 +304,7 @@ internal sealed class AuthSession(IAuthService authService, ITokenStorage storag
             return true;
         }
 
-        return HasFullAccess
-            || CurrentUser?.Permissions?.Contains(permission, StringComparer.OrdinalIgnoreCase) == true;
+        return CurrentUser?.Permissions?.Contains(permission, StringComparer.OrdinalIgnoreCase) == true;
     }
 
     public bool HasAnyPermission(params string[] permissions)
@@ -301,9 +324,11 @@ internal sealed class AuthSession(IAuthService authService, ITokenStorage storag
         CurrentUser = currentUser.IsSuccess ? currentUser.Data : null;
         LastError = currentUser.IsSuccess ? null : GetMeaningfulMessage(currentUser.Message, "The API did not return a current user profile.");
         ProfilePictureDataUri = null;
+
         if (CurrentUser?.ProfilePictureUrl is not null)
         {
             var picture = await authService.GetProfilePictureAsync().ConfigureAwait(false);
+
             if (picture.IsSuccess && picture.Data is not null)
             {
                 ProfilePictureDataUri = $"data:{picture.Data.ContentType};base64,{Convert.ToBase64String(picture.Data.Content)}";

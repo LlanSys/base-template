@@ -15,9 +15,12 @@ using BT.Domain.Shared.Contracts.Specifications;
 using BT.Domain.Features.Banking.Customers.Entities;
 using BT.SharedKernel.Features.Banking.Customers.Dtos;
 using BT.SharedKernel.Dtos.Common;
+
 using MediatR;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -30,7 +33,7 @@ namespace BT.Application.Features.Banking.Customers.QueryHandlers;
 // ════════════════════════════════════════════════════════════════════════════════
 //  GET CUSTOMER LIST  (unfiltered, paginated)
 // ════════════════════════════════════════════════════════════════════════════════
- 
+
 /// <summary>
 /// Returns the full customer list with cursor-based pagination, no search filters.
 ///

@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 namespace BT.Persistence.Features.Shared;
 
 public sealed class SharedUnitOfWork(
+    TimeProvider timeProvider,
     SharedDBContext context,
     IEmailTemplateRepository emailTemplateRepository,
     IFailedMessageRepository failedMessageRepository,
@@ -26,7 +27,7 @@ public sealed class SharedUnitOfWork(
     IOrgSettingRepository OrgSettingRepository,
     IPublisher publisher,
     ILogger<SharedUnitOfWork> logger
-) : BaseUnitOfWork<SharedDBContext>(context, publisher, logger), ISharedUnitOfWork
+) : BaseUnitOfWork<SharedDBContext>(context, publisher, logger, timeProvider), ISharedUnitOfWork
 {
     private readonly SharedDBContext _sharedContext = context;
     private readonly IPublisher _publisher = publisher;

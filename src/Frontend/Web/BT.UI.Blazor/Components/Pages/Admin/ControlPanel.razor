@@ -1,98 +1,48 @@
 @page "/control-panel"
 @layout ControlPlaneLayout
-
-@rendermode InteractiveServer
 @inject IAuthSession AuthSession
-@inject IIamAdminService IamAdminService
-@inject NavigationManager Navigation
-@inject ISnackbar Snackbar
-
-<PageTitle>Control Panel | Base Template</PageTitle>
-
-<RequireAuthenticated>
-    <section class="dashboard-page">
-        @if (!_isReady)
+<PageTitle>Control Panel | BaseTemplate</PageTitle>
+<section class="dashboard-page">
+    <div class="panel-heading">
+        <h2>Control Panel</h2>
+    </div>
+    <MudText Class="mb-4">Manage deployment stamps, tenants, business modules, and vendor-owned access definitions.</MudText>
+    <MudList T="string"
+             Dense="true">
+        @if (AuthSession.HasPermission("controlplane.view_stamps"))
         {
-            <MudPaper Class="status-card" Elevation="0">Loading control panel...</MudPaper>
+            <MudListItem Href="/control-panel/stamps"
+                         Icon="@Icons.Material.Filled.Dns">Deployment Stamps</MudListItem>
         }
-        else
+        @if (AuthSession.HasPermission("controlplane.view_tenants"))
         {
-            <div class="dashboard-hero compact-hero">
-                <div>
-                    <span class="eyebrow">Platform</span>
-                    <h1>Control Panel.</h1>
-                    <p>Manage platform-wide settings, SaaS tenants, and deployment stamps.</p>
-                </div>
-            </div>
-
-            <div class="admin-module-grid">
-                @foreach (var module in _modules)
-                {
-                    <MudPaper Class="admin-tile" Elevation="0">
-                        <MudIcon Icon="@MenuIconMapper.Resolve(module.Icon)" Class="tile-icon" />
-                        <div>
-                            <strong>@module.Title</strong>
-                            <span>@module.Description</span>
-                        </div>
-                        <MudButton Href="@module.Url" Variant="Variant.Text" Size="Size.Small" Class="bt-small-button" EndIcon="@Icons.Material.Filled.ArrowForward">
-                            Open
-                        </MudButton>
-                    </MudPaper>
-                }
-            </div>
+            <MudListItem Href="/control-panel/tenants"
+                         Icon="@Icons.Material.Filled.Business">Tenants</MudListItem>
         }
-    </section>
-</RequireAuthenticated>
-
-@code {
-    private readonly List<MenuResponse> _modules = [];
-    private bool _isReady;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
+        @if (AuthSession.HasPermission("modules.view"))
         {
-            return;
+            <MudListItem Href="/control-panel/modules"
+                         Icon="@Icons.Material.Filled.Apps">Modules</MudListItem>
         }
-
-        await AuthSession.InitializeAsync();
-        if (AuthSession.IsAuthenticated)
+        @if (AuthSession.HasPermission("menus.view"))
         {
-            await LoadModulesAsync();
-            StateHasChanged();
+            <MudListItem Href="/control-panel/menus"
+                         Icon="@Icons.Material.Filled.Menu">Menus</MudListItem>
         }
-    }
-
-    private async Task LoadModulesAsync()
-    {
-        var response = await IamAdminService.GetNavigationMenusAsync("ControlPanel");
-        if (!response.IsSuccess || response.Data is null)
+        @if (AuthSession.HasAnyPermission("roles.view", "roles.manage_permissions", "users.view"))
         {
-            Snackbar.Add(response.Message ?? "We could not load control panel menus.", Severity.Error);
-            _isReady = true;
-            return;
+            <MudListItem Href="/control-panel/access"
+                         Icon="@Icons.Material.Filled.Security">Roles, Permissions, and Platform Staff</MudListItem>
         }
-
-        _modules.Clear();
-        var allMenus = Flatten(response.Data);
-        _modules.AddRange(allMenus);
-        _isReady = true;
-    }
-
-    private static IEnumerable<MenuResponse> Flatten(IEnumerable<MenuResponse>? menus)
-    {
-        if (menus is null)
+        @if (AuthSession.HasPermission("menus.view"))
         {
-            yield break;
+            <MudListItem Href="/control-panel/access-catalog"
+                         Icon="@Icons.Material.Filled.List">Access Catalog</MudListItem>
         }
-
-        foreach (var menu in menus)
+        @if (AuthSession.HasPermission("controlplane.view_audit"))
         {
-            yield return menu;
-            foreach (var child in Flatten(menu.Children))
-            {
-                yield return child;
-            }
+            <MudListItem Href="/control-panel/audit"
+                         Icon="@Icons.Material.Filled.History">Audit Log</MudListItem>
         }
-    }
-}
+    </MudList>
+</section>

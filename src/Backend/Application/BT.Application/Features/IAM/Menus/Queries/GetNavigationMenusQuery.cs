@@ -17,5 +17,6 @@ public sealed record GetNavigationMenusQuery(string Placement, IReadOnlyList<str
     public string Discriminator => CacheKeys.Discriminator(new { Placement, HasFullAccess, Permissions = PermissionKeys.Order(StringComparer.OrdinalIgnoreCase) });
     public string? CacheUserId => UserId;
     public bool IsVersioned => true;
+    public bool BypassCache => true;
 }
 

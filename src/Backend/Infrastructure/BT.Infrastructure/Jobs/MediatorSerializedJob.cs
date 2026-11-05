@@ -24,6 +24,7 @@ public class MediatorSerializedJob(IServiceProvider _serviceProvider) : IJob
 
         // Reconstruct the Type
         var type = Type.GetType(typeName);
+
         if (type == null)
         {
             return;

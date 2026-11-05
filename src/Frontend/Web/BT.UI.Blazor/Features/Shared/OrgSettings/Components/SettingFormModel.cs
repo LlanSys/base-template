@@ -1,6 +1,6 @@
 namespace BT.UI.Blazor.Features.Shared.OrgSettings.Components;
 
-public class SettingFormModel
+internal sealed class SettingFormModel
 {
     public Guid Id { get; set; }
     public string Key { get; set; } = string.Empty;

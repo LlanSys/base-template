@@ -60,6 +60,7 @@ public sealed class ProfileController(ISender sender) : BaseController
     private string GetUserId()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
         if (string.IsNullOrWhiteSpace(userId))
         {
             throw new UnauthorizedAccessException("Authenticated user id was not found.");

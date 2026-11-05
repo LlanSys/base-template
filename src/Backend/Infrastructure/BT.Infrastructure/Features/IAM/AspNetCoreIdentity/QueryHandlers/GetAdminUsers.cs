@@ -9,18 +9,24 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 
+using BT.Application.Features.IAM.Authorization;
+
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.QueryHandlers;
 
-internal sealed class GetAdminUsers(UserManager<AppUser> userManager, IamDBContext context)
+internal sealed class GetAdminUsers(UserManager<AppUser> userManager, IamDBContext context,
+    Domain.Shared.Contracts.Common.ICurrentActorProvider actorProvider,
+    IEffectiveAccessService accessService)
     : IRequestHandler<GetAdminUsersQuery, AppResponse<PagedResponse<AdminUserListResponse, string>>>
 {
     public async Task<AppResponse<PagedResponse<AdminUserListResponse, string>>> Handle(GetAdminUsersQuery request, CancellationToken cancellationToken)
     {
         var req = request.SearchRequest;
         var pageSize = Math.Clamp(req.PageSize, 1, 50);
+        var actor = await accessService.GetAsync(actorProvider.ActorId, cancellationToken).ConfigureAwait(false);
 
         var query = userManager.Users
             .AsNoTracking()
+            .Where(user => user.IsPlatformStaff == actor.IsPlatformStaff && user.TenantId == actor.TenantId)
             .OrderBy(static user => user.Email)
             .ThenBy(static user => user.Id)
             .AsQueryable();
@@ -131,6 +137,7 @@ internal sealed class GetAdminUsers(UserManager<AppUser> userManager, IamDBConte
             .ConfigureAwait(false);
 
         var hasNextPage = pageUsers.Count > pageSize;
+
         if (hasNextPage)
         {
             pageUsers.RemoveAt(pageUsers.Count - 1);

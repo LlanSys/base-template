@@ -7,7 +7,7 @@ using System.Text;
 namespace BT.Application.Features.HR.Employees.Contracts.Implementations;
 
 
-internal sealed class EmployeeNumberGenerator(IHrUnitOfWork _hrUnitOfWork) : IEmployeeNumberGenerator
+internal sealed class EmployeeNumberGenerator(TimeProvider timeProvider, IHrUnitOfWork _hrUnitOfWork) : IEmployeeNumberGenerator
 {
     public async Task<string> GenerateAsync(Guid departmentId, CancellationToken ct = default)
     {
@@ -15,7 +15,7 @@ internal sealed class EmployeeNumberGenerator(IHrUnitOfWork _hrUnitOfWork) : IEm
             ?? throw new InvalidOperationException("Department is required before generating an employee number.");
 
         var prefix = department.Code;
-        var year = DateTime.UtcNow.Year;
+        var year = timeProvider.GetUtcNow().Year;
         var sequence = await _hrUnitOfWork.EmployeeNumberSequenceRepository
             .AllocateNextAsync(departmentId, year, ct)
             .ConfigureAwait(false);

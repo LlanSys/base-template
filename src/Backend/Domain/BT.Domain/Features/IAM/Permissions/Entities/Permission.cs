@@ -3,9 +3,12 @@ using BT.Domain.Shared.Entities;
 
 namespace BT.Domain.Features.IAM.Permissions.Entities;
 
-public sealed class Permission : BaseEntity, ISoftDeletable
+public sealed class Permission : BaseEntity, ISoftDeletable, IPlatformCatalogEntity
 {
     public Guid? DepartmentId { get; private set; }
+    public Guid? AvailableTenantId { get; set; }
+    public string? RequiredModule { get; set; }
+    public bool IsTenantDelegatable { get; set; }
     public string Key { get; private set; } = string.Empty;
     public string Context { get; private set; } = string.Empty;
     public string Resource { get; private set; } = string.Empty;
@@ -50,7 +53,7 @@ public sealed class Permission : BaseEntity, ISoftDeletable
         };
     }
 
-    public void Update(Guid? departmentId, string context, string resource, string action, string description, bool isActive, string updatedBy)
+    public void Update(DateTimeOffset now, Guid? departmentId, string context, string resource, string action, string description, bool isActive, string updatedBy)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(context);
         ArgumentException.ThrowIfNullOrWhiteSpace(resource);
@@ -68,18 +71,18 @@ public sealed class Permission : BaseEntity, ISoftDeletable
         Key = $"{normalizedResource}.{normalizedAction}";
         Description = description.Trim();
         IsActive = isActive;
-        SetUpdatedInfo(updatedBy);
+        SetUpdatedInfo(now, updatedBy);
     }
 
-    public void MarkAsDeleted(string deletedBy)
+    public void MarkAsDeleted(string deletedBy, DateTimeOffset now)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(deletedBy);
 
         IsDeleted = true;
         IsActive = false;
-        DeletedAt = DateTimeOffset.UtcNow;
+        DeletedAt = now;
         DeletedBy = deletedBy.Trim();
-        SetUpdatedInfo(deletedBy);
+        SetUpdatedInfo(now, deletedBy);
     }
 
     private static string NormalizeSegment(string value)

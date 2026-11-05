@@ -1,10 +1,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+
 using BT.Application.Contracts.Interfaces.Common;
 using BT.Domain.Features.ControlPlane.Contracts;
 using BT.Domain.Shared.Contracts.Common;
 using BT.Domain.Shared.Exceptions;
+
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -44,6 +46,7 @@ internal sealed class TenantConnectionResolver : ITenantConnectionResolver
     private async Task<TenantDatabaseMetadata?> GetTenantMetadataAsync(CancellationToken cancellationToken)
     {
         Guid tenantId;
+
         try
         {
             tenantId = _tenantProvider.TenantId;
@@ -56,6 +59,7 @@ internal sealed class TenantConnectionResolver : ITenantConnectionResolver
         }
 
         var cacheKey = $"TenantDbMetadata_{tenantId}";
+
         if (_memoryCache.TryGetValue(cacheKey, out TenantDatabaseMetadata? cachedMetadata))
         {
             return cachedMetadata;
@@ -65,6 +69,7 @@ internal sealed class TenantConnectionResolver : ITenantConnectionResolver
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IControlPlaneUnitOfWork>();
 
         var tenant = await unitOfWork.Tenants.FindByIdAsync(tenantId, cancellationToken).ConfigureAwait(false);
+
         if (tenant == null)
         {
             return null;
@@ -81,6 +86,7 @@ internal sealed class TenantConnectionResolver : ITenantConnectionResolver
         else
         {
             var stamp = await unitOfWork.DeploymentStamps.FindByIdAsync(tenant.DeploymentStampId, cancellationToken).ConfigureAwait(false);
+
             if (stamp != null && !string.IsNullOrEmpty(stamp.DatabaseConnectionString))
             {
                 resolvedConnectionString = _encryptionService.Decrypt(stamp.DatabaseConnectionString);
@@ -92,7 +98,7 @@ internal sealed class TenantConnectionResolver : ITenantConnectionResolver
 
         var cacheOptions = new MemoryCacheEntryOptions()
             .SetAbsoluteExpiration(TimeSpan.FromMinutes(5));
-            
+
         _memoryCache.Set(cacheKey, metadata, cacheOptions);
 
         return metadata;

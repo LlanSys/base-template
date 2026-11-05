@@ -2,7 +2,8 @@
 param(
     [switch]$UseContainerSql,
     [switch]$IncludeSeq,
-    [switch]$SkipPull
+    [switch]$SkipPull,
+    [switch]$UseSharedLocalKeyRing
 )
 
 $ErrorActionPreference = 'Stop'
@@ -59,6 +60,9 @@ function Set-EnvironmentValue([string]$path, [string]$key, [string]$value) {
 }
 
 $platformArguments = @{}
+if ($UseSharedLocalKeyRing) {
+    $platformArguments.UseSharedLocalKeyRing = $true
+}
 if ($UseContainerSql) {
     $platformArguments.IncludeSqlServer = $true
 }
@@ -75,6 +79,43 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $environment = Read-EnvironmentFile $envFile
+
+# Carry the existing local MediatR community key into the container at runtime.
+# It is a separate product from MassTransit and never belongs in an image or committed file.
+if ((-not $environment.Contains('APP_MEDIATR_LICENSE_KEY') -or [string]::IsNullOrWhiteSpace($environment.APP_MEDIATR_LICENSE_KEY)) -and $env:APPDATA) {
+    $apiProjectXml = [xml](Get-Content (Join-Path $repoRoot 'src/Backend/Api/BT.Api/BT.Api.csproj') -Raw)
+    $apiSecretsId = ($apiProjectXml.Project.PropertyGroup | Where-Object UserSecretsId | Select-Object -First 1).UserSecretsId
+    $apiSecretsPath = Join-Path $env:APPDATA "Microsoft/UserSecrets/$apiSecretsId/secrets.json"
+    if (Test-Path -LiteralPath $apiSecretsPath) {
+        $apiSecrets = Get-Content -LiteralPath $apiSecretsPath -Raw | ConvertFrom-Json -AsHashtable
+        $mediatrKey = $apiSecrets['MediatR:LicenseKey']
+        if (-not [string]::IsNullOrWhiteSpace($mediatrKey)) {
+            Set-EnvironmentValue $envFile 'APP_MEDIATR_LICENSE_KEY' $mediatrKey
+        }
+    }
+}
+
+# Import provider credentials from the API's local secret store only when its provider is enabled.
+# Existing explicit Compose settings take precedence. No values are printed or baked into images.
+$apiProjectXml = [xml](Get-Content (Join-Path $repoRoot 'src/Backend/Api/BT.Api/BT.Api.csproj') -Raw)
+$apiSecretsId = ($apiProjectXml.Project.PropertyGroup | Where-Object UserSecretsId | Select-Object -First 1).UserSecretsId
+$apiSecretsPath = Join-Path $env:APPDATA "Microsoft/UserSecrets/$apiSecretsId/secrets.json"
+if (Test-Path -LiteralPath $apiSecretsPath) {
+    $apiSecrets = Get-Content -LiteralPath $apiSecretsPath -Raw | ConvertFrom-Json -AsHashtable
+    foreach ($provider in @(@{ Section = 'GoogleSso'; Prefix = 'APP_GOOGLE_SSO'; Keys = @('ClientId','ClientSecret') },
+                            @{ Section = 'EntraId'; Prefix = 'APP_ENTRA_SSO'; Keys = @('TenantId','ClientId','ClientSecret') })) {
+        if ($apiSecrets["$($provider.Section):Enabled"] -ne 'true' -and $apiSecrets["$($provider.Section):Enabled"] -ne $true) { continue }
+        $mapping = @{ ClientId = 'CLIENT_ID'; ClientSecret = 'CLIENT_SECRET'; TenantId = 'TENANT_ID' }
+        foreach ($key in $provider.Keys) {
+            $settingName = "$($provider.Prefix)_$($mapping[$key])"
+            if ([string]::IsNullOrWhiteSpace($environment[$settingName]) -and -not [string]::IsNullOrWhiteSpace($apiSecrets["$($provider.Section):$key"])) {
+                Set-EnvironmentValue $envFile $settingName $apiSecrets["$($provider.Section):$key"]
+            }
+        }
+        $enabledName = "$($provider.Prefix)_ENABLED"
+        if (-not $environment.Contains($enabledName)) { Set-EnvironmentValue $envFile $enabledName 'true' }
+    }
+}
 
 if (-not $environment.Contains('APP_API_HOST_PORT')) {
     Set-EnvironmentValue $envFile 'APP_API_HOST_PORT' '8080'

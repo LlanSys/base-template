@@ -3,30 +3,55 @@
 
 <MudDialog>
     <DialogContent>
-    <EditForm FormName="hr-department-form" Model="_model" OnValidSubmit="SaveAsync">
-        <DataAnnotationsValidator />
+        <EditForm FormName="hr-department-form"
+                  Model="_model"
+                  OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
             <MudGrid Spacing="2">
-                <MudItem xs="12" sm="4">
-                    <MudTextField @bind-Value="_model.Code" Label="Code" Margin="Margin.Dense" Variant="Variant.Outlined" Required />
+                <MudItem xs="12"
+                         sm="4">
+                    <MudTextField @bind-Value="_model.Code"
+                                  Label="Code"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  Required />
                 </MudItem>
-                <MudItem xs="12" sm="8">
-                    <MudTextField @bind-Value="_model.Name" Label="Name" Margin="Margin.Dense" Variant="Variant.Outlined" Required />
+                <MudItem xs="12"
+                         sm="8">
+                    <MudTextField @bind-Value="_model.Name"
+                                  Label="Name"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined"
+                                  Required />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_model.Description" Label="Description" Lines="3" Margin="Margin.Dense" Variant="Variant.Outlined" />
+                    <MudTextField @bind-Value="_model.Description"
+                                  Label="Description"
+                                  Lines="3"
+                                  Margin="Margin.Dense"
+                                  Variant="Variant.Outlined" />
                 </MudItem>
                 @if (ExistingDepartment is not null)
                 {
                     <MudItem xs="12">
-                        <MudSwitch @bind-Value="_model.IsActive" Color="Color.Success" Label="Active" />
+                        <MudSwitch @bind-Value="_model.IsActive"
+                                   Color="Color.Success"
+                                   Label="Active" />
                     </MudItem>
                 }
             </MudGrid>
         </EditForm>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Default" OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Success" Disabled="_isSaving" OnClick="SaveAsync">@(_isSaving ? "Saving..." : SaveLabel)</MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Size="Size.Small"
+                   Color="Color.Default"
+                   OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Size="Size.Small"
+                   Color="Color.Success"
+                   Disabled="_isSaving"
+                   OnClick="SaveAsync">@(_isSaving ? "Saving..." : SaveLabel)</MudButton>
     </DialogActions>
 </MudDialog>
 

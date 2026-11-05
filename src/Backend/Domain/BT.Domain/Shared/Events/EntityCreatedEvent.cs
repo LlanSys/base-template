@@ -11,7 +11,7 @@ namespace BT.Domain.Shared.Events;
 
 public sealed record EntityCreatedEvent() : IDomainEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 
 }
 

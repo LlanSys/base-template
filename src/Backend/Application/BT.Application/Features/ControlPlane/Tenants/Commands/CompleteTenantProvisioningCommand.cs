@@ -45,6 +45,7 @@ internal sealed partial class CompleteTenantProvisioningCommandHandler : IReques
         LogCompletingProvisioning(request.TenantId);
 
         var tenant = await _unitOfWork.Tenants.FindByIdAsync(request.TenantId, cancellationToken).ConfigureAwait(false);
+
         if (tenant == null || tenant.Status != TenantStatus.Provisioning)
         {
             LogTenantNotFoundOrNotProvisioning(request.TenantId);
@@ -56,6 +57,6 @@ internal sealed partial class CompleteTenantProvisioningCommandHandler : IReques
 
         await _unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
 
-        return AppResponses.Success<bool>("Provisioning completed successfully.", true);
+        return AppResponses.Success("Provisioning completed successfully.", true);
     }
 }

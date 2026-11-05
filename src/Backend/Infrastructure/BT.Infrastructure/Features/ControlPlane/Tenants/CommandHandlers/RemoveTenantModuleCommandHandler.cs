@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BT.Application.Features.ControlPlane.Tenants.Commands;
-using BT.Domain.Features.ControlPlane.Tenants.Entities;
+using BT.Domain.Features.ControlPlane.Tenants.Events;
 using BT.SharedKernel.Dtos.Common;
 using BT.Domain.Features.ControlPlane.Contracts;
 using BT.SharedKernel.Features.ControlPlane.Tenants.Dtos;
@@ -22,11 +22,15 @@ public class RemoveTenantModuleCommandHandler : IRequestHandler<RemoveTenantModu
     private readonly ILogger<RemoveTenantModuleCommandHandler> _logger;
     private readonly ICurrentActorProvider _actorProvider;
 
+    private readonly TimeProvider _timeProvider;
+
     public RemoveTenantModuleCommandHandler(
+        TimeProvider timeProvider,
         IControlPlaneUnitOfWork unitOfWork,
         ILogger<RemoveTenantModuleCommandHandler> logger,
         ICurrentActorProvider actorProvider)
     {
+        _timeProvider = timeProvider;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _actorProvider = actorProvider;
@@ -34,6 +38,8 @@ public class RemoveTenantModuleCommandHandler : IRequestHandler<RemoveTenantModu
 
     public async Task<AppResponse<TenantResponse>> Handle(RemoveTenantModuleCommand request, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request, nameof(request));
+
         var tenant = await _unitOfWork.Tenants.FindAll()
             .Include(t => t.Modules)
             .FirstOrDefaultAsync(t => t.Id == request.TenantId, cancellationToken)
@@ -49,11 +55,12 @@ public class RemoveTenantModuleCommandHandler : IRequestHandler<RemoveTenantModu
 
         if (existingModule != null && existingModule.IsActive)
         {
+            var now = _timeProvider.GetUtcNow();
             existingModule.IsActive = false;
-            existingModule.UpdatedAt = DateTimeOffset.UtcNow;
+            existingModule.UpdatedAt = now;
             existingModule.UpdatedBy = _actorProvider.ActorId;
 
-            tenant.RaiseDomainEvent(new BT.Domain.Features.ControlPlane.Tenants.Events.TenantModuleRevokedDomainEvent(tenant.Id, moduleKey));
+            tenant.RaiseDomainEvent(new TenantModuleRevokedDomainEvent(tenant.Id, moduleKey) { OccurredAt = now });
 
             await _unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
             ControlPlaneLogDefinitions.LogTenantModuleRemoved(_logger, moduleKey, tenant.Id);
@@ -62,6 +69,7 @@ public class RemoveTenantModuleCommandHandler : IRequestHandler<RemoveTenantModu
         var dto = new TenantResponse
         {
             Id = tenant.Id,
+            Revision = tenant.Revision,
             Identifier = tenant.Identifier,
             DisplayName = tenant.DisplayName,
             HostName = tenant.HostName,

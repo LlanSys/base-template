@@ -1,0 +1,116 @@
+
+
+@rendermode InteractiveServer
+@inject IAuthSession AuthSession
+
+<PageTitle>Identity & Access | Base Template</PageTitle>
+
+<RequireAuthenticated>
+    <section class="dashboard-page">
+        <div class="mb-4">
+            <MudButton Href="@(AuthSession.CurrentUser?.IsPlatformStaff == true ? "/control-panel" : "/admin")"
+                       Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.ArrowBack"
+                       Color="Color.Primary"
+                       Class="px-0">Back</MudButton>
+        </div>
+
+        <div class="list-page-actions">
+            @if (_activeTab == 0 && AuthSession.HasPermission("roles.create"))
+            {
+                <MudButton Variant="Variant.Filled"
+                           Size="Size.Small"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenRoleCreateDialogAsync">Create role</MudButton>
+            }
+            else if (_activeTab == 1 && AuthSession.HasPermission("permissions.manage"))
+            {
+                <MudButton Variant="Variant.Filled"
+                           Size="Size.Small"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenPermissionCreateDialogAsync">Create permission</MudButton>
+            }
+            else if (_activeTab == 2 && AuthSession.HasPermission("users.create"))
+            {
+                <MudButton Variant="Variant.Filled"
+                           Size="Size.Small"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenUserCreateDialogAsync">Create user</MudButton>
+            }
+
+        </div>
+        <MudPaper Class="poc-panel"
+                  Elevation="0">
+            <div class="panel-heading">
+                <h2 style="color: var(--bt-moss); font-weight: 700;">Identity & Access</h2>
+            </div>
+
+            <MudTabs ActivePanelIndex="_activeTab"
+                     ActivePanelIndexChanged="OnTabChanged"
+                     Rounded="true"
+                     Elevation="0"
+                     Class="bt-catalog-tabs">
+                <MudTabPanel Text="Roles"
+                             Disabled="@(!AuthSession.HasPermission("roles.view"))" />
+                <MudTabPanel Text="Permissions"
+                             Disabled="@(!AuthSession.HasPermission("roles.manage_permissions"))" />
+                <MudTabPanel Text="Users"
+                             Disabled="@(!AuthSession.HasPermission("users.view"))" />
+                <MudTabPanel Text="User Devices"
+                             Disabled="@(!AuthSession.HasPermission("users.view"))" />
+            </MudTabs>
+
+            @if (_activeTab == 0 && AuthSession.HasPermission("roles.view"))
+            {
+                <AdminRoles @ref="_rolesTab" />
+            }
+            else if (_activeTab == 1 && AuthSession.HasPermission("roles.manage_permissions"))
+            {
+                <AdminPermissions @ref="_permissionsTab" />
+            }
+            else if (_activeTab == 2 && AuthSession.HasPermission("users.view"))
+            {
+                <AdminUsers @ref="_usersTab" />
+            }
+            else if (_activeTab == 3 && AuthSession.HasPermission("users.view"))
+            {
+                <AdminUserDevices />
+            }
+        </MudPaper>
+    </section>
+</RequireAuthenticated>
+
+@code {
+    private int _activeTab;
+    private AdminRoles? _rolesTab;
+    private AdminPermissions? _permissionsTab;
+    private AdminUsers? _usersTab;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AuthSession.InitializeAsync();
+            _activeTab = AuthSession.HasPermission("roles.view") ? 0 : AuthSession.HasPermission("roles.manage_permissions") ? 1 : 2;
+            StateHasChanged();
+        }
+    }
+
+    private void OnTabChanged(int index)
+    {
+        _activeTab = index;
+    }
+
+    private Task OpenRoleCreateDialogAsync() =>
+        _rolesTab?.OpenCreateDialogAsync() ?? Task.CompletedTask;
+
+    private Task OpenPermissionCreateDialogAsync() =>
+        _permissionsTab?.OpenCreateDialogAsync() ?? Task.CompletedTask;
+
+    private Task OpenUserCreateDialogAsync() =>
+        _usersTab?.OpenCreateDialogAsync() ?? Task.CompletedTask;
+
+}

@@ -11,7 +11,8 @@ namespace BT.Application.Features.IAM.Permissions.Queries;
 
 
 
-internal sealed class GetPermissionByIdQueryHandler(IIamUnitOfWork unitOfWork, ILogger<GetPermissionByIdQueryHandler> logger)
+internal sealed class GetPermissionByIdQueryHandler(IIamUnitOfWork unitOfWork, ILogger<GetPermissionByIdQueryHandler> logger,
+    Authorization.IEffectiveAccessService accessService)
     : IRequestHandler<GetPermissionByIdQuery, AppResponse<PermissionResponse>>
 {
     public async Task<AppResponse<PermissionResponse>> Handle(GetPermissionByIdQuery query, CancellationToken cancellationToken)
@@ -19,8 +20,9 @@ internal sealed class GetPermissionByIdQueryHandler(IIamUnitOfWork unitOfWork, I
         try
         {
             var permission = await unitOfWork.PermissionRepository.FindByIdAsync(query.Id, cancellationToken).ConfigureAwait(false);
-            return permission is null
-                ? AppResponses.Failure<PermissionResponse>($"Permission {query.Id} not found.")
+            var access = await accessService.GetAsync(query.UserId, cancellationToken).ConfigureAwait(false);
+            return permission is null || (!access.IsPlatformStaff && !access.Permissions.Contains(permission.Key))
+                ? AppResponses.NotFound<PermissionResponse>("Permission not found.")
                 : AppResponses.Success(permission.ToPermissionResponse());
         }
         catch (Exception ex)

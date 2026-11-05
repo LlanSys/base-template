@@ -10,7 +10,7 @@ using BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces;
 
 namespace BT.UI.Blazor.Features.ControlPlane.Auditing.Implementations;
 
-internal class AuditService(IBackendApiClient client) : IAuditService
+internal sealed class AuditService(IBackendApiClient client) : IAuditService
 {
     private const string BasePath = "api/v1/control-plane/audit/impersonate";
 

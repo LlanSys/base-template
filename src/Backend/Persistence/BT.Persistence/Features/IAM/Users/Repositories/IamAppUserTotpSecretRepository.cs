@@ -12,7 +12,7 @@ using System.Collections.ObjectModel;
 
 namespace BT.Persistence.Features.IAM.Users.Repositories;
 
-internal sealed class IamAppUserTotpSecretRepository(IamDBContext context, ILogger<IamAppUserTotpSecretRepository> logger) : Repository<AppUserTotpSecret>(context), IAppUserTotpSecretRepository
+internal sealed class IamAppUserTotpSecretRepository(IamDBContext context, ILogger<IamAppUserTotpSecretRepository> logger, TimeProvider timeProvider) : Repository<AppUserTotpSecret>(context), IAppUserTotpSecretRepository
 {
     public async Task<AppUserTotpSecret?> GetByUserIdAsync(string userId)
     {
@@ -23,10 +23,11 @@ internal sealed class IamAppUserTotpSecretRepository(IamDBContext context, ILogg
 
     public async Task<AppUserTotpSecret?> GetActiveSecretByUserIdAsync(string userId)
     {
+        var now = timeProvider.GetUtcNow();
         return await FindByCondition(x =>
                 x.AppUserId == userId &&
                 x.IsActive &&
-                (x.ExpiresAt == null || x.ExpiresAt > DateTimeOffset.UtcNow))
+                (x.ExpiresAt == null || x.ExpiresAt > now))
             .AsNoTracking()
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync().ConfigureAwait(false);
@@ -39,9 +40,11 @@ internal sealed class IamAppUserTotpSecretRepository(IamDBContext context, ILogg
             var secrets = await FindByCondition(x => x.AppUserId == userId && x.IsActive)
                 .ToListAsync().ConfigureAwait(false);
 
+            var now = timeProvider.GetUtcNow();
+
             foreach (var secret in secrets)
             {
-                secret.Deactivate();
+                secret.Deactivate(now);
             }
 
             await UpdateRangeAsync(new Collection<AppUserTotpSecret>(secrets)).ConfigureAwait(false);

@@ -1,8 +1,10 @@
 using BT.Domain.Features.Banking.Customers.Entities;
 using BT.Domain.Features.HR.Employees.Entities;
 using BT.Persistence.Features.Banking.Customers.Seeds;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
 using System;
 using System.Collections.Generic;
 using System.Text;

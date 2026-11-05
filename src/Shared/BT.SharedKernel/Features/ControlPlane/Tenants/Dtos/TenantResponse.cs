@@ -4,7 +4,9 @@ namespace BT.SharedKernel.Features.ControlPlane.Tenants.Dtos;
 
 public class TenantResponse
 {
+    public string AdministratorOnboarding { get; set; } = "Existing tenant";
     public Guid Id { get; set; }
+    public Guid Revision { get; set; }
     public required string Identifier { get; set; }
     public required string DisplayName { get; set; }
     public required string HostName { get; set; }
@@ -14,7 +16,7 @@ public class TenantResponse
     public required string Status { get; set; }
 
     public Guid DeploymentStampId { get; set; }
-    
+
     public string? DatabaseProvider { get; set; }
     public string? DatabaseConnectionString { get; set; }
 

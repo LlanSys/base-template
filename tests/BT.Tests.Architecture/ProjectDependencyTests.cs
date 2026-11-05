@@ -19,17 +19,12 @@ namespace BT.Tests.Architecture;
 /// Application             → Domain, SharedKernel
 /// Infrastructure          → Application, SharedKernel
 /// Persistence             → Domain, Application
-/// API                     → Application, SharedKernel       (MAUI + Angular consumers)
-/// RCL                     → SharedKernel                    (components only — no MediatR)
-/// BlazorWebApp            → Application, SharedKernel, RCL  (direct — no HTTP overhead)
-/// MAUI.BlazorHybrid       → SharedKernel, RCL               (HTTP → API)
+/// API                     → Application, SharedKernel (HTTP boundary)
+/// BlazorWebApp            → SharedKernel (typed HTTP clients)
 /// </code>
 ///
-/// BlazorWebApp calls Application directly via MediatR to avoid HTTP overhead.
-/// MAUI and future Angular clients go through the API over HTTP.
-/// RCL components receive data as parameters — they never dispatch MediatR commands.
-/// If RCL referenced Application, components would be coupled to MediatR and
-/// unusable from MAUI which has no Application reference.
+/// Blazor presentation contracts live in their owning feature folders.
+/// The web host consumes the API and never dispatches backend handlers directly.
 /// </remarks>
 public sealed class ProjectDependencyTests
 {

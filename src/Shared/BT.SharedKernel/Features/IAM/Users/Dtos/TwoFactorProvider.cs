@@ -1,4 +1,5 @@
 namespace BT.SharedKernel.Features.IAM.Users.Dtos;
+
 public record TwoFactorProvider(
     string Value,
     string Text,

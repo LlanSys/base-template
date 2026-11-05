@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace BT.UI.Blazor.Features.IAM.Users.Models;
 
-public sealed class ChangePasswordFormModel
+internal sealed class ChangePasswordFormModel
 {
     [Required(ErrorMessage = "Current password is required.")]
     public string CurrentPassword { get; set; } = string.Empty;

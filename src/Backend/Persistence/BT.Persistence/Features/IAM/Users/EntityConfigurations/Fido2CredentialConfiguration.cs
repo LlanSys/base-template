@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace BT.Persistence.Features.IAM.Users.EntityConfigurations;
 
-internal class Fido2CredentialConfiguration : IEntityTypeConfiguration<Fido2Credential>
+internal sealed class Fido2CredentialConfiguration : IEntityTypeConfiguration<Fido2Credential>
 {
     public void Configure(EntityTypeBuilder<Fido2Credential> builder)
     {

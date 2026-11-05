@@ -17,6 +17,7 @@ using Azure;
 namespace BT.Infrastructure.Features.Shared.Notifications.Contracts.Implementations.Services;
 
 internal sealed class EmailDeliveryService(
+    TimeProvider timeProvider,
     IOptions<EmailSettings> options,
     IHttpClientFactory httpClientFactory,
     IHostEnvironment environment,
@@ -200,9 +201,10 @@ internal sealed class EmailDeliveryService(
         }
 
         var emailClient = serviceProvider.GetService<EmailClient>();
+
         if (emailClient == null)
         {
-             return AppResponses.Failure<SendEmailResponse>("EmailClient is not registered.");
+            return AppResponses.Failure<SendEmailResponse>("EmailClient is not registered.");
         }
 
         var emailMessage = new EmailMessage(
@@ -267,7 +269,7 @@ internal sealed class EmailDeliveryService(
             return AppResponses.Failure<SendEmailResponse>(
                 "Email could not be accepted by the delivery provider.");
         }
-        
+
         var responseContent = await response.Content.ReadFromJsonAsync<ResendResponse>(cancellationToken: cancellationToken).ConfigureAwait(false);
         var messageId = responseContent?.Id;
 
@@ -281,10 +283,10 @@ internal sealed class EmailDeliveryService(
 
     private sealed record ResendResponse(string Id);
 
-    private static SendEmailResponse CreateResponse(string messageId, SendEmailRequest request) =>
+    private SendEmailResponse CreateResponse(string messageId, SendEmailRequest request) =>
         new(
             messageId,
-            DateTimeOffset.UtcNow,
+            timeProvider.GetUtcNow(),
             request.To ?? string.Empty,
             request.Subject ?? string.Empty);
 

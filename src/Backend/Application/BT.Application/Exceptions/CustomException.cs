@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Net;
 
 namespace BT.Application.Exceptions;
+
 public class CustomException : Exception
 {
     public Collection<string>? ErrorMessages { get; }

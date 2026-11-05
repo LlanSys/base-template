@@ -27,6 +27,7 @@ public class EnumConverter<T> : JsonConverter<T> where T : struct, Enum
 
             // Try with underscores replaced with spaces (common BC pattern)
             var normalizedValue = stringValue.Replace("_", " ");
+
             if (Enum.TryParse<T>(normalizedValue, true, out var normalizedResult))
             {
                 return normalizedResult;
@@ -34,6 +35,7 @@ public class EnumConverter<T> : JsonConverter<T> where T : struct, Enum
 
             // Try with spaces replaced with underscores
             var underscoreValue = stringValue.Replace(" ", "_");
+
             if (Enum.TryParse<T>(underscoreValue, true, out var underscoreResult))
             {
                 return underscoreResult;

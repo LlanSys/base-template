@@ -26,7 +26,7 @@ namespace BT.Persistence.Features.HR.Migrations.PostgreSql
                 type: "bytea",
                 rowVersion: true,
                 nullable: false,
-                defaultValue: new byte[0],
+                defaultValue: Array.Empty<byte>(),
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true);
@@ -45,7 +45,7 @@ namespace BT.Persistence.Features.HR.Migrations.PostgreSql
                 type: "bytea",
                 rowVersion: true,
                 nullable: false,
-                defaultValue: new byte[0],
+                defaultValue: Array.Empty<byte>(),
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true);
@@ -74,7 +74,7 @@ namespace BT.Persistence.Features.HR.Migrations.PostgreSql
                 type: "bytea",
                 rowVersion: true,
                 nullable: false,
-                defaultValue: new byte[0],
+                defaultValue: Array.Empty<byte>(),
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true);
@@ -109,7 +109,7 @@ namespace BT.Persistence.Features.HR.Migrations.PostgreSql
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true,
-                oldDefaultValue: new byte[0]);
+                oldDefaultValue: Array.Empty<byte>());
 
             migrationBuilder.AlterColumn<DateTimeOffset>(
                 name: "CreatedAt",
@@ -128,7 +128,7 @@ namespace BT.Persistence.Features.HR.Migrations.PostgreSql
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true,
-                oldDefaultValue: new byte[0]);
+                oldDefaultValue: Array.Empty<byte>());
 
             migrationBuilder.AlterColumn<DateTimeOffset>(
                 name: "DeletedAt",
@@ -157,7 +157,7 @@ namespace BT.Persistence.Features.HR.Migrations.PostgreSql
                 oldClrType: typeof(byte[]),
                 oldType: "bytea",
                 oldRowVersion: true,
-                oldDefaultValue: new byte[0]);
+                oldDefaultValue: Array.Empty<byte>());
 
             migrationBuilder.AlterColumn<DateTimeOffset>(
                 name: "CreatedAt",

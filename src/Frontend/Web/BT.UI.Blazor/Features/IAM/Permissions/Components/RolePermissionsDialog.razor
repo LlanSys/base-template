@@ -1,18 +1,28 @@
 @inject IIamAdminService IamAdminService
 @inject ISnackbar Snackbar
+@inject IAuthSession AuthSession
 
 <MudDialog>
     <DialogContent>
         @if (_isLoading)
         {
-            <MudProgressLinear Color="Color.Success" Indeterminate="true" />
+            <MudProgressLinear Color="Color.Success"
+                               Indeterminate="true" />
         }
         else
         {
             <MudStack Spacing="2">
                 <MudText Typo="Typo.body2">Manage permission keys assigned to <strong>@Role.Name</strong>.</MudText>
+                <MudText Typo="Typo.caption">Tenant administrators can grant only permissions approved for delegation by the vendor.</MudText>
                 <div class="bt-table-scroll">
-                    <MudTable Items="_permissions" Dense="true" Hover="true" Elevation="0" FixedHeader="true" Height="28rem" Style="min-width: 760px;" Breakpoint="Breakpoint.None">
+                    <MudTable Items="_permissions"
+                              Dense="true"
+                              Hover="true"
+                              Elevation="0"
+                              FixedHeader="true"
+                              Height="28rem"
+                              Style="min-width: 760px;"
+                              Breakpoint="Breakpoint.None">
                         <HeaderContent>
                             <MudTh Style="width: 4rem;">Grant</MudTh>
                             <MudTh>Key</MudTh>
@@ -22,7 +32,12 @@
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="Grant">
-                                <MudCheckBox T="bool" Value="@IsSelected(context.Key)" ValueChanged="@((selected) => TogglePermission(context.Key, selected))" Color="Color.Success" Dense="true" />
+                                <MudCheckBox T="bool"
+                                             Value="@IsSelected(context.Key)"
+                                             ValueChanged="@((selected) => TogglePermission(context.Key, selected))"
+                                             Disabled="@(AuthSession.CurrentUser?.IsPlatformStaff != true && !context.IsTenantDelegatable && !IsSelected(context.Key))"
+                                             Color="Color.Success"
+                                             Dense="true" />
                             </MudTd>
                             <MudTd DataLabel="Key">@context.Key</MudTd>
                             <MudTd DataLabel="Context">@context.Context</MudTd>
@@ -30,7 +45,9 @@
                             <MudTd DataLabel="Description">@context.Description</MudTd>
                         </RowTemplate>
                         <NoRecordsContent>
-                            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No active permissions found.</MudAlert>
+                            <MudAlert Severity="Severity.Info"
+                                      Variant="Variant.Outlined"
+                                      Dense="true">No active permissions found.</MudAlert>
                         </NoRecordsContent>
                     </MudTable>
                 </div>
@@ -38,8 +55,16 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Success" Disabled="@(_isLoading || _isSaving)" OnClick="SaveAsync">@(_isSaving ? "Saving..." : "Update")</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   Variant="Variant.Text"
+                   Size="Size.Small"
+                   OnClick="Cancel">Cancel</MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Save"
+                   Variant="Variant.Filled"
+                   Size="Size.Small"
+                   Color="Color.Success"
+                   Disabled="@(_isLoading || _isSaving)"
+                   OnClick="SaveAsync">@(_isSaving ? "Saving..." : "Update")</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -62,7 +87,7 @@
 
     private async Task LoadAsync()
     {
-        var permissionsResponse = await IamAdminService.SearchPermissionsAsync(new PermissionSearchRequest(DepartmentId: Role.DepartmentId, IsActive: true, PageSize: 50));
+        var permissionsResponse = await BT.UI.Blazor.Features.IAM.Permissions.PermissionCatalogLoader.LoadAsync(IamAdminService, Role.DepartmentId);
         var rolePermissionsResponse = await IamAdminService.GetRolePermissionsAsync(Role.Id);
 
         if (!permissionsResponse.IsSuccess || permissionsResponse.Data is null)
@@ -80,7 +105,7 @@
         }
 
         _permissions.Clear();
-        _permissions.AddRange(permissionsResponse.Data.Items);
+        _permissions.AddRange(permissionsResponse.Data);
         _selectedKeys.Clear();
         foreach (var key in rolePermissionsResponse.Data.PermissionKeys)
         {

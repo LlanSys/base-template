@@ -176,5 +176,9 @@ When adding or reviewing a repository, check:
 
 If the answer is unclear, start with the generic repository and add a concrete method only when the use case proves it needs one.
 
+### Database initialization
+
+Use the [database initialization runbook](../development/database-initialization.md) for new BaseTemplate databases and existing upgrades. The fresh initializer creates all five current context schemas plus the non-EF Quartz schema atomically and records provider-specific histories only after creation succeeds. Historical migration files remain the existing-database upgrade contract.
+
 ### PostgreSQL JSONB
 When using PostgreSQL as the primary database provider, you can safely utilize jsonb columns for unstructured or highly dynamic data (e.g., audit trails, untyped webhook payloads, or form submissions) when appropriate. PostgreSQL handles jsonb extremely efficiently and allows GIN indexing on these columns, providing excellent performance for complex queries. Ensure that business-critical relational data remains strongly typed.

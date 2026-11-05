@@ -19,5 +19,5 @@ public record CreateEmployeeRequest
     // Optional fields
     public DateOnly? DateOfBirth { get; init; }
     public Guid? ManagerId { get; init; }
-    
+
 }

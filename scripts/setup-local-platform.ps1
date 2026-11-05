@@ -2,7 +2,8 @@
 param(
     [switch]$IncludeSqlServer,
     [switch]$IncludeSeq,
-    [switch]$SkipPull
+    [switch]$SkipPull,
+    [switch]$UseSharedLocalKeyRing
 )
 
 $ErrorActionPreference = 'Stop'
@@ -111,7 +112,12 @@ foreach ($volumeName in $volumeNames) {
     }
 }
 
-dotnet user-secrets set 'Messaging:Enabled' 'true' --project $apiProject
+$localMessagingEnabled = $true
+if ($environment.ContainsKey('APP_MESSAGING_ENABLED') -and
+    -not [bool]::TryParse($environment.APP_MESSAGING_ENABLED, [ref]$localMessagingEnabled)) {
+    throw 'APP_MESSAGING_ENABLED must be true or false.'
+}
+dotnet user-secrets set 'Messaging:Enabled' "$localMessagingEnabled" --project $apiProject
 dotnet user-secrets set 'Messaging:Transport' 'RabbitMq' --project $apiProject
 dotnet user-secrets set 'Messaging:RabbitMq:Host' 'localhost' --project $apiProject
 dotnet user-secrets set 'Messaging:RabbitMq:Port' '5672' --project $apiProject
@@ -120,6 +126,18 @@ dotnet user-secrets set 'Messaging:RabbitMq:Username' $environment.RABBITMQ_USER
 dotnet user-secrets set 'Messaging:RabbitMq:Password' $environment.RABBITMQ_PASSWORD --project $apiProject
 dotnet user-secrets set 'CacheSettings:Provider' 'Redis' --project $apiProject
 dotnet user-secrets set 'CacheSettings:Redis:ConnectionString' "localhost:$($environment.REDIS_HOST_PORT),password=$($environment.REDIS_PASSWORD),abortConnect=false" --project $apiProject
+if ($UseSharedLocalKeyRing) {
+    # Explicit opt-in: existing protected records must be migrated before switching stores.
+    # Both Visual Studio and the app containers must use the same ring for a shared database.
+    @{
+        'DataProtection:UseExternalKeyStore' = 'true'
+        'DataProtection:BlobKeyUri' = ''
+        'DataProtection:RedisKeyRingConnectionString' = "localhost:$($environment.REDIS_HOST_PORT),password=$($environment.REDIS_PASSWORD),abortConnect=false"
+        'DataProtection:RedisKeyRingKey' = 'BaseTemplate-DataProtection-Keys'
+        'DataProtection:KeyEncryptionMode' = 'None'
+    } | ConvertTo-Json | dotnet user-secrets set --project $apiProject
+    if ($LASTEXITCODE -ne 0) { throw 'Local shared Data Protection configuration failed.' }
+}
 dotnet user-secrets set 'EmailSettings:Provider' 'LocalMailpit' --project $apiProject
 dotnet user-secrets set 'EmailSettings:LocalMailpit:Host' 'localhost' --project $apiProject
 dotnet user-secrets set 'EmailSettings:LocalMailpit:Port' '1025' --project $apiProject

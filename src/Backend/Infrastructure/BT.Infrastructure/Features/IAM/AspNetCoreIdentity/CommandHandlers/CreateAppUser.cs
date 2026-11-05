@@ -20,14 +20,18 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
+using BT.Infrastructure.Features.IAM.Authorization;
+
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
 internal sealed class CreateAppUser(
+    TimeProvider timeProvider,
     UserManager<AppUser> userManager,
     IBankingUnitOfWork bankingUnitOfWork,
     IHrUnitOfWork hrUnitOfWork,
     IIamUnitOfWork iamUnitOfWork,
-    ILogger<CreateAppUser> logger) : IRequestHandler<CreateAppUserCommand, AppResponse<AppUserResponse>>
+    ILogger<CreateAppUser> logger,
+    IamAccessBoundary boundary) : IRequestHandler<CreateAppUserCommand, AppResponse<AppUserResponse>>
 {
     public async Task<AppResponse<AppUserResponse>> Handle(CreateAppUserCommand command, CancellationToken ct)
     {
@@ -36,6 +40,10 @@ internal sealed class CreateAppUser(
 
         try
         {
+            if (!await boundary.CanAssignRolesAsync(command.UserId, req.Roles ?? [], ct).ConfigureAwait(false))
+                return AppResponses.Failure<AppUserResponse>(AppError.Forbidden("You cannot assign these roles."));
+            var actor = await boundary.GetActorAsync(command.UserId, ct).ConfigureAwait(false);
+
             if (req.EmployeeId.HasValue && req.CustomerId.HasValue)
                 return AppResponses.Failure<AppUserResponse>("A user account can be linked to either an employee or a customer, not both.");
 
@@ -62,6 +70,7 @@ internal sealed class CreateAppUser(
             }
 
             Customer? customer = null;
+
             if (req.CustomerId.HasValue)
             {
                 customer = await bankingUnitOfWork.CustomerRepository
@@ -92,6 +101,7 @@ internal sealed class CreateAppUser(
 
             var appUser = employee is not null
                 ? AppUser.CreateForEmployee(
+                    timeProvider.GetUtcNow(),
                     Guid.Empty,
                     employee.Id,
                     req.Username,
@@ -103,6 +113,7 @@ internal sealed class CreateAppUser(
                     createdBy: "System")
                 : customer is not null
                     ? AppUser.CreateForCustomer(
+                        timeProvider.GetUtcNow(),
                         Guid.Empty,
                         customer.Id,
                         req.Username,
@@ -113,6 +124,7 @@ internal sealed class CreateAppUser(
                         req.IdNumber ?? string.Empty,
                         createdBy: "System")
                     : AppUser.Create(
+                    timeProvider.GetUtcNow(),
                     Guid.Empty,
                     employeeId: null,
                     req.Username,
@@ -125,6 +137,10 @@ internal sealed class CreateAppUser(
             appUser.SetIdentityProfile(
                 req.IdNumber ?? appUser.NationalId,
                 Enum.TryParse<Gender>(req.Gender, true, out var g) ? g : Gender.Other);
+
+            appUser.TenantId = actor.TenantId;
+            appUser.IsPlatformStaff = actor.IsPlatformStaff;
+            appUser.CreatedBy = command.UserId;
 
             var identityResult = await userManager
                 .CreateAsync(appUser, req.Password)
@@ -153,6 +169,7 @@ internal sealed class CreateAppUser(
                 }
 
                 var profile = AppUserProfile.Create(
+                    timeProvider.GetUtcNow(),
                     appUser.Id,
                     appUser.PhoneNumber,
                     appUser.PhoneNumber,
@@ -166,7 +183,7 @@ internal sealed class CreateAppUser(
                 return true;
             }).ConfigureAwait(false);
 
-            appUser.RaiseAppUserCreatedEvent();
+            appUser.RaiseAppUserCreatedEvent(timeProvider.GetUtcNow());
 
             _ = await userManager.GenerateEmailConfirmationTokenAsync(appUser).ConfigureAwait(false);
 

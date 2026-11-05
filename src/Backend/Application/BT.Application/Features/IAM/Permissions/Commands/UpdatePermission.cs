@@ -12,7 +12,7 @@ namespace BT.Application.Features.IAM.Permissions.Commands;
 
 
 
-internal sealed class UpdatePermissionCommandHandler(IIamUnitOfWork unitOfWork, ILogger<UpdatePermissionCommandHandler> logger)
+internal sealed class UpdatePermissionCommandHandler(TimeProvider timeProvider, IIamUnitOfWork unitOfWork, ILogger<UpdatePermissionCommandHandler> logger)
     : IRequestHandler<UpdatePermissionCommand, AppResponse<PermissionResponse>>
 {
     public async Task<AppResponse<PermissionResponse>> Handle(UpdatePermissionCommand command, CancellationToken cancellationToken)
@@ -21,12 +21,14 @@ internal sealed class UpdatePermissionCommandHandler(IIamUnitOfWork unitOfWork, 
         {
             var catalogError = await ValidateCatalogAsync(unitOfWork, command.Request.Context, command.Request.Resource, command.Request.Action, cancellationToken)
                 .ConfigureAwait(false);
+
             if (catalogError is not null)
             {
                 return AppResponses.Failure<PermissionResponse>(catalogError);
             }
 
             var permission = await unitOfWork.PermissionRepository.FindByIdAsync(command.Id, cancellationToken).ConfigureAwait(false);
+
             if (permission is null)
             {
                 return AppResponses.Failure<PermissionResponse>($"Permission {command.Id} not found.");
@@ -41,6 +43,7 @@ internal sealed class UpdatePermissionCommandHandler(IIamUnitOfWork unitOfWork, 
                 command.UserId);
 
             var duplicate = await unitOfWork.PermissionRepository
+                // Permission keys are contracts used by compiled endpoints and existing grants.
                 .AnyAsync(existing => existing.Id != command.Id && existing.Key == draft.Key, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -49,7 +52,20 @@ internal sealed class UpdatePermissionCommandHandler(IIamUnitOfWork unitOfWork, 
                 return AppResponses.Failure<PermissionResponse>($"Permission {draft.Key} already exists.");
             }
 
+            if (!string.Equals(permission.Key, draft.Key, StringComparison.Ordinal))
+                return AppResponses.Failure<PermissionResponse>("Permission keys cannot be renamed. Register new functionality through a release.");
+
+            if (!command.Request.IsActive)
+            {
+                if (BT.SharedKernel.Features.IAM.Permissions.ImplementedPermissions.IsProtected(permission.Key))
+                    return AppResponses.Failure<PermissionResponse>("This permission protects shipped functionality. Retire it through a reviewed application release; change assignments or availability to restrict access.");
+
+                if (await unitOfWork.PermissionRepository.HasReferencesAsync(permission.Key, cancellationToken).ConfigureAwait(false))
+                    return AppResponses.Failure<PermissionResponse>("Remove menu references and role/direct-user assignments before retiring this permission.");
+            }
+
             permission.Update(
+                timeProvider.GetUtcNow(),
                 command.Request.DepartmentId,
                 command.Request.Context,
                 command.Request.Resource,
@@ -58,6 +74,9 @@ internal sealed class UpdatePermissionCommandHandler(IIamUnitOfWork unitOfWork, 
                 command.Request.IsActive,
                 command.UserId);
 
+            permission.AvailableTenantId = command.Request.AvailableTenantId;
+            permission.IsTenantDelegatable = command.Request.IsTenantDelegatable;
+            permission.RequiredModule = command.Request.RequiredModule ?? BT.SharedKernel.Features.ControlPlane.Modules.ModuleCatalog.ForPermission(permission.Key);
             await unitOfWork.PermissionRepository.UpdateAsync(permission, cancellationToken).ConfigureAwait(false);
             var saved = await unitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false) > 0;
 

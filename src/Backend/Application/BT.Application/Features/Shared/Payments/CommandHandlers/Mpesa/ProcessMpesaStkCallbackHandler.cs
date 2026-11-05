@@ -2,8 +2,11 @@ using BT.Application.Contracts.Interfaces.Common;
 using BT.Application.Utilities;
 using BT.Domain.Features.Shared.Payments.Enums;
 using BT.SharedKernel.Dtos.Common;
+
 using MediatR;
+
 using Microsoft.Extensions.Logging;
+
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +14,7 @@ using System.Threading.Tasks;
 namespace BT.Application.Features.Shared.Payments.CommandHandlers.Mpesa;
 
 internal sealed class ProcessMpesaStkCallbackHandler(
+    TimeProvider timeProvider,
     ISharedUnitOfWork sharedUnitOfWork,
     ILogger<ProcessMpesaStkCallbackHandler> logger) : IRequestHandler<ProcessMpesaStkCallbackCommand, AppResponse<string>>
 {
@@ -18,7 +22,7 @@ internal sealed class ProcessMpesaStkCallbackHandler(
     {
         try
         {
-            if (!request.Payload.TryGetProperty("Body", out var bodyEl) || 
+            if (!request.Payload.TryGetProperty("Body", out var bodyEl) ||
                 !bodyEl.TryGetProperty("stkCallback", out var stkCallbackEl))
             {
                 LogDefinitions.LogMpesaStkInvalidPayload(logger);
@@ -28,7 +32,7 @@ internal sealed class ProcessMpesaStkCallbackHandler(
             var checkoutRequestId = stkCallbackEl.TryGetProperty("CheckoutRequestID", out var checkoutIdEl) ? checkoutIdEl.GetString() : null;
             var resultCode = stkCallbackEl.TryGetProperty("ResultCode", out var resultCodeEl) ? resultCodeEl.GetInt32() : -1;
             var resultDesc = stkCallbackEl.TryGetProperty("ResultDesc", out var resultDescEl) ? resultDescEl.GetString() : null;
-            
+
             if (string.IsNullOrWhiteSpace(checkoutRequestId))
             {
                 LogDefinitions.LogMpesaStkInvalidPayload(logger);
@@ -47,19 +51,19 @@ internal sealed class ProcessMpesaStkCallbackHandler(
 
             if (resultCode == 0)
             {
-                paymentRecord.UpdateStatus(PaymentStatus.Success, statusMessage: resultDesc);
+                paymentRecord.UpdateStatus(timeProvider.GetUtcNow(), PaymentStatus.Success, statusMessage: resultDesc);
             }
             else if (resultCode == 1032)
             {
-                paymentRecord.UpdateStatus(PaymentStatus.Cancelled, statusMessage: resultDesc);
+                paymentRecord.UpdateStatus(timeProvider.GetUtcNow(), PaymentStatus.Cancelled, statusMessage: resultDesc);
             }
             else
             {
-                paymentRecord.UpdateStatus(PaymentStatus.Failed, statusMessage: resultDesc);
+                paymentRecord.UpdateStatus(timeProvider.GetUtcNow(), PaymentStatus.Failed, statusMessage: resultDesc);
             }
 
             await sharedUnitOfWork.CompleteAsync(cancellationToken).ConfigureAwait(false);
-            
+
             LogDefinitions.LogMpesaStkCallbackProcessed(logger, checkoutRequestId, resultCode);
 
             return AppResponses.Success("STK callback processed successfully.");

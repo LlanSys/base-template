@@ -26,15 +26,18 @@ internal sealed class LocalProfilePictureStorage(
         var extension = GetSafeExtension(fileName, contentType);
         var safeUserId = string.Concat(userId.Select(static character =>
             char.IsLetterOrDigit(character) ? character : '-'));
+
         var storedFileName = $"{safeUserId}-{RandomNumberGenerator.GetHexString(12).ToLowerInvariant()}{extension}";
         var relativeRoot = _settings.LocalRootPath
             .Trim()
             .TrimStart('/', '\\')
             .Replace('/', Path.DirectorySeparatorChar)
             .Replace('\\', Path.DirectorySeparatorChar);
+
         var webRootPath = string.IsNullOrWhiteSpace(environment.WebRootPath)
             ? Path.Combine(environment.ContentRootPath, "wwwroot")
             : environment.WebRootPath;
+
         var targetDirectory = Path.Combine(webRootPath, relativeRoot);
 
         Directory.CreateDirectory(targetDirectory);
@@ -60,12 +63,14 @@ internal sealed class LocalProfilePictureStorage(
 
         var publicBasePath = _settings.PublicBasePath.TrimEnd('/');
         var relativeUri = profilePictureUri.ToString();
+
         if (!relativeUri.StartsWith(publicBasePath, StringComparison.OrdinalIgnoreCase))
         {
             return Task.FromResult<ProfilePictureFile?>(null);
         }
 
         var fileName = Path.GetFileName(relativeUri);
+
         if (string.IsNullOrWhiteSpace(fileName))
         {
             return Task.FromResult<ProfilePictureFile?>(null);
@@ -76,9 +81,11 @@ internal sealed class LocalProfilePictureStorage(
             .TrimStart('/', '\\')
             .Replace('/', Path.DirectorySeparatorChar)
             .Replace('\\', Path.DirectorySeparatorChar);
+
         var webRootPath = string.IsNullOrWhiteSpace(environment.WebRootPath)
             ? Path.Combine(environment.ContentRootPath, "wwwroot")
             : environment.WebRootPath;
+
         var targetDirectory = Path.GetFullPath(Path.Combine(webRootPath, relativeRoot));
         var targetPath = Path.GetFullPath(Path.Combine(targetDirectory, fileName));
 
@@ -89,6 +96,7 @@ internal sealed class LocalProfilePictureStorage(
         }
 
         var contentTypeProvider = new FileExtensionContentTypeProvider();
+
         if (!contentTypeProvider.TryGetContentType(targetPath, out var contentType))
         {
             contentType = "application/octet-stream";
@@ -101,6 +109,7 @@ internal sealed class LocalProfilePictureStorage(
     private static string GetSafeExtension(string fileName, string contentType)
     {
         var extension = Path.GetExtension(fileName);
+
         if (!string.IsNullOrWhiteSpace(extension))
         {
             return extension.ToLowerInvariant() switch

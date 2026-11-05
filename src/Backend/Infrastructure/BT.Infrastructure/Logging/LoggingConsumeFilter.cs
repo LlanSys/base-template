@@ -16,6 +16,7 @@ public class LoggingConsumeFilter<T>(ILogger<LoggingConsumeFilter<T>> logger) : 
         var messageType = typeof(T).Name;
         var messageId = context.MessageId?.ToString() ?? "unknown";
         var retryCount = 0;
+
         if (context.Headers.TryGetHeader("MT-Redelivery-Count", out var retryCountValue) &&
             retryCountValue is not null)
         {
@@ -23,6 +24,7 @@ public class LoggingConsumeFilter<T>(ILogger<LoggingConsumeFilter<T>> logger) : 
         }
 
         var isRedelivered = false;
+
         if (context.Headers.TryGetHeader("MT-Redelivered", out var isRedeliveredValue) &&
             isRedeliveredValue is not null)
         {

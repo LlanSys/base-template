@@ -5,6 +5,7 @@ using BT.Domain.Shared.Contracts;
 using BT.Domain.Shared.Contracts.Common;
 using BT.Domain.Features.Banking.Customers.Enums;
 using BT.Domain.Shared.Entities;
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -34,6 +35,7 @@ public class Director : BaseEntity, ISoftDeletable
     private Director() { }
 
     public static Director Create(
+        DateTimeOffset now,
         Guid customerId,
         string fullName,
         DirectorRelationType relationType,
@@ -62,9 +64,9 @@ public class Director : BaseEntity, ISoftDeletable
             PhoneNumber = phoneNumber?.Trim(),
             Email = email?.Trim().ToLower(CultureInfo.CurrentCulture),
             SharePercentage = sharePercentage,
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = now,
             CreatedBy = createdBy
-            
+
         };
     }
 
@@ -86,11 +88,11 @@ public class Director : BaseEntity, ISoftDeletable
         SharePercentage = sharePercentage;
     }
 
-    public void MarkAsDeleted(string deletedBy)
+    public void MarkAsDeleted(string deletedBy, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(deletedBy);
         IsDeleted = true;
-        DeletedAt = DateTimeOffset.UtcNow;
+        DeletedAt = now;
         DeletedBy = deletedBy;
 
 

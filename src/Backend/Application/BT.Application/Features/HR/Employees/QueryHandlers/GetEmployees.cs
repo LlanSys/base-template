@@ -40,6 +40,7 @@ internal sealed class GetEmployeesQueryHandler(IHrUnitOfWork _hrUnitOfWork, ILog
                         .Select(static department => new { department.Id, department.Name }),
                     ct)
                 .ConfigureAwait(false);
+
             var departments = departmentRows.ToDictionary(static department => department.Id, static department => department.Name);
             var managerIds = staff
                 .Select(static employee => employee.ManagerId)
@@ -47,6 +48,7 @@ internal sealed class GetEmployeesQueryHandler(IHrUnitOfWork _hrUnitOfWork, ILog
                 .Select(static managerId => managerId!.Value)
                 .Distinct()
                 .ToArray();
+
             var managers = managerIds.Length == 0
                 ? new Dictionary<Guid, string>()
                 : (await _hrUnitOfWork.EmployeeRepository
@@ -63,6 +65,7 @@ internal sealed class GetEmployeesQueryHandler(IHrUnitOfWork _hrUnitOfWork, ILog
                     departments.GetValueOrDefault(employee.DepartmentId, string.Empty),
                     employee.ManagerId.HasValue ? managers.GetValueOrDefault(employee.ManagerId.Value, string.Empty) : string.Empty))
                 .ToList();
+
             return AppResponses.Success($"Success", mapped);
         }
         catch (Exception ex)

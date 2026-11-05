@@ -13,4 +13,6 @@ public record GetAllTenantsQuery : IRequest<AppResponse<List<TenantResponse>>>, 
     public string Discriminator => "all";
     public string? CacheUserId => null;
     public bool IsVersioned => true;
+
+    public bool BypassCache => true;
 }

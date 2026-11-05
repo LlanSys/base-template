@@ -11,7 +11,9 @@ using BT.Domain.Features.IAM.Users.Events;
 using BT.Infrastructure.Logging;
 using BT.SharedKernel.Features.IAM.Users.Dtos;
 using BT.SharedKernel.Dtos.Common;
+
 using MediatR;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
@@ -19,6 +21,7 @@ using Microsoft.Extensions.Logging;
 namespace BT.Infrastructure.Features.IAM.AspNetCoreIdentity.CommandHandlers;
 
 internal sealed class ResetPassword(
+    TimeProvider timeProvider,
     UserManager<AppUser> userManager,
     IIamUnitOfWork iamUnitOfWork,
     ICacheService cacheService,
@@ -33,6 +36,7 @@ internal sealed class ResetPassword(
         try
         {
             var user = await userManager.FindByEmailAsync(request.Email).ConfigureAwait(false);
+
             if (user == null)
             {
                 ServiceLogDefinitions.LogInvalidToken(logger);
@@ -42,6 +46,7 @@ internal sealed class ResetPassword(
             var password = request.Password ?? request.NewPassword ?? string.Empty;
 
             var isSamePassword = await userManager.CheckPasswordAsync(user, password).ConfigureAwait(false);
+
             if (isSamePassword)
             {
                 return AppResponses.Failure<bool>("New password must be different from your current password");
@@ -62,13 +67,14 @@ internal sealed class ResetPassword(
                 return AppResponses.Failure<bool>("Password reset failed. Please ensure your password meets all requirements.");
             }
 
-            user.CompletePasswordReset(user.Id);
+            user.CompletePasswordReset(timeProvider.GetUtcNow(), user.Id);
 
             await userManager.UpdateAsync(user).ConfigureAwait(false);
 
             await iamUnitOfWork.ExecuteInTransactionWithRetryAsync(async () =>
             {
                 var refreshTokens = await iamUnitOfWork.TokenRepository.GetActiveTokensByUserIdAsync(user.Id).ConfigureAwait(false);
+
                 if (refreshTokens.Any())
                 {
                     var revokedByIp = httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();
@@ -84,7 +90,8 @@ internal sealed class ResetPassword(
             await publisher.Publish(new PasswordResetSuccessEvent(
                 user.Id,
                 user.Email!,
-                $"{user.FirstName} {user.LastName}"), ct).ConfigureAwait(false);
+                $"{user.FirstName} {user.LastName}")
+            { OccurredAt = timeProvider.GetUtcNow() }, ct).ConfigureAwait(false);
 
             ServiceLogDefinitions.LogEmailOtpSent(logger, user.Id, "PasswordReset");
             return AppResponses.Success("Password reset successfully", true);

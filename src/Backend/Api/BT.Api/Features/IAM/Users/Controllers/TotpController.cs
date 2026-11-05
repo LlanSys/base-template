@@ -15,7 +15,7 @@ namespace BT.Api.Features.IAM.Users.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/iam/users/totp")]
 [ApiController]
-public sealed class TotpController(ISender sender) : BaseController
+public sealed class TotpController(ISender sender, Application.Features.IAM.Authorization.IEffectiveAccessService accessService) : BaseController
 {
     [HttpPost("setup")]
     [Authorize]
@@ -79,13 +79,14 @@ public sealed class TotpController(ISender sender) : BaseController
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
         var currentUserId = GetUserId();
-        if (!string.Equals(currentUserId, userId, StringComparison.OrdinalIgnoreCase)
-            && !User.IsInRole("System Administrator")
-            && !User.HasClaim(static claim =>
-                string.Equals(claim.Type, "permission", StringComparison.OrdinalIgnoreCase)
-                && string.Equals(claim.Value, "users.view", StringComparison.OrdinalIgnoreCase)))
+
+        if (!string.Equals(currentUserId, userId, StringComparison.Ordinal))
         {
-            return Forbid();
+            var actor = await accessService.GetAsync(currentUserId, HttpContext.RequestAborted).ConfigureAwait(false);
+            var target = await accessService.GetAsync(userId, HttpContext.RequestAborted).ConfigureAwait(false);
+
+            if (!actor.Permissions.Contains("users.view") || actor.TenantId != target.TenantId || actor.IsPlatformStaff != target.IsPlatformStaff)
+                return Forbid();
         }
 
         var response = await sender
@@ -98,6 +99,7 @@ public sealed class TotpController(ISender sender) : BaseController
     private string GetUserId()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
         if (string.IsNullOrWhiteSpace(userId))
         {
             throw new UnauthorizedAccessException("Authenticated user id was not found.");

@@ -14,6 +14,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using BT.Application.Features.IAM.Authorization;
+using BT.Application.Features.ControlPlane.Modules;
+using BT.Infrastructure.Features.IAM.Authorization;
 
 namespace BT.Infrastructure.Features.IAM.Extensions;
 
@@ -23,6 +27,7 @@ public static class IamModuleDI
     {
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(environment);
+        services.TryAddSingleton(TimeProvider.System);
 
         services.AddIamPersistence(configuration, environment);
 
@@ -32,17 +37,24 @@ public static class IamModuleDI
             .AddEntityFrameworkStores<IamDBContext>()
             .AddDefaultTokenProviders();
 
+        services.RemoveAll<IRoleValidator<AppRole>>();
+        services.AddScoped<IRoleValidator<AppRole>, ScopedRoleValidator>();
+
         DependencyInjection.ConfigureAuthentication(services, configuration);
 
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Login>());
 
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IClaimsService, ClaimsService>();
+        services.AddScoped<IEffectiveAccessService, EffectiveAccessService>();
         services.AddScoped<IAppUserService, AppUserService>();
         services.AddScoped<ISessionService, SessionService>();
         services.AddScoped<ISmsComposer, SmsComposer>();
         services.AddScoped<IUserContextService, UserContextService>();
         services.AddScoped<DevelopmentIdentitySeeder>();
+        services.AddScoped<PlatformCatalogInitializer>();
+        services.AddScoped<IamAccessBoundary>();
+        services.AddScoped<IModuleReadinessService, ModuleReadinessService>();
 
         return services;
     }

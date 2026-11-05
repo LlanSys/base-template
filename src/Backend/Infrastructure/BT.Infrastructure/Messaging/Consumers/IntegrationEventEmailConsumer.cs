@@ -31,6 +31,7 @@ using System.Text.Json;
 namespace BT.Infrastructure.Messaging.Consumers;
 
 public abstract class IntegrationEventEmailConsumer<TEvent>(
+    TimeProvider timeProvider,
     IEmailComposer<TEvent> composer,
     ISharedUnitOfWork sharedUnitOfWork,
     ILogger<IntegrationEventEmailConsumer<TEvent>> logger) : IConsumer<TEvent> where TEvent : class, IIntegrationEvent
@@ -47,6 +48,7 @@ public abstract class IntegrationEventEmailConsumer<TEvent>(
         try
         {
             var composed = await composer.ComposeAsync(evt, context.CancellationToken).ConfigureAwait(false);
+
             if (!composed.IsSuccess || composed.Data is null)
             {
                 MessageBusLogDefinitions.LogEmailCompositionFailed(logger, messageId);
@@ -66,6 +68,7 @@ public abstract class IntegrationEventEmailConsumer<TEvent>(
             MessageBusLogDefinitions.LogPermanentEventFailure(logger, typeof(TEvent).Name, retryCount + 1, ex);
 
             var failed = FailedMessage.RecordPermanentFailure(
+                timeProvider.GetUtcNow(),
                 messageId,
                 typeof(TEvent).FullName!,
                 JsonSerializer.Serialize(evt),

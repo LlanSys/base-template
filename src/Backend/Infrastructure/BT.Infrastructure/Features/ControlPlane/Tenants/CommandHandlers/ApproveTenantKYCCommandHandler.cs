@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+
 using BT.Application.Features.ControlPlane.Tenants.Commands;
 using BT.Application.Features.ControlPlane.Tenants.Contracts;
 using BT.Domain.Features.ControlPlane.Contracts;
@@ -10,7 +11,9 @@ using BT.Infrastructure.Logging;
 using BT.SharedKernel.Dtos.Common;
 using BT.SharedKernel.Features.ControlPlane.Tenants.Dtos;
 using BT.SharedKernel.Extensions;
+
 using MediatR;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -18,17 +21,20 @@ namespace BT.Infrastructure.Features.ControlPlane.Tenants.CommandHandlers;
 
 public class ApproveTenantKYCCommandHandler : IRequestHandler<ApproveTenantKYCCommand, AppResponse<TenantResponse>>
 {
+    private readonly TimeProvider _timeProvider;
     private readonly IControlPlaneUnitOfWork _unitOfWork;
     private readonly ILogger<ApproveTenantKYCCommandHandler> _logger;
     private readonly IStampProvisioner _stampProvisioner;
     private readonly ICurrentActorProvider _actorProvider;
 
     public ApproveTenantKYCCommandHandler(
+        TimeProvider timeProvider,
         IControlPlaneUnitOfWork unitOfWork,
         ILogger<ApproveTenantKYCCommandHandler> logger,
         IStampProvisioner stampProvisioner,
         ICurrentActorProvider actorProvider)
     {
+        _timeProvider = timeProvider;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _stampProvisioner = stampProvisioner;
@@ -52,17 +58,18 @@ public class ApproveTenantKYCCommandHandler : IRequestHandler<ApproveTenantKYCCo
         }
 
         var stamp = await _unitOfWork.DeploymentStamps.FirstOrDefaultAsync(s => s.Id == tenant.DeploymentStampId, cancellationToken).ConfigureAwait(false);
+
         if (stamp == null)
         {
             return AppResponses.Failure<TenantResponse>("Deployment stamp for this tenant could not be found.");
         }
 
-        tenant.ApproveKYC(_actorProvider.ActorId);
+        tenant.ApproveKYC(_timeProvider.GetUtcNow(), _actorProvider.ActorId);
 
         if (stamp.IsolationTier == IsolationTier.Isolated)
         {
             tenant.MarkAsProvisioning();
-            
+
             try
             {
                 await _stampProvisioner.ProvisionIsolatedStampAsync(
@@ -71,7 +78,7 @@ public class ApproveTenantKYCCommandHandler : IRequestHandler<ApproveTenantKYCCo
                     stamp.TargetResourceGroup,
                     tenant.DatabaseProvider ?? stamp.DatabaseProvider ?? "PostgreSql",
                     cancellationToken).ConfigureAwait(false);
-                
+
                 ControlPlaneLogDefinitions.LogStampProvisioningDispatched(_logger, tenant.Id, stamp.Name);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -94,6 +101,7 @@ public class ApproveTenantKYCCommandHandler : IRequestHandler<ApproveTenantKYCCo
         var dto = new TenantResponse
         {
             Id = tenant.Id,
+            Revision = tenant.Revision,
             Identifier = tenant.Identifier,
             DisplayName = tenant.DisplayName,
             HostName = tenant.HostName,

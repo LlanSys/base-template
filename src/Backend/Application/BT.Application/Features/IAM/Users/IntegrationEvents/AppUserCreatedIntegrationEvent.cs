@@ -19,6 +19,6 @@ internal sealed record AppUserCreatedIntegrationEvent(
 
 ) : IIntegrationEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }
 

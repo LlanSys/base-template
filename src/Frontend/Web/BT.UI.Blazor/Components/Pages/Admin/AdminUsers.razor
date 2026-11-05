@@ -16,109 +16,169 @@
                   DebounceInterval="400"
                   OnDebounceIntervalElapsed="ApplyFiltersAsync"
                   OnKeyDown="HandleSearchKeyDown" />
-    <MudIconButton Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" Color="@(_showFilters ? Color.Success : Color.Default)" OnClick="ToggleFilters" title="Advanced filters" />
+    <MudIconButton Icon="@Icons.Material.Filled.FilterList"
+                   Size="Size.Small"
+                   Color="@(_showFilters ? Color.Success : Color.Default)"
+                   OnClick="ToggleFilters"
+                   title="Advanced filters" />
     @if (HasActiveFilters)
     {
-        <MudIconButton Icon="@Icons.Material.Filled.FilterAltOff" Size="Size.Small" Color="Color.Error" OnClick="ClearFiltersAsync" title="Clear filters" />
+        <MudIconButton Icon="@Icons.Material.Filled.FilterAltOff"
+                       Size="Size.Small"
+                       Color="Color.Error"
+                       OnClick="ClearFiltersAsync"
+                       title="Clear filters" />
     }
 </div>
 
-        @if (_showFilters)
-        {
-            <MudDivider Class="my-2" />
-            <MudGrid Spacing="2" Class="mb-2">
-                <MudItem xs="12" sm="6" lg="3">
-                    <MudSelect T="string" Value="_statusFilter" ValueChanged="@(async (string? val) => { _statusFilter = val; await ApplyFiltersAsync(); })" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                        @foreach (var item in StatusOptions)
-                        {
-                            <MudSelectItem Value="@item">@item</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" sm="6" lg="3">
-                    <MudSelect T="string" Value="_roleFilter" ValueChanged="@(async (string? val) => { _roleFilter = val; await ApplyFiltersAsync(); })" Label="Role" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                        @foreach (var item in AvailableRoles)
-                        {
-                            <MudSelectItem Value="@item">@item</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" sm="6" lg="3">
-                    <MudSelect T="string" Value="_twoFactorFilter" ValueChanged="@(async (string? val) => { _twoFactorFilter = val; await ApplyFiltersAsync(); })" Label="Two-factor" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                        @foreach (var item in TwoFactorOptions)
-                        {
-                            <MudSelectItem Value="@item">@item</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" sm="6" lg="3">
-                    <MudSelect T="string" Value="_linkedRecordFilter" ValueChanged="@(async (string? val) => { _linkedRecordFilter = val; await ApplyFiltersAsync(); })" Label="Linked Record" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                        @foreach (var item in LinkedRecordOptions)
-                        {
-                            <MudSelectItem Value="@item">@item</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-            </MudGrid>
-        }
+@if (_showFilters)
+{
+    <MudDivider Class="my-2" />
+    <MudGrid Spacing="2"
+             Class="mb-2">
+        <MudItem xs="12"
+                 sm="6"
+                 lg="3">
+            <MudSelect T="string"
+                       Value="_statusFilter"
+                       ValueChanged="@(async (string? val) => { _statusFilter = val; await ApplyFiltersAsync(); })"
+                       Label="Status"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="true">
+                @foreach (var item in StatusOptions)
+                {
+                    <MudSelectItem Value="@item">@item</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12"
+                 sm="6"
+                 lg="3">
+            <MudSelect T="string"
+                       Value="_roleFilter"
+                       ValueChanged="@(async (string? val) => { _roleFilter = val; await ApplyFiltersAsync(); })"
+                       Label="Role"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="true">
+                @foreach (var item in AvailableRoles)
+                {
+                    <MudSelectItem Value="@item">@item</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12"
+                 sm="6"
+                 lg="3">
+            <MudSelect T="string"
+                       Value="_twoFactorFilter"
+                       ValueChanged="@(async (string? val) => { _twoFactorFilter = val; await ApplyFiltersAsync(); })"
+                       Label="Two-factor"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="true">
+                @foreach (var item in TwoFactorOptions)
+                {
+                    <MudSelectItem Value="@item">@item</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12"
+                 sm="6"
+                 lg="3">
+            <MudSelect T="string"
+                       Value="_linkedRecordFilter"
+                       ValueChanged="@(async (string? val) => { _linkedRecordFilter = val; await ApplyFiltersAsync(); })"
+                       Label="Linked Record"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="true">
+                @foreach (var item in LinkedRecordOptions)
+                {
+                    <MudSelectItem Value="@item">@item</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+}
 
-        @if (_isLoading)
-        {
-            <MudProgressLinear Color="Color.Success" Indeterminate="true" Class="my-2" />
-        }
+@if (_isLoading)
+{
+    <MudProgressLinear Color="Color.Success"
+                       Indeterminate="true"
+                       Class="my-2" />
+}
 
-        @if (!string.IsNullOrWhiteSpace(_message))
-        {
-            <MudAlert Severity="@_messageSeverity" Variant="Variant.Outlined" Dense="true" Class="my-2">@_message</MudAlert>
-        }
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <MudAlert Severity="@_messageSeverity"
+              Variant="Variant.Outlined"
+              Dense="true"
+              Class="my-2">@_message</MudAlert>
+}
 
-        <div class="bt-table-scroll">
-            <MudTable Items="_users" Dense="true" Hover="true" Elevation="0" FixedHeader="true" RowsPerPage="PageSize" Height="calc(100vh - 25rem)" Style="min-width: 980px;" Breakpoint="Breakpoint.None">
-                <HeaderContent>
-                    <MudTh Style="width: 15rem;">Name</MudTh>
-                    <MudTh Style="width: 18rem;">Email</MudTh>
-                    <MudTh Style="width: 14rem;">Roles</MudTh>
-                    <MudTh Style="width: 8rem;">Status</MudTh>
-                    <MudTh Style="width: 8rem;">2FA</MudTh>
-                    <MudTh Style="width: 10rem;">Linked Record</MudTh>
-                    <MudTh Style="width: 8rem;">Actions</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Name">@DisplayName(context)</MudTd>
-                    <MudTd DataLabel="Email">@context.Email</MudTd>
-                    <MudTd DataLabel="Roles">@RoleText(context)</MudTd>
-                    <MudTd DataLabel="Status">
-                        <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Warning)">@(context.IsActive ? "Active" : "Inactive")</MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="2FA">
-                        <MudChip T="string" Size="Size.Small" Color="@(context.TwoFactorEnabled ? Color.Success : Color.Info)">@(context.TwoFactorEnabled ? "Enabled" : "Recommended")</MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="Linked Record">@LinkedRecord(context)</MudTd>
-                    <MudTd DataLabel="Actions">
-                        <TableRowActions OnView="@(() => ShowUserDetailsAsync(context))"
-                                         OnEdit="@(() => OpenUserDialogAsync(context))"
-                                         OnDelete="@(() => ConfirmDeactivateAsync(context))"
-                                         CanView="@AuthSession.HasPermission("users.view")"
-                                         CanEdit="@AuthSession.HasPermission("users.edit")"
-                                         CanDelete="@AuthSession.HasPermission("users.deactivate")"
-                                         ExtraActions="@UserExtraActions(context)"
-                                         OnExtraAction="@((action) => HandleExtraActionAsync(context, action))" />
-                    </MudTd>
-                </RowTemplate>
-                <NoRecordsContent>
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No records found.</MudAlert>
-                </NoRecordsContent>
-                <PagerContent>
-                    <GlobalTablePager CurrentPage="_currentPage"
-                                      TotalRecords="_totalRecords"
-                                      PageSize="PageSize"
-                                      IsLoading="_isLoading"
-                                      OnFirstPage="GoToFirstPageAsync"
-                                      OnPreviousPage="GoToPreviousPageAsync"
-                                      OnNextPage="GoToNextPageAsync" />
-                </PagerContent>
-            </MudTable>
-        </div>
+<div class="bt-table-scroll">
+    <MudTable Items="_users"
+              Dense="true"
+              Hover="true"
+              Elevation="0"
+              FixedHeader="true"
+              RowsPerPage="PageSize"
+              Height="calc(100vh - 25rem)"
+              Style="min-width: 980px;"
+              Breakpoint="Breakpoint.None">
+        <HeaderContent>
+            <MudTh Style="width: 15rem;">Name</MudTh>
+            <MudTh Style="width: 18rem;">Email</MudTh>
+            <MudTh Style="width: 14rem;">Roles</MudTh>
+            <MudTh Style="width: 8rem;">Status</MudTh>
+            <MudTh Style="width: 8rem;">2FA</MudTh>
+            <MudTh Style="width: 10rem;">Linked Record</MudTh>
+            <MudTh Style="width: 8rem;">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Name">@DisplayName(context)</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Roles">@RoleText(context)</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@(context.IsActive ? Color.Success : Color.Warning)">@(context.IsActive ? "Active" : "Inactive")</MudChip>
+            </MudTd>
+            <MudTd DataLabel="2FA">
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@(context.TwoFactorEnabled ? Color.Success : Color.Info)">@(context.TwoFactorEnabled ? "Enabled" : "Recommended")</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Linked Record">@LinkedRecord(context)</MudTd>
+            <MudTd DataLabel="Actions">
+                <TableRowActions OnView="@(() => ShowUserDetailsAsync(context))"
+                                 OnEdit="@(() => OpenUserDialogAsync(context))"
+                                 OnDelete="@(() => ConfirmDeactivateAsync(context))"
+                                 CanView="@AuthSession.HasPermission("users.view")"
+                                 CanEdit="@AuthSession.HasPermission("users.edit")"
+                                 CanDelete="@AuthSession.HasPermission("users.deactivate")"
+                                 ExtraActions="@UserExtraActions(context)"
+                                 OnExtraAction="@((action) => HandleExtraActionAsync(context, action))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudAlert Severity="Severity.Info"
+                      Variant="Variant.Outlined"
+                      Dense="true">No records found.</MudAlert>
+        </NoRecordsContent>
+        <PagerContent>
+            <GlobalTablePager CurrentPage="_currentPage"
+                              TotalRecords="_totalRecords"
+                              PageSize="PageSize"
+                              IsLoading="_isLoading"
+                              OnFirstPage="GoToFirstPageAsync"
+                              OnPreviousPage="GoToPreviousPageAsync"
+                              OnNextPage="GoToNextPageAsync" />
+        </PagerContent>
+    </MudTable>
+</div>
 
 @code {
     public Task OpenCreateDialogAsync() => OpenUserDialogAsync(null);
@@ -233,7 +293,9 @@
         if (response.IsSuccess && response.Data is not null)
         {
             _availableRoles.Clear();
-            _availableRoles.AddRange(response.Data.Select(r => r.Name).Order(StringComparer.OrdinalIgnoreCase));
+            _availableRoles.AddRange(response.Data.Where(role => role.IsActive && role.IsPlatformRole == (AuthSession.CurrentUser?.IsPlatformStaff == true)
+                && (role.ModuleKey is null || AuthSession.CurrentUser?.EnabledModules?.Contains(role.ModuleKey, StringComparer.OrdinalIgnoreCase) == true))
+                .Select(role => role.Name).Order(StringComparer.OrdinalIgnoreCase));
         }
     }
 
@@ -290,7 +352,7 @@
     {
         var parameters = new DialogParameters
         {
-            { nameof(AdminUserFormDialog.Roles), AvailableRoles.Count > 0 ? AvailableRoles : ["Admin", "User"] },
+            { nameof(AdminUserFormDialog.Roles), AvailableRoles },
             { nameof(AdminUserFormDialog.ExistingUser), user }
         };
 

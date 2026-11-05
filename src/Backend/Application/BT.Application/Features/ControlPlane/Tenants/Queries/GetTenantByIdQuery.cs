@@ -12,4 +12,6 @@ public record GetTenantByIdQuery(Guid Id) : IRequest<AppResponse<TenantResponse>
     public string Discriminator => Id.ToString();
     public string? CacheUserId => null;
     public bool IsVersioned => false;
+
+    public bool BypassCache => true;
 }

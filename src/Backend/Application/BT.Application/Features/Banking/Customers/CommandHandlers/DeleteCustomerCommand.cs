@@ -10,7 +10,9 @@ using BT.Domain.Features.Banking.Customers.Entities;
 using BT.SharedKernel.Features.Banking.Customers.Dtos;
 
 using MediatR;
+
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -22,7 +24,7 @@ namespace BT.Application.Features.Banking.Customers.CommandHandlers;
 /// </summary>
 
 public record DeleteCustomerCommand(Guid CustomerId, string UserId) : IRequest<AppResponse<bool>>, ICacheInvalidatorRequest
-    
+
 {
     public IReadOnlyList<string> DirectInvalidationKeys => [CacheKeys.Entity("customers", CustomerId.ToString())];
     public IReadOnlyList<string> GroupVersionKeysToInvalidate =>
@@ -30,6 +32,6 @@ public record DeleteCustomerCommand(Guid CustomerId, string UserId) : IRequest<A
         CacheKeys.GroupVersion("customers"),
         CacheKeys.GroupVersion("dashboard")
     ];
-        
+
 }
 

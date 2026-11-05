@@ -1,8 +1,10 @@
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
+
 using BT.Application.Features.IAM.Users.Contracts.Interfaces;
 using BT.Infrastructure.Configuration;
+
 using Microsoft.Extensions.Options;
 
 namespace BT.Infrastructure.Features.IAM.Users.Contracts.Implementations.Storage;
@@ -41,7 +43,7 @@ internal sealed class S3ProfilePictureStorage(IOptions<ProfileImageStorageSettin
         // If ServiceUrl is provided, it's https://<bucket>.<serviceUrl>/<key> or https://<serviceUrl>/<bucket>/<key>
         // It's safer to generate a pre-signed URL or build it. Wait, the template returns the raw URI which the frontend might need.
         // Let's use the standard format.
-        
+
         var uriBuilder = new UriBuilder(activeSettings.ServiceUrl ?? "https://s3.amazonaws.com");
         uriBuilder.Path = $"{activeSettings.BucketName}/{blobName}";
 

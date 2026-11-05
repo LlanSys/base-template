@@ -31,7 +31,7 @@ Production defaults keep these capabilities enabled unless explicitly configured
 
 ## Messaging Transport
 
-Development uses RabbitMQ. Azure production uses Azure Service Bus. Both use the same MassTransit consumers and EF outbox registration. BaseTemplate pins Apache-2.0-licensed MassTransit `8.5.10`, which targets .NET 10; the commercial v9 dependency was intentionally removed from the reusable template.
+Development uses RabbitMQ. Azure production uses Azure Service Bus. Both use the same MassTransit consumers and EF outbox registration. BaseTemplate pins Apache-2.0-licensed MassTransit `8.5.12`; the commercial v9 dependency was intentionally removed. Outbox locking follows the configured SQL Server or PostgreSQL database provider.
 
 ## Required User Secrets
 

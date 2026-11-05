@@ -7,8 +7,20 @@ using BT.Domain.Features.ControlPlane.Tenants.Enums;
 
 namespace BT.Domain.Features.ControlPlane.Tenants.Entities;
 
-public class Tenant : IAuditable, IHasDomainEvents
+public class Tenant : IAuditable, IHasDomainEvents, ISoftDeletable
 {
+    public bool IsDeleted { get; set; }
+    public Guid Revision { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
+    public string? DeletedBy { get; set; }
+    public void MarkAsDeleted(string deletedBy, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(deletedBy);
+        IsDeleted = true;
+        Status = TenantStatus.Suspended;
+        DeletedBy = deletedBy;
+        DeletedAt = now;
+    }
     public Guid Id { get; set; } = Guid.CreateVersion7();
     public required string Identifier { get; set; } // URL-safe slug
     public required string DisplayName { get; set; }
@@ -18,21 +30,21 @@ public class Tenant : IAuditable, IHasDomainEvents
     public SubscriptionTier SubscriptionTier { get; set; }
     public TenantStatus Status { get; set; } = TenantStatus.PendingKYC;
 
-    public void ApproveKYC(string actorId)
+    public void ApproveKYC(DateTimeOffset now, string actorId)
     {
         if (Status != TenantStatus.PendingKYC)
             throw new InvalidOperationException($"Cannot approve KYC from status {Status}");
 
         Status = TenantStatus.PendingProvisioning;
         UpdatedBy = actorId;
-        UpdatedAt = DateTimeOffset.UtcNow; // We will use TimeProvider in application layer, but here standard fallback
+        UpdatedAt = now;
     }
 
     public void MarkAsProvisioning()
     {
         if (Status != TenantStatus.PendingProvisioning)
             throw new InvalidOperationException($"Cannot start provisioning from status {Status}");
-            
+
         Status = TenantStatus.Provisioning;
     }
 
@@ -40,7 +52,7 @@ public class Tenant : IAuditable, IHasDomainEvents
     {
         Status = TenantStatus.Active;
     }
-    
+
     public void Suspend()
     {
         Status = TenantStatus.Suspended;
@@ -50,8 +62,8 @@ public class Tenant : IAuditable, IHasDomainEvents
     {
         Status = TenantStatus.ProvisioningFailed;
     }
-    private readonly System.Collections.Generic.List<IDomainEvent> _domainEvents = [];
-    public System.Collections.Generic.IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+    private readonly List<IDomainEvent> _domainEvents = [];
+    public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
     public void RaiseDomainEvent(IDomainEvent domainEvent)
     {
@@ -69,15 +81,16 @@ public class Tenant : IAuditable, IHasDomainEvents
     public string? DatabaseProvider { get; set; }
     public string? DatabaseConnectionString { get; set; }
 
+    public ICollection<TenantAdministratorInvitation> AdministratorInvitations { get; set; } = [];
     public ICollection<TenantModule> Modules { get; set; } = [];
 
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
     public string? UpdatedBy { get; set; }
 
     [Timestamp]
-    [SuppressMessage("Performance", "CA1819:Properties should not return arrays", 
+    [SuppressMessage("Performance", "CA1819:Properties should not return arrays",
         Justification = "Required by Entity Framework Core for optimistic concurrency control")]
     public byte[] RowVersion { get; set; } = [];
 }

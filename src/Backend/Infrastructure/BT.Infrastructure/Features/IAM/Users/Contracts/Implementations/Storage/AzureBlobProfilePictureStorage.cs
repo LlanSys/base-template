@@ -31,12 +31,14 @@ internal sealed class AzureBlobProfilePictureStorage(IOptions<ProfileImageStorag
         var extension = GetSafeExtension(fileName, contentType);
         var safeUserId = string.Concat(userId.Select(static character =>
             char.IsLetterOrDigit(character) ? character : '-'));
+
         var storageSettings = ActiveStorageSettings;
         var blobPrefix = storageSettings.BlobPrefix.Trim().Trim('/');
         var storedFileName = $"{RandomNumberGenerator.GetHexString(12).ToLowerInvariant()}{extension}";
         var blobName = string.IsNullOrWhiteSpace(blobPrefix)
             ? $"{safeUserId}/{storedFileName}"
             : $"{blobPrefix}/{safeUserId}/{storedFileName}";
+
         var container = CreateContainerClient(storageSettings);
 
         await container.CreateIfNotExistsAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -71,6 +73,7 @@ internal sealed class AzureBlobProfilePictureStorage(IOptions<ProfileImageStorag
 
         var container = CreateContainerClient(ActiveStorageSettings);
         var blobName = GetBlobName(profilePictureUri, container.Uri);
+
         if (string.IsNullOrWhiteSpace(blobName))
         {
             // ToDo: Log warning about profile picture URI not matching container URI
@@ -78,14 +81,17 @@ internal sealed class AzureBlobProfilePictureStorage(IOptions<ProfileImageStorag
         }
 
         var blob = container.GetBlobClient(blobName);
+
         try
         {
             var download = await blob
                 .DownloadStreamingAsync(cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
+
             var contentType = string.IsNullOrWhiteSpace(download.Value.Details.ContentType)
                 ? "application/octet-stream"
                 : download.Value.Details.ContentType;
+
             var fileName = Path.GetFileName(blobName);
 
             return new ProfilePictureFile(download.Value.Content, contentType, fileName);
@@ -127,6 +133,7 @@ internal sealed class AzureBlobProfilePictureStorage(IOptions<ProfileImageStorag
     {
         var containerPrefix = containerUri.ToString().TrimEnd('/') + "/";
         var profilePictureUrl = profilePictureUri.ToString();
+
         if (!profilePictureUrl.StartsWith(containerPrefix, StringComparison.OrdinalIgnoreCase))
         {
             return null;
@@ -138,6 +145,7 @@ internal sealed class AzureBlobProfilePictureStorage(IOptions<ProfileImageStorag
     private static string GetSafeExtension(string fileName, string contentType)
     {
         var extension = Path.GetExtension(fileName);
+
         if (!string.IsNullOrWhiteSpace(extension))
         {
             return extension.ToLowerInvariant() switch

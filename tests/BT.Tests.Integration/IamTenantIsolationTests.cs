@@ -1,10 +1,13 @@
 using System;
 using System.Threading.Tasks;
-using BT.Domain.Features.IAM.Menus.Entities;
+
+using BT.Domain.Features.IAM.Users.Entities;
 using BT.Domain.Shared.Contracts.Common;
 using BT.Persistence.Features.IAM.DataContext;
 using BT.Tests.Integration.TestFixtures;
+
 using Microsoft.EntityFrameworkCore;
+
 using Xunit;
 
 namespace BT.Tests.Integration;
@@ -57,43 +60,46 @@ public abstract class IamTenantIsolationTests<TFixture> : IClassFixture<TFixture
         {
             await context.Database.EnsureCreatedAsync();
 
-            var menu1 = MenuItem.Create(null, null, $"menu-1-{tenant1}", "Menu 1", "Desc 1", "/m1", "icon1", "top", null, null, 1, "test");
-            context.MenuItems.Add(menu1);
+            var menu1 = new AppRole { Name = $"menu-1-{tenant1}", NormalizedName = $"MENU-1-{tenant1}" };
+            context.Roles.Add(menu1);
             await context.SaveChangesAsync();
         }
 
         // Seed data acting as tenant 2
         tenantProvider.TenantId = tenant2;
+
         using (var context = new IamDBContext(_options, tenantProvider, actorProvider))
         {
-            var menu2 = MenuItem.Create(null, null, $"menu-2-{tenant2}", "Menu 2", "Desc 2", "/m2", "icon2", "top", null, null, 2, "test");
-            context.MenuItems.Add(menu2);
+            var menu2 = new AppRole { Name = $"menu-2-{tenant2}", NormalizedName = $"MENU-2-{tenant2}" };
+            context.Roles.Add(menu2);
             await context.SaveChangesAsync();
         }
 
         // Act - Query as tenant 1
         tenantProvider.TenantId = tenant1;
+
         using (var context = new IamDBContext(_options, tenantProvider, actorProvider))
         {
-            var items = await context.MenuItems.ToListAsync();
+            var items = await context.Roles.ToListAsync();
 
             // Assert
-            Assert.Contains(items, i => i.Key == $"menu-1-{tenant1}");
-            Assert.DoesNotContain(items, i => i.Key == $"menu-2-{tenant2}");
+            Assert.Contains(items, i => i.Name == $"menu-1-{tenant1}");
+            Assert.DoesNotContain(items, i => i.Name == $"menu-2-{tenant2}");
         }
-        
+
         // Act - Query as tenant 2
         tenantProvider.TenantId = tenant2;
+
         using (var context = new IamDBContext(_options, tenantProvider, actorProvider))
         {
-            var items = await context.MenuItems.ToListAsync();
+            var items = await context.Roles.ToListAsync();
 
             // Assert
-            Assert.Contains(items, i => i.Key == $"menu-2-{tenant2}");
-            Assert.DoesNotContain(items, i => i.Key == $"menu-1-{tenant1}");
+            Assert.Contains(items, i => i.Name == $"menu-2-{tenant2}");
+            Assert.DoesNotContain(items, i => i.Name == $"menu-1-{tenant1}");
         }
     }
-    
+
     [Fact]
     public async Task IgnoreQueryFilters_ShouldReturnDataForAllTenants()
     {
@@ -109,29 +115,31 @@ public abstract class IamTenantIsolationTests<TFixture> : IClassFixture<TFixture
         {
             await context.Database.EnsureCreatedAsync();
 
-            var menu1 = MenuItem.Create(null, null, $"menu-3-{tenant1}", "Menu 3", "Desc 1", "/m3", "icon1", "top", null, null, 1, "test");
-            context.MenuItems.Add(menu1);
+            var menu1 = new AppRole { Name = $"menu-3-{tenant1}", NormalizedName = $"MENU-3-{tenant1}" };
+            context.Roles.Add(menu1);
             await context.SaveChangesAsync();
         }
 
         // Seed data acting as tenant 2
         tenantProvider.TenantId = tenant2;
+
         using (var context = new IamDBContext(_options, tenantProvider, actorProvider))
         {
-            var menu2 = MenuItem.Create(null, null, $"menu-4-{tenant2}", "Menu 4", "Desc 2", "/m4", "icon2", "top", null, null, 2, "test");
-            context.MenuItems.Add(menu2);
+            var menu2 = new AppRole { Name = $"menu-4-{tenant2}", NormalizedName = $"MENU-4-{tenant2}" };
+            context.Roles.Add(menu2);
             await context.SaveChangesAsync();
         }
 
         // Act - Ignore query filters
         tenantProvider.TenantId = tenant1; // Doesn't matter for this query
+
         using (var context = new IamDBContext(_options, tenantProvider, actorProvider))
         {
-            var items = await context.MenuItems.IgnoreQueryFilters().ToListAsync();
+            var items = await context.Roles.IgnoreQueryFilters().ToListAsync();
 
             // Assert
-            Assert.Contains(items, i => i.Key == $"menu-3-{tenant1}");
-            Assert.Contains(items, i => i.Key == $"menu-4-{tenant2}");
+            Assert.Contains(items, i => i.Name == $"menu-3-{tenant1}");
+            Assert.Contains(items, i => i.Name == $"menu-4-{tenant2}");
         }
     }
 }

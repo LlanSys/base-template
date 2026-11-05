@@ -1,97 +1,23 @@
 @page "/admin"
-
+@attribute [Authorize(Policy = "Tenant.Administration")]
 @rendermode InteractiveServer
 @inject IAuthSession AuthSession
-@inject IIamAdminService IamAdminService
-@inject NavigationManager Navigation
-@inject ISnackbar Snackbar
-
-<PageTitle>Admin | Base Template</PageTitle>
-
-<RequireAuthenticated>
-    <section class="dashboard-page">
-        @if (!_isReady)
+<PageTitle>Admin Center | BaseTemplate</PageTitle>
+<section class="dashboard-page">
+    <div class="panel-heading">
+        <h2>Admin Center</h2>
+    </div>
+    <MudList T="string"
+             Dense="true">
+        @if (AuthSession.HasPermission("tenant-settings.view"))
         {
-            <MudPaper Class="status-card" Elevation="0">Loading admin workspace...</MudPaper>
+            <MudListItem Href="/admin/org-settings"
+                         Icon="@Icons.Material.Filled.Settings">Organization Settings</MudListItem>
         }
-        else
+        @if (AuthSession.HasAnyPermission("users.view", "roles.view", "roles.manage_permissions"))
         {
-            <div class="dashboard-hero compact-hero">
-                <div>
-                    <span class="eyebrow">Administration</span>
-                    <h1>Admin center.</h1>
-                    <p>Manage the platform building blocks: users, staff, customers, roles, permissions, and operational settings.</p>
-                </div>
-            </div>
-
-            <div class="admin-module-grid">
-                @foreach (var module in _modules)
-                {
-                    <MudPaper Class="admin-tile" Elevation="0">
-                        <MudIcon Icon="@MenuIconMapper.Resolve(module.Icon)" Class="tile-icon" />
-                        <div>
-                            <strong>@module.Title</strong>
-                            <span>@module.Description</span>
-                        </div>
-                        <MudButton Href="@module.Url" Variant="Variant.Text" Size="Size.Small" Class="bt-small-button" EndIcon="@Icons.Material.Filled.ArrowForward">
-                            Open
-                        </MudButton>
-                    </MudPaper>
-                }
-            </div>
+            <MudListItem Href="/admin/iam"
+                         Icon="@Icons.Material.Filled.Security">Users and Access</MudListItem>
         }
-    </section>
-</RequireAuthenticated>
-
-@code {
-    private readonly List<MenuResponse> _modules = [];
-    private bool _isReady;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
-        {
-            return;
-        }
-
-        await AuthSession.InitializeAsync();
-        if (AuthSession.IsAuthenticated)
-        {
-            await LoadModulesAsync();
-            StateHasChanged();
-        }
-    }
-
-    private async Task LoadModulesAsync()
-    {
-        var response = await IamAdminService.GetNavigationMenusAsync("AdminCenter");
-        if (!response.IsSuccess || response.Data is null)
-        {
-            Snackbar.Add(response.Message ?? "We could not load admin menus.", Severity.Error);
-            _isReady = true;
-            return;
-        }
-
-        _modules.Clear();
-        var allMenus = Flatten(response.Data);
-        _modules.AddRange(allMenus);
-        _isReady = true;
-    }
-
-    private static IEnumerable<MenuResponse> Flatten(IEnumerable<MenuResponse>? menus)
-    {
-        if (menus is null)
-        {
-            yield break;
-        }
-
-        foreach (var menu in menus)
-        {
-            yield return menu;
-            foreach (var child in Flatten(menu.Children))
-            {
-                yield return child;
-            }
-        }
-    }
-}
+    </MudList>
+</section>

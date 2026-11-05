@@ -1,6 +1,7 @@
 using BT.SharedKernel.Extensions;
 using BT.Domain.Features.Banking.Customers.Entities;
 using BT.SharedKernel.Features.Banking.Customers.Dtos;
+
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -145,9 +146,9 @@ internal static class CustomerMapping
             d.Email,
             d.SharePercentage,
             d.CreatedAt))
-        
+
         .ToList()
     );
 
-    
+
 }

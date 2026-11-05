@@ -23,9 +23,10 @@ public record CompositeCursor(DateTimeOffset CreatedAt, Guid Id)
         if (parts.Length != 2) return null;
 
         if (!long.TryParse(parts[0], out var ms)) return null;
+
         if (!Guid.TryParse(parts[1], out var id)) return null;
 
-        return new CompositeCursor(DateTimeOffset.FromUnixTimeMilliseconds(ms), id); 
-        
+        return new CompositeCursor(DateTimeOffset.FromUnixTimeMilliseconds(ms), id);
+
     }
 }

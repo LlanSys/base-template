@@ -32,6 +32,11 @@ internal sealed class ApiExceptionHandler : IExceptionHandler
 
         switch (exception)
         {
+            case Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException:
+                status = StatusCodes.Status409Conflict;
+                title = "Conflict";
+                detail = "This record changed while you were editing. Reload it and try again.";
+                break;
             case AuthenticationException:
                 status = (int)HttpStatusCode.Unauthorized;
                 title = "Authentication Failed";

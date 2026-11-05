@@ -29,6 +29,9 @@ public static class IamPersistenceDI
 {
     public static IServiceCollection AddIamPersistence(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+        services.TryAddSingleton(TimeProvider.System);
         var connectionString = configuration.GetConnectionString("IamConnection")
             ?? configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("IamConnection (or DefaultConnection) not found.");

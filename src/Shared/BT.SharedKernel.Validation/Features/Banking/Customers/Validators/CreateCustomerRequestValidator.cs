@@ -11,8 +11,14 @@ namespace BT.SharedKernel.Validation.Features.Banking.Customers.Validators;
 
 public class CreateCustomerRequestValidator : Validator<CreateCustomerRequest>
 {
-    public CreateCustomerRequestValidator()
+    public CreateCustomerRequestValidator(TimeProvider timeProvider)
     {
+        Func<int, DateTimeOffset> localMidnight = daysAhead =>
+        {
+            var date = timeProvider.GetLocalNow().Date.AddDays(daysAhead);
+            return new DateTimeOffset(date, timeProvider.LocalTimeZone.GetUtcOffset(date));
+        };
+
         RuleLevelCascadeMode = CascadeMode.Stop;
         ClassLevelCascadeMode = CascadeMode.Stop;
 
@@ -57,12 +63,12 @@ public class CreateCustomerRequestValidator : Validator<CreateCustomerRequest>
 
         RuleFor(x => x.DateOfRegistration)
             .NotEmpty().WithMessage("Date of registration is required.")
-            .LessThanOrEqualTo(DateTime.Today)
+            .LessThanOrEqualTo(_ => localMidnight(0))
             .WithMessage("Date of registration cannot be in the future.");
 
         RuleFor(x => x.BusinessStartedYear)
-            .InclusiveBetween(1800, DateTime.Today.Year)
-            .WithMessage($"Business started year must be between 1800 and {DateTime.Today.Year}.")
+            .Must(year => year >= 1800 && year <= timeProvider.GetLocalNow().Year)
+            .WithMessage(_ => $"Business started year must be between 1800 and {timeProvider.GetLocalNow().Year}.")
             .When(x => x.BusinessStartedYear.HasValue);
 
         RuleFor(x => x.NumberOfEmployees)
@@ -86,7 +92,7 @@ public class CreateCustomerRequestValidator : Validator<CreateCustomerRequest>
 
         RuleFor(x => x.OpenedOn)
             .NotEmpty().WithMessage("Opened On date is required.")
-            .LessThanOrEqualTo(DateTime.Today.AddDays(1))
+            .LessThanOrEqualTo(_ => localMidnight(1))
             .WithMessage("Opened On date cannot be in the future.");
 
         // ── Address ─────────────────────────────────────────────────────

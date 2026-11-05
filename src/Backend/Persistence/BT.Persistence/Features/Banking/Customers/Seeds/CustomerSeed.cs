@@ -6,7 +6,7 @@ using System.Text;
 namespace BT.Persistence.Features.Banking.Customers.Seeds;
 
 /// <summary>
-/// Provides deterministic seed data for the <see cref="BT.Domain.Features.Banking.Customers.Entities.Customer"/> aggregate
+/// Provides deterministic seed data for the <see cref="Customer"/> aggregate
 /// and all its owned entities (<see cref="CorporateDetail"/>, <see cref="Address"/>,
 /// <see cref="CommunicationPreference"/>).
 /// </summary>
@@ -180,7 +180,7 @@ public static class CustomerSeed
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Returns the 150 <see cref="BT.Domain.Features.Banking.Customers.Entities.Customer"/> root records as anonymous objects
+    /// Returns the 150 <see cref="Customer"/> root records as anonymous objects
     /// for use with <c>entity.HasData(...)</c> inside
     /// <c>IEntityTypeConfiguration&lt;Customer&gt;</c>.
     /// </summary>
@@ -201,7 +201,7 @@ public static class CustomerSeed
             return (object)new
             {
                 Id = CustomerIds[i],
-                Number = $"CUS-{(i + 1):D4}",
+                Number = $"CUS-{i + 1:D4}",
                 Name = $"{CompanyNames[i % CompanyNames.Length]} {GetSuffix(seg.Type)}",
                 Type = seg.Type,
                 SegmentType = seg.Segment,
@@ -247,7 +247,7 @@ public static class CustomerSeed
                 LineOfBusinessMoreInfo = (string?)null,
                 NatureOfBusiness = nature,
                 IdentificationType = IdTypes[i % IdTypes.Length],
-                RegistrationNumber = $"CPR/{(i + 1):D6}/{regYear}",
+                RegistrationNumber = $"CPR/{i + 1:D6}/{regYear}",
                 DateOfRegistration = regDate,
                 RegisteredAt = "Companies Registry, Nairobi",
                 RegisteredOffice = $"{CompanyNames[i % CompanyNames.Length]} House, {Streets[i % Streets.Length]}",
@@ -258,7 +258,7 @@ public static class CustomerSeed
                 .Replace(" ", "", StringComparison.Ordinal)
                 .Replace("&", "and", StringComparison.Ordinal)}.co.ke",
 
-                TINNumber = $"P0{(51234560 + i):D8}Y",
+                TINNumber = $"P0{51234560 + i:D8}Y",
                 Classification = GetClassification(i),
             };
         });
@@ -284,10 +284,10 @@ public static class CustomerSeed
             Ward = Wards[i % Wards.Length],
             District = Districts[i % Districts.Length],
             Street = Streets[i % Streets.Length],
-            ZipCode = $"{(00100 + (i % 100)):D5}",
+            ZipCode = $"{00100 + (i % 100):D5}",
             PhoneHome = (string?)null,
-            PhoneWork = $"+254 20 {(2000000 + i * 3):D7}",
-            Mobile = $"+254 7{(10000000 + i * 7):D8}",
+            PhoneWork = $"+254 20 {2000000 + i * 3:D7}",
+            Mobile = $"+254 7{10000000 + i * 7:D8}",
             FaxNo = (string?)null,
             LandMark = $"Near {Streets[(i + 1) % Streets.Length]}",
             EmailId = $"info@{CompanyNames[i % CompanyNames.Length].ToUpperInvariant()

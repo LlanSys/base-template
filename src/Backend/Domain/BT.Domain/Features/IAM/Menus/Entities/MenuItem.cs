@@ -3,10 +3,11 @@ using BT.Domain.Shared.Entities;
 
 namespace BT.Domain.Features.IAM.Menus.Entities;
 
-public sealed class MenuItem : BaseEntity, ISoftDeletable
+public sealed class MenuItem : BaseEntity, ISoftDeletable, IPlatformCatalogEntity
 {
     public Guid? ParentId { get; private set; }
     public Guid? DepartmentId { get; private set; }
+    public Guid? AvailableTenantId { get; set; }
     public string Key { get; private set; } = string.Empty;
     public string Title { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
@@ -66,6 +67,7 @@ public sealed class MenuItem : BaseEntity, ISoftDeletable
     }
 
     public void Update(
+        DateTimeOffset now,
         Guid? parentId,
         Guid? departmentId,
         string key,
@@ -100,18 +102,18 @@ public sealed class MenuItem : BaseEntity, ISoftDeletable
         RequiredModule = NormalizeOptional(requiredModule);
         DisplayOrder = displayOrder;
         IsActive = isActive;
-        SetUpdatedInfo(updatedBy);
+        SetUpdatedInfo(now, updatedBy);
     }
 
-    public void MarkAsDeleted(string deletedBy)
+    public void MarkAsDeleted(string deletedBy, DateTimeOffset now)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(deletedBy);
 
         IsDeleted = true;
         IsActive = false;
-        DeletedAt = DateTimeOffset.UtcNow;
+        DeletedAt = now;
         DeletedBy = deletedBy.Trim();
-        SetUpdatedInfo(deletedBy);
+        SetUpdatedInfo(now, deletedBy);
     }
 
     private static string NormalizeKey(string value)

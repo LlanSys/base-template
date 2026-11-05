@@ -32,6 +32,7 @@ public class NullableEnumConverter<T> : JsonConverter<T?> where T : struct, Enum
 
             // Try with underscores replaced with spaces
             var normalizedValue = stringValue.Replace("_", " ");
+
             if (Enum.TryParse<T>(normalizedValue, true, out var normalizedResult))
             {
                 return normalizedResult;
@@ -39,6 +40,7 @@ public class NullableEnumConverter<T> : JsonConverter<T?> where T : struct, Enum
 
             // Try with spaces replaced with underscores
             var underscoreValue = stringValue.Replace(" ", "_");
+
             if (Enum.TryParse<T>(underscoreValue, true, out var underscoreResult))
             {
                 return underscoreResult;
@@ -52,6 +54,7 @@ public class NullableEnumConverter<T> : JsonConverter<T?> where T : struct, Enum
         if (reader.TokenType == JsonTokenType.Number)
         {
             var numValue = reader.GetInt32();
+
             if (Enum.IsDefined(typeof(T), numValue))
             {
                 return (T)Enum.ToObject(typeof(T), numValue);

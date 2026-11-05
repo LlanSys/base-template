@@ -9,10 +9,18 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: ${APP_SQL_CONNECTION_STRING:?Set APP_SQL_CONNECTION_STRING in ops/local/.env}
       JwtSettings__SecretKey: ${APP_JWT_SECRET:?Set APP_JWT_SECRET in ops/local/.env}
+      MediatR__LicenseKey: ${APP_MEDIATR_LICENSE_KEY:-}
+      GoogleSso__Enabled: ${APP_GOOGLE_SSO_ENABLED:-false}
+      GoogleSso__ClientId: ${APP_GOOGLE_SSO_CLIENT_ID:-}
+      GoogleSso__ClientSecret: ${APP_GOOGLE_SSO_CLIENT_SECRET:-}
+      EntraId__Enabled: ${APP_ENTRA_SSO_ENABLED:-false}
+      EntraId__TenantId: ${APP_ENTRA_SSO_TENANT_ID:-}
+      EntraId__ClientId: ${APP_ENTRA_SSO_CLIENT_ID:-}
+      EntraId__ClientSecret: ${APP_ENTRA_SSO_CLIENT_SECRET:-}
       IamProvisioning__TemporaryPassword: ${APP_IAM_TEMPORARY_PASSWORD:?Set APP_IAM_TEMPORARY_PASSWORD in ops/local/.env}
       IamProvisioning__SignInUrl: http://localhost:${APP_BLAZOR_HOST_PORT:-8081}/iam/sign-in
       BackgroundJobs__Enabled: "true"
-      Messaging__Enabled: "true"
+      Messaging__Enabled: ${APP_MESSAGING_ENABLED:-true}
       Messaging__Transport: RabbitMq
       Messaging__RabbitMq__Host: rabbitmq
       Messaging__RabbitMq__VirtualHost: /
@@ -57,6 +65,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       BackendApi__BaseUrl: http://api:8080/
+      BackendApi__PublicBaseUrl: http://localhost:${APP_API_HOST_PORT:-8080}/
       SessionLifecycle__SignInPath: /iam/sign-in
       DataProtection__ApplicationName: BaseTemplate
       DataProtection__KeysPath: /var/basetemplate/dataprotection

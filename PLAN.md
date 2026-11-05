@@ -1,6 +1,6 @@
 # Base Template - Living Architecture And Delivery Plan
 
-> Last updated: 2026-07-03
+> Last updated: 2026-11-05
 >
 > This file is the canonical roadmap for the BaseTemplate solution.
 > It defines the architectural guardrails, execution order, and production-hardening specifications.
@@ -10,14 +10,18 @@
 
 ## 1. Purpose
 
-BaseTemplate is a reusable enterprise .NET solution template for building production-grade systems quickly, designed with a **Production-First Mindset** from the get-go.
+The 2026-11-05 web frontend consolidation and release-preparation status are recorded in [release readiness](docs/development/release-readiness.md). Review/commits, target-specific permission decisions, remaining analyzer warnings, and production validation are still open.
+
+The shared [code conventions](docs/development/configuration-code-conventions.md) now require imported type names and injected TimeProvider clocks for new or changed runtime flows. BaseTemplate now uses injected clocks across runtime IAM, onboarding, domain transitions, audit stamping, payments, and calendar rules. The [parity checklist](docs/architecture/invitation-acceptance-and-starter-parity.md) tracks separate StarterTemplate adoption.
+
+BaseTemplate is the domain-rich enterprise .NET reference application. StarterTemplate is the neutral default for downstream applications. Both retain mandatory KYC and platform IAM. Complete the BaseTemplate invitation/SSO workflow first, then carry the verified design into StarterTemplate without copying Banking/HR dependencies or migration history.
 
 The solution is structured as a **Logical Modular Monolith**:
 - **Single Deployable Unit:** Simplifies deployment, operations, and hosting costs while the domain is evolving.
 - **Bounded Contexts:** Clear separation of concerns (IAM, Workforce, Banking, Shared) with separate database schemas and DbContexts to prevent cross-context table joins.
 - **Clean Architecture:** Strict inward-pointing dependency directions (Domain & SharedKernel -> Application -> Infrastructure & Persistence -> API & UI Hosts).
 - **Vertical Slice Structure:** Cross-layer feature folders to maximize readability and reduce code scatteredness.
-- **Client Decoupling:** Both Blazor Web and MAUI Hybrid serve as clean HTTP API clients, ensuring the web host requires zero database connectivity or secrets.
+- **Client Decoupling:** Blazor Web serves as a clean HTTP API client, ensuring the web host requires zero database connectivity or secrets.
 
 ---
 
@@ -41,29 +45,13 @@ BaseTemplate is a SaaS-ready template, not a single-client application template.
 
 This means configuration, Key Vault, database, storage, cache, messaging, and CI/CD decisions must follow the selected stamp model. See `docs/architecture/saas-multitenancy-strategy.md`.
 
-```
-┌────────────────────────────────────────────────────────┐
-│                      BT.UI.Rcl                         │ (Shared Razor Components)
-└───────────┬────────────────────────────────┬───────────┘
-            │ (HTTP REST)                    │ (HTTP REST)
-┌───────────▼───────────┐        ┌───────────▼───────────┐
-│     BT.UI.Blazor      │        │      BT.UI.Maui       │ (UI Hosts)
-└───────────┬───────────┘        └───────────┬───────────┘
-            └────────────────┬───────────────┘
-                             │ (JSON over HTTP)
-                    ┌────────▼────────┐
-                    │     BT.Api      │ (Host Controller Gateway)
-                    └────────┬────────┘
-        ┌────────────────────┼────────────────────┐
-┌───────▼───────┐    ┌───────▼───────┐    ┌───────▼───────┐
-│BT.Infrastructure│  │BT.Persistence │    │BT.Application │ (Infrastructure / Data / Logic)
-└───────┬───────┘    └───────┬───────┘    └───────┬───────┘
-        │                    │                    │
-        └────────────────────┼────────────────────┘
-                             ▼
-                     ┌───────────────┐
-                     │   BT.Domain   │ (Core Entities & Business Rules)
-                     └───────────────┘
+```text
+BT.UI.Blazor (presentation contracts and typed HTTP clients)
+    -> BT.Api (HTTP boundary)
+    -> Application / Domain (business policy)
+    -> Infrastructure / Persistence (adapters)
+
+BT.SharedKernel supplies transport contracts to API and UI.
 ```
 
 ### 2.3 Bounded Context Guardrails
@@ -87,9 +75,13 @@ Every public top-level type must live in its own file named after that type. Thi
 ## 3. Current State
 
 ### 3.1 Architecture Work Completed
+- **Explicit administrator onboarding (2026-11-05):** Added expiring, hashed, one-time invitation acceptance; welcome UI; restricted, resumable MFA setup; final administrator assignment; resend/revoke controls; and distinct delivery/setup statuses. Added optional Google OIDC alongside Microsoft, explicit existing-account connection, protected central callback state, and database-backed one-time exchange codes. KYC remains mandatory. Separate IAM and Control Plane migrations exist for SQL Server/PostgreSQL. See [onboarding and StarterTemplate parity](docs/architecture/invitation-acceptance-and-starter-parity.md) for verification and the required StarterTemplate backlog.
+- **Administration closure (2026-11-04):** Implemented granular vendor permissions and native page guards, shipped/in-use permission retirement protection, complete module activation readiness, durable initial-administrator onboarding with retries, Tenant/Menu/Role relationship tabs, and operational dashboard aggregates. Removed the remaining Blazor web Counter/Weather samples. Generated separate IAM and Control Plane migrations for SQL Server and PostgreSQL. The retired broad Control Plane key and its grants are removed by provider-specific IAM upgrade migrations. Vendor operations require explicit granular assignments. Local browser/email checks were subsequently completed, followed by the explicit acceptance and Google work on 2026-11-05. See [SaaS administration](docs/architecture/saas-administration.md) for exact verification boundaries and production gates.
+- **Vendor and tenant administration:** Recovered the interrupted redesign on `codex/saas-administration`. The implementation separates platform identities and tenant roles, protects default role definitions, derives effective permissions from current database state on every API request, and enforces module availability and expiration. Vendor-approved permission delegation is independent of permission ownership. The shared codebase remains mandatory for tenant-specific capabilities.
+- **Administration UI and organization preferences:** Vendor module/access/menu management, tenant users/access and predefined organization settings, audit records, compact tables, and soft-delete flows are implemented. Admin Center stays at the bottom of tenant navigation; profile controls live in the top bar. Current-user refresh updates native Blazor authorization and navigation. See [SaaS administration](docs/architecture/saas-administration.md) for contracts, upgrade checks, and validation limits.
 - **Decoupled Frontend:** Blazor Web App (`BT.UI.Blazor`) restructured as a pure API consumer over HTTP (removes database dependencies, secrets, and MediatR references from the Web UI project).
 - **Multi-Context Persistence:** Separate DbContexts (`IamDBContext`, `HrDBContext`, `BankingDBContext`, and `SharedDBContext`) created.
-- **Shared Kernel & Validation:** Created `BT.SharedKernel` (DTOs) and `BT.SharedKernel.Validation` (Validators) to share validation logic between client-side Blazor/MAUI and backend MediatR behaviors.
+- **Shared Kernel & Validation:** Created `BT.SharedKernel` (DTOs) and `BT.SharedKernel.Validation` (Validators) to share validation logic between the Blazor client and backend MediatR behaviors.
 - **IAM/Auth Enterprise Baseline:** Auth endpoints expose login, refresh, logout, current-user, permission-based authorization, server-side session tracking, sliding refresh token rotation, MFA enrollment/disable, trusted-device support, inactivity warning/logout, and profile-picture upload through a storage abstraction.
 - **Audit Actor Stamping:** Persistence audit fields use the current actor provider where available and fall back to `System` only for background/startup work.
 - **Profile Image Storage:** User profile pictures are supported through `IProfilePictureStorage`; local development stores files under API static assets, while Azure Blob/Azurite providers are available behind the same abstraction for cloud and local-platform hardening.
@@ -225,7 +217,7 @@ EventIds are structured by architectural layer to simplify searching in logs:
 ### Phase 5 - Template Extensibility
 *Goal: complete reusable extension points without adding product-specific SACCO/domain features to the template.*
 - [x] **Dynamic Permissions-Based Menus:** Implement backend menu/module API that constructs the UI layout based on user permissions, roles, and active feature flags.
-- [x] **MudBlazor UI Shell:** Implement responsive theme, layouts, and auth pages in the Shared Razor Class Library (RCL).
+- [x] **MudBlazor UI Shell:** Implement responsive theme, layouts, and auth pages in the Blazor Web host.
 - [x] **Feature Flags:** Generic fail-closed feature-flag abstraction is registered with configuration-backed evaluation.
 - [x] **SignalR Baseline:** Authenticated notification hub structure and tenant grouping convention are registered.
 - [x] **Reporting Baseline:** QuestPDF reporting abstraction is registered without product-specific reports.
@@ -258,4 +250,6 @@ EventIds are structured by architectural layer to simplify searching in logs:
 
 ## StarterTemplate direction approved 2026-10-06
 
-The user selected a new StarterTemplate repository, preserving BaseTemplate as the business-domain reference. The implementation inventory and phase gates are in [domain-neutral-refactor-plan.md](docs/architecture/domain-neutral-refactor-plan.md). Customer-reference gates below describe the existing reference application; they must not require Banking/HR retention in StarterTemplate. Preserve the current architecture and platform infrastructure. Create the new repository from a reviewed baseline before performing business removal.
+StarterTemplate is the existing neutral default for downstream applications. BaseTemplate remains a reference for business-domain implementations, including membership/employment relationships; its Banking/HR features are not requirements for StarterTemplate. StarterTemplate has revised several of these designs, so assess its current owning implementation before transferring an idea. Keep repository changes separate until the next repository strategy discussion.
+
+BaseTemplate's administration follow-up now includes an explicit atomic fresh-database initializer and separate existing-database upgrade tooling; see [database initialization](docs/development/database-initialization.md). Local browser/email certification uses the existing `cg-basetemplate` Compose group and retains its volumes.

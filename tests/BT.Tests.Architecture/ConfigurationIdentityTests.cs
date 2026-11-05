@@ -49,6 +49,7 @@ public sealed class ConfigurationIdentityTests
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AGENTS.md")))
         {
             directory = directory.Parent;

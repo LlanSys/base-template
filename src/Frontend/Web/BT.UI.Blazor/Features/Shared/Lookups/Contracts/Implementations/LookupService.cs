@@ -3,7 +3,7 @@ using BT.SharedKernel.Features.Shared.Lookups.Dtos;
 using BT.UI.Blazor.Configuration;
 using BT.UI.Blazor.Features.Shared.BackendApi;
 using BT.UI.Blazor.Features.Shared.BackendApi.Contracts.Interfaces;
-using BT.UI.Rcl.Features.Shared.Lookups.Contracts.Interfaces;
+using BT.UI.Blazor.Features.Shared.Lookups.Contracts.Interfaces;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 

@@ -12,4 +12,6 @@ public record GetDeploymentStampByIdQuery(Guid Id) : IRequest<AppResponse<Deploy
     public string Discriminator => Id.ToString();
     public string? CacheUserId => null;
     public bool IsVersioned => false;
+
+    public bool BypassCache => true;
 }

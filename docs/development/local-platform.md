@@ -98,13 +98,18 @@ The app deployment overlay:
 - Builds `BT.Api` from `ops/docker/api.Dockerfile`.
 - Builds `BT.UI.Blazor` from `ops/docker/blazor.Dockerfile`.
 - Uses RabbitMQ, Redis, Mailpit, and Azurite through Docker service names.
+- Runs messaging with MassTransit 8.5.12, pinned across the API, Infrastructure, Persistence, and integration-test projects. This is the Apache-licensed 8.x line and does not require a MassTransit 9 license key. Messaging defaults to enabled; `APP_MESSAGING_ENABLED=false` is an explicit diagnostic choice, not a licensing workaround. The platform setup script applies the same switch to Visual Studio's local user-secrets.
 - Sets `DevelopmentSeed:ResetExistingAdminPassword=true` for app containers so stale local Identity password hashes and lockouts can be recovered predictably during Docker smoke tests.
 - Stores ASP.NET Core Data Protection keys in Redis using `DataProtection:KeyEncryptionMode=None` for local-only development.
 - Keeps Azure Blob, Key Vault, Service Bus, and provider production settings untouched.
 
-If the local Redis volume/key ring is deleted after an authenticator app has been enrolled, previously encrypted TOTP secrets cannot be decrypted. The API treats this as a stale local security artifact: it logs the key-ring failure, disables the stale authenticator enrollment, and asks the user to sign in again and set up the authenticator app. This does not change Visual Studio or cloud behavior; it only protects the local app-deployment flow from exposing Data Protection internals.
+Visual Studio and Docker must share a Data Protection ring when they use the same application database. Windows' original filesystem ring is under `%LOCALAPPDATA%/BTApi/DataProtection-Keys`, while the app containers use Redis key `BaseTemplate-DataProtection-Keys`. An authenticator enrolled with one ring cannot be decrypted by the other. The API fails closed and keeps MFA enabled when its key is unavailable; retrying codes cannot repair a missing key.
 
-If an authenticator enrollment is reset this way, delete the old BaseTemplate account entry from Microsoft Authenticator/Google Authenticator/1Password and scan the new QR code. Old 6-digit codes are tied to the old secret and will remain invalid.
+API key storage is selected at startup: external storage with a non-empty `BlobKeyUri` selects Azure Blob; otherwise external storage with a Redis connection selects Redis; otherwise `KeysPath` or the default filesystem folder is used. There is no cross-store fallback when decryption or connectivity fails. Windows filesystem keys are protected for the Windows user with DPAPI; a Linux container cannot read those keys automatically. Keep `DataProtection:ApplicationName` unchanged, and share both the ring and application name among API hosts using the same protected database values. Blazor's browser-storage protection uses its own persisted UI ring; bearer and refresh tokens are not stored in Redis.
+
+For a new local database, use `-UseSharedLocalKeyRing` with either setup script to configure Visual Studio to use Docker's existing Redis ring. This is an explicit opt-in because switching stores after protected data exists requires a continuity migration. It selects unencrypted-at-rest keys only in the established local development Redis configuration; deployed production key encryption is independent. Preserve the Redis data volume and the original Windows keys.
+
+For an existing Windows enrollment, the explicit `reprotect-local-authenticator` operation in [the database runbook](database-initialization.md#local-authenticator-continuity) can re-encrypt one account's saved secret for the current local Redis ring. It requires the original Windows user/keys and preserves the same authenticator enrollment and MFA requirement. Do not automatically reset an enrollment or copy a Windows master key to work around a missing ring. If the original keys are irrecoverable, use an explicitly approved account-recovery procedure.
 
 Local Identity lockout is enabled to match production behavior. Five failed password attempts lock the account for five minutes. During local testing, wait for the lockout window to expire or reset the local user row intentionally in the development database; do not keep retrying because each failed password attempt increments the Identity lockout counter.
 
@@ -134,6 +139,8 @@ The full app deployment is for deployability confidence and local smoke tests. F
 | Containerized Blazor | `http://localhost:8081` | Optional local deployment profile |
 
 ## Operations
+
+MassTransit version policy: retain the aligned 8.x pin unless an explicit replacement/licensing decision is approved. The vendor states that 8.x support ends on December 31, 2026; reassess the maintenance plan as part of StarterTemplate's downstream-platform strategy. See [Massient licensing FAQ](https://massient.com/) and [the pinned NuGet package](https://www.nuget.org/packages/MassTransit/8.5.12).
 
 ```powershell
 # Inspect service state.
@@ -175,7 +182,7 @@ The ordinary integration suite skips this external test when Docker credentials 
 
 ## Azure Deployment Dispatch
 
-The Azure deployment workflow remains committed but is manual-only. Normal backend, frontend, mobile, full-solution, and architecture CI remain independent of Azure deployment.
+The Azure deployment workflow remains committed but is manual-only. Normal backend, frontend, full-solution, and architecture CI remain independent of Azure deployment.
 
 1. Open **Actions > Deploy to Azure > Run workflow**.
 2. Select `app-service`, `aca-acr`, or `aca-ghcr` for `deployment_target`.
@@ -201,7 +208,15 @@ Development explicitly disables external Data Protection key storage and selects
 
 ## Messaging License Decision
 
-BaseTemplate pins MassTransit `8.5.10`, which targets .NET 10 and is published under Apache-2.0. MassTransit v9 is a commercial release and is not used by the reusable template. Revisit this decision deliberately if a future application purchases MassTransit v9 support and features.
+BaseTemplate pins MassTransit `8.5.12` under Apache-2.0. MassTransit v9 is a commercial release and is not used here. Revisit this decision deliberately if a future application purchases MassTransit v9 support and features.
+
+`PinMassTransit8Outbox` supplies separate SQL Server and PostgreSQL migrations. These add the v8 outbox lookup indexes and retain the existing `BusName` column/index as compatibility metadata, preserving queued messages. The application currently registers one bus. The outbox lock provider follows `DatabaseSettings:Provider`; unknown non-empty values fail startup rather than selecting incompatible SQL.
+
+MediatR is a separate dependency with a separate community key. Local application setup copies an existing API `MediatR:LicenseKey` from Windows user-secrets to the ignored `APP_MEDIATR_LICENSE_KEY` setting when absent. Compose supplies it at runtime; it is never embedded in an image. No MassTransit license setting is required for v8.
+
+Optional Microsoft/Google sign-in uses the same existing app group. Provider credentials are supplied through `APP_ENTRA_SSO_*` / `APP_GOOGLE_SSO_*`; application setup imports missing values from enabled API user-secret sections. The Blazor container uses `BackendApi:PublicBaseUrl=http://localhost:8080/` for browser OAuth navigation while ordinary API calls retain `http://api:8080/`. See [provider setup](google-and-microsoft-sso.md). Administrator invitation emails now use the dedicated welcome/acceptance page after mandatory KYC and provisioning; password recovery remains a separate user action.
+
+The profile-image readiness check requires the private `profile-images` container in the configured Azurite account. A new Azurite data volume has no blob containers; provision this container with anonymous access disabled using Azure Storage Explorer or Azure CLI against the loopback emulator. The normal profile-upload adapter also creates it on first use. This is a blob container inside the existing Azurite service, not another Docker container. The existing local account was initialized and both API liveness and readiness returned HTTP 200 on 2026-11-04.
 
 Seq first-run administrator credentials use `SEQ_PASSWORD` from the ignored local `.env`. The setup script generates this value when missing. Changing it does not reset credentials in an existing Seq data volume.
 

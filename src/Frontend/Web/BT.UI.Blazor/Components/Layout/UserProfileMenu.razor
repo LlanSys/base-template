@@ -1,37 +1,45 @@
 @rendermode InteractiveServer
+@implements IDisposable
 @inject IAuthSession AuthSession
 @inject NavigationManager Navigation
 @inject ILogger<UserProfileMenu> Logger
 
-<div class="sidebar-profile">
+<div class="topbar-profile">
     @if (AuthSession.IsAuthenticated)
     {
         <details class="profile-card">
-            <summary>
+            <summary aria-label="@($"Account menu for {DisplayName}")">
                 @if (ProfilePictureSource is not null)
                 {
-                    <MudAvatar Size="Size.Medium" Class="profile-avatar">
-                        <MudImage Src="@ProfilePictureSource" Alt="@Initials" />
+                    <MudAvatar Size="Size.Medium"
+                               Class="profile-avatar">
+                        <MudImage Src="@ProfilePictureSource"
+                                  Alt="@Initials" />
                     </MudAvatar>
                 }
                 else
                 {
-                    <MudAvatar Size="Size.Medium" Class="profile-avatar">@Initials</MudAvatar>
+                    <MudAvatar Size="Size.Medium"
+                               Class="profile-avatar">@Initials</MudAvatar>
                 }
                 <span class="profile-copy">
                     <strong>@DisplayName</strong>
                     <small>@PrimaryRole</small>
                 </span>
-                <MudIcon Icon="@Icons.Material.Filled.ExpandLess" Size="Size.Small" />
+                <MudIcon Icon="@Icons.Material.Filled.ExpandMore"
+                         Size="Size.Small" />
             </summary>
 
             <div class="profile-actions">
                 <a href="/profile">
-                    <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Size="Size.Small" />
+                    <MudIcon Icon="@Icons.Material.Filled.ManageAccounts"
+                             Size="Size.Small" />
                     Profile
                 </a>
-                <button type="button" @onclick="LogoutAsync">
-                    <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
+                <button type="button"
+                        @onclick="LogoutAsync">
+                    <MudIcon Icon="@Icons.Material.Filled.Logout"
+                             Size="Size.Small" />
                     Logout
                 </button>
             </div>
@@ -39,7 +47,8 @@
     }
     else
     {
-        <a class="profile-card sign-in-card" href="/iam/sign-in">
+        <a class="profile-card sign-in-card"
+           href="/iam/sign-in">
             <MudAvatar Size="Size.Medium">BT</MudAvatar>
             <div>
                 <strong>@ProfileFallbackTitle</strong>
@@ -50,6 +59,12 @@
 </div>
 
 @code {
+    protected override void OnInitialized() => AuthSession.Changed += OnSessionChangedAsync;
+
+    private Task OnSessionChangedAsync() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => AuthSession.Changed -= OnSessionChangedAsync;
+
     private string DisplayName
     {
         get

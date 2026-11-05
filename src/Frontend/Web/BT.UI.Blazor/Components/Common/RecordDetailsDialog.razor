@@ -1,0 +1,25 @@
+<MudDialog>
+    <DialogContent>
+        <MudTable Items="Fields"
+                  Dense="true"
+                  Elevation="0"
+                  Breakpoint="Breakpoint.None">
+            <HeaderContent>
+                <MudTh>Field</MudTh>
+                <MudTh>Value</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Key</MudTd>
+                <MudTd>@context.Value</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DialogContent>
+    <DialogActions>
+        <MudButton StartIcon="@Icons.Material.Filled.Close"
+                   OnClick="@(() => Dialog.Close())">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<KeyValuePair<string, string>> Fields { get; set; } = [];
+}

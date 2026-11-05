@@ -1,4 +1,4 @@
-﻿using BT.Domain.Shared.Contracts.Common;
+using BT.Domain.Shared.Contracts.Common;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -12,5 +12,5 @@ public sealed record EmployeeCreatedIntegrationEvent(
     string Email,
     string Type) : IIntegrationEvent
 {
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; }
 }

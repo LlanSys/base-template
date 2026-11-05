@@ -45,6 +45,17 @@ internal sealed class MfaEnrollmentMiddleware(
 
     private async Task<bool> RequiresEnrollmentGateAsync(HttpContext context, UserManager<AppUser> userManager)
     {
+        if (context.User.HasClaim("temp_auth", "true"))
+            return !string.Equals(context.Request.Path.Value, "/api/v1/iam/users/totp/verify", StringComparison.OrdinalIgnoreCase);
+
+        if (context.User.Identity?.IsAuthenticated == true)
+        {
+            var current = await userManager.FindByIdAsync(context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty).ConfigureAwait(false);
+
+            if (current?.RequiresOnboarding == true)
+                return !ShouldSkip(context.Request.Path) && !string.Equals(context.Request.Path.Value, "/api/v1/iam/auth/onboarding/complete", StringComparison.OrdinalIgnoreCase);
+        }
+
         if (!_mfaSettings.Enabled || !_mfaSettings.EnforceEnrollment)
         {
             return false;
@@ -60,18 +71,23 @@ internal sealed class MfaEnrollmentMiddleware(
             .Select(static claim => claim.Value)
             .Any(role => _mfaSettings.RequiredRoles.Contains(role, StringComparer.OrdinalIgnoreCase));
 
-        if (!roleRequiresMfa)
+        var permissionRequiresMfa = context.User.Claims.Any(claim => claim.Type == "permission"
+            && BT.SharedKernel.Features.ControlPlane.Modules.ModuleCatalog.IsAdministrativePermission(claim.Value));
+
+        if (!roleRequiresMfa && !permissionRequiresMfa)
         {
             return false;
         }
 
         var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
         if (string.IsNullOrWhiteSpace(userId))
         {
             return false;
         }
 
         var user = await userManager.FindByIdAsync(userId).ConfigureAwait(false);
+
         if (user is null)
         {
             return true;

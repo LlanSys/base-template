@@ -1,85 +1,74 @@
 using BT.Domain.Shared.Contracts.Common;
-using BT.Persistence.Features.Banking.DataContext;
-using BT.Persistence.Features.ControlPlane.DataContext;
-using BT.Persistence.Features.HR.DataContext;
-using BT.Persistence.Features.IAM.DataContext;
 using BT.Persistence.Features.Shared.DataContext;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
-
-using Xunit;
 
 namespace BT.Tests.Architecture.Database;
 
 [Trait("Category", "Guardrail")]
 public class MigrationGuardrailTests
 {
-    [Fact]
-    public void IamSqlServer_ShouldNotHavePendingModelChanges()
+    private const string ContextSuffix = "DBContext";
+    private const string SqlServer = "SqlServer";
+    private const string PostgreSql = "PostgreSql";
+
+    public static TheoryData<Type, string> ProviderContexts()
     {
-        AssertNoPendingModelChanges<IamSqlServerDBContext>(options => options.UseSqlServer("Server=.;Database=dummy;Integrated Security=true"));
+        var cases = new TheoryData<Type, string>();
+        var contextTypes = typeof(SharedDBContext).Assembly.GetTypes()
+            .Where(type => !type.ContainsGenericParameters
+                && type.IsSubclassOf(typeof(DbContext))
+                && !type.Name.EndsWith(SqlServer + ContextSuffix, StringComparison.Ordinal)
+                && !type.Name.EndsWith(PostgreSql + ContextSuffix, StringComparison.Ordinal))
+            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+
+        foreach (var contextType in contextTypes)
+        {
+            cases.Add(contextType, SqlServer);
+            cases.Add(contextType, PostgreSql);
+        }
+
+        return cases;
     }
 
-    [Fact]
-    public void IamPostgreSql_ShouldNotHavePendingModelChanges()
+    [Theory]
+    [MemberData(nameof(ProviderContexts))]
+    public void ProviderContext_ShouldHaveCurrentMigrations(Type baseContextType, string providerName)
     {
-        AssertNoPendingModelChanges<IamPostgreSqlDBContext>(options => options.UseNpgsql("Host=localhost;Database=dummy;Username=postgres;Password=postgres"));
-    }
+        ArgumentNullException.ThrowIfNull(baseContextType);
+        Assert.EndsWith(ContextSuffix, baseContextType.Name, StringComparison.Ordinal);
+        var expectedName = baseContextType.Name[..^ContextSuffix.Length] + providerName + ContextSuffix;
+        var contextType = baseContextType.Assembly.GetType(baseContextType.Namespace + "." + expectedName);
 
-    [Fact]
-    public void SharedSqlServer_ShouldNotHavePendingModelChanges()
-    {
-        AssertNoPendingModelChanges<SharedSqlServerDBContext>(options => options.UseSqlServer("Server=.;Database=dummy;Integrated Security=true"));
-    }
+        Assert.True(contextType is { IsAbstract: false } && contextType.IsSubclassOf(baseContextType),
+            $"Add the concrete {expectedName} for {baseContextType.Name}.");
 
-    [Fact]
-    public void SharedPostgreSql_ShouldNotHavePendingModelChanges()
-    {
-        AssertNoPendingModelChanges<SharedPostgreSqlDBContext>(options => options.UseNpgsql("Host=localhost;Database=dummy;Username=postgres;Password=postgres"));
-    }
+        var builderType = typeof(DbContextOptionsBuilder<>).MakeGenericType(contextType);
+        var options = (DbContextOptionsBuilder)Activator.CreateInstance(builderType)!;
+        if (providerName == SqlServer)
+        {
+            options.UseSqlServer("Server=.;Database=dummy;Integrated Security=true");
+        }
+        else
+        {
+            options.UseNpgsql("Host=localhost;Database=dummy;Username=postgres;Password=postgres");
+        }
 
-    [Fact]
-    public void HrSqlServer_ShouldNotHavePendingModelChanges()
-    {
-        AssertNoPendingModelChanges<HrSqlServerDBContext>(options => options.UseSqlServer("Server=.;Database=dummy;Integrated Security=true"));
-    }
-
-    [Fact]
-    public void HrPostgreSql_ShouldNotHavePendingModelChanges()
-    {
-        AssertNoPendingModelChanges<HrPostgreSqlDBContext>(options => options.UseNpgsql("Host=localhost;Database=dummy;Username=postgres;Password=postgres"));
-    }
-
-    [Fact]
-    public void ControlPlaneSqlServer_ShouldNotHavePendingModelChanges()
-    {
-        AssertNoPendingModelChanges<ControlPlaneSqlServerDBContext>(options => options.UseSqlServer("Server=.;Database=dummy;Integrated Security=true"));
-    }
-
-    [Fact]
-    public void ControlPlanePostgreSql_ShouldNotHavePendingModelChanges()
-    {
-        AssertNoPendingModelChanges<ControlPlanePostgreSqlDBContext>(options => options.UseNpgsql("Host=localhost;Database=dummy;Username=postgres;Password=postgres"));
-    }
-
-    private static void AssertNoPendingModelChanges<TContext>(Action<DbContextOptionsBuilder> configureOptions) where TContext : DbContext
-    {
         var services = new ServiceCollection();
-        services.AddDbContext<TContext>(configureOptions);
-
-        // Register mock providers to satisfy constructor dependencies for various DbContexts
         services.AddScoped<ICurrentTenantProvider, DummyTenantProvider>();
         services.AddScoped<ICurrentActorProvider, DummyActorProvider>();
-        // Add a generic logger just in case
         services.AddLogging();
 
-        using var provider = services.BuildServiceProvider();
-        using var context = provider.GetRequiredService<TContext>();
-
-        bool hasPendingChanges = context.Database.HasPendingModelChanges();
-
-        Assert.False(hasPendingChanges, $"The model for {typeof(TContext).Name} has changed since the last migration. Please run 'dotnet ef migrations add' to generate a new migration.");
+        using var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+        using var context = (DbContext)ActivatorUtilities.CreateInstance(scope.ServiceProvider, contextType, options.Options);
+        Assert.True(context.Database.GetMigrations().Any() && context.GetService<IMigrationsAssembly>().ModelSnapshot is not null,
+            $"Create an initial migration and snapshot for {expectedName}.");
+        Assert.False(context.Database.HasPendingModelChanges(),
+            $"The model for {expectedName} differs from its snapshot. Run 'dotnet ef migrations add' for this context.");
     }
 
     private sealed class DummyTenantProvider : ICurrentTenantProvider
@@ -92,5 +81,3 @@ public class MigrationGuardrailTests
         public string ActorId => "System";
     }
 }
-
-

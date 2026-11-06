@@ -14,7 +14,7 @@ BaseTemplate supports multiple database providers simultaneously (e.g., SQL Serv
 
 ## How to generate a Migration
 
-Whenever you add a new property, column, class, or make any schema changes, you **must run a migration for EVERY supported provider**.
+When an EF model change affects the schema or managed seed data, scaffold and review a named migration for each supported provider. Query and service changes can use the existing schema. Apply the reviewed migrations locally with the [local database workflow](database-initialization.md#local-database-workflow).
 
 Use the following commands from the repository root:
 

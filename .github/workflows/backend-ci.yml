@@ -9,6 +9,11 @@ on:
       - "src/Shared/**"
       - "tests/BT.Tests.Unit/**"
       - "tests/BT.Tests.Integration/**"
+      - "tests/BT.Tests.Architecture/**"
+      - "tools/BT.DatabaseTools/**"
+      - "Directory.Build.props"
+      - "Directory.Build.targets"
+      - "global.json"
       - ".github/workflows/backend-ci.yml"
   push:
     branches: [main]
@@ -17,6 +22,11 @@ on:
       - "src/Shared/**"
       - "tests/BT.Tests.Unit/**"
       - "tests/BT.Tests.Integration/**"
+      - "tests/BT.Tests.Architecture/**"
+      - "tools/BT.DatabaseTools/**"
+      - "Directory.Build.props"
+      - "Directory.Build.targets"
+      - "global.json"
       - ".github/workflows/backend-ci.yml"
 
 permissions:
@@ -49,6 +59,9 @@ jobs:
 
       - name: Build API
         run: dotnet build src/Backend/Api/BT.Api/BT.Api.csproj --configuration Release --no-restore
+
+      - name: Check EF migration snapshots
+        run: dotnet test tests/BT.Tests.Architecture/BT.Tests.Architecture.csproj --configuration Release --filter FullyQualifiedName~MigrationGuardrailTests --logger trx
 
       - name: Run unit tests
         run: dotnet test tests/BT.Tests.Unit/BT.Tests.Unit.csproj --configuration Release --no-restore --logger trx

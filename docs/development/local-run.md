@@ -50,16 +50,15 @@ Server=.\SQLEXPRESS;Database=BT;Trusted_Connection=True;TrustServerCertificate=T
 
 ## Apply Local Database Schema
 
-Run the EF migrations once after setting the connection string:
+Enable the [post-merge hook](database-initialization.md#automatic-local-updates-after-pulling-main) for automatic updates when pulling main. Use the script directly when adding migrations on a feature branch or retrying a failed update. Apply pending migrations before starting the application.
 
 ```powershell
-dotnet ef database update --context IamDBContext --project src\Backend\Persistence\BT.Persistence\BT.Persistence.csproj --startup-project src\Backend\Api\BT.Api\BT.Api.csproj
-dotnet ef database update --context HrDBContext --project src\Backend\Persistence\BT.Persistence\BT.Persistence.csproj --startup-project src\Backend\Api\BT.Api\BT.Api.csproj
-dotnet ef database update --context SharedDBContext --project src\Backend\Persistence\BT.Persistence\BT.Persistence.csproj --startup-project src\Backend\Api\BT.Api\BT.Api.csproj
-dotnet ef database update --context BankingDBContext --project src\Backend\Persistence\BT.Persistence\BT.Persistence.csproj --startup-project src\Backend\Api\BT.Api\BT.Api.csproj
+./scripts/update-local-database.ps1
+./scripts/update-local-database.ps1 -Apply
+# PostgreSQL uses -Provider PostgreSql
 ```
 
-The bounded contexts share the same local database, but each context has its own migration history table.
+The workflow checks all five bounded-context histories in the configured local database. Use the explicit fresh initializer for a new database. See [Database initialization](database-initialization.md).
 
 ## Development Admin
 

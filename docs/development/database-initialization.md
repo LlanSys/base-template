@@ -17,6 +17,38 @@ Use `fresh` only for a new, explicitly named application database. It rejects sy
 
 BaseTemplate's early IAM migrations contain seed updates before the schema baseline; historical PostgreSQL scheduler SQL also contains an invalid reset preamble. For that reason, new installations use this explicit current-model baseline instead of replaying every historical migration from zero. Previously applied migration files and identities remain intact for existing databases. Future migrations apply normally after initialization. Do not use `EnsureCreated` for application setup or manually insert history rows.
 
+## Local database workflow
+
+From the repository root, run the PowerShell command after pulling a branch or scaffolding migrations.
+
+```powershell
+./scripts/update-local-database.ps1
+./scripts/update-local-database.ps1 -Apply
+./scripts/update-local-database.ps1 -Provider PostgreSql
+```
+
+The default command shows the local target and lists pending migration IDs without changing the database. `-Apply` applies the pending migrations and checks the histories again. It checks the snapshots and existing history for all five contexts before any migration runs. A gap in the current migration chain, a newer applied migration outside the checkout, or an unscaffolded model change blocks the update. Older history entries can coexist with a complete applied prefix of the current chain. Create named migrations for SQL Server and PostgreSQL using the [scaffolding workflow](database-migrations.md).
+
+The script uses the API's Development `ConnectionStrings:DefaultConnection` with its user secrets and process overrides. It requires a single local application database shared by the five contexts. Set `BT_DATABASE_CONNECTION` in the current process to select an explicit local database. For Compose SQL Server, use the host-side connection to the existing BaseTemplate group, for example `localhost,14333` with the default published port. The loopback check applies to either configuration source. Keep valuable local data backed up before applying changes and run the command before starting the app.
+
+## Automatic local updates after pulling main
+
+With Docker and the existing BaseTemplate database available, enable the Husky hook once from the repository root. The hook uses PowerShell 7 (`pwsh`).
+
+```powershell
+dotnet tool restore
+dotnet husky install
+git config --local basetemplate.localMigrations.enabled true
+```
+
+SQL Server is the default. PostgreSQL workstations can set `git config --local basetemplate.localMigrations.provider PostgreSql`. Disable automatic updates with `git config --local basetemplate.localMigrations.enabled false`.
+
+The hook runs after a successful non-squash merge, including a fast-forward `git pull --ff-only --no-rebase`, when the working tree has no tracked changes and local `main` matches `origin/main`. It uses the script's local connection and migration checks. Fetches, branch switches, rebases that replay commits, and pulls that are already up to date do not trigger this hook. Git has already updated the branch when the hook runs. If the database is offline or an upgrade fails, correct the issue and run the script once with `-Apply` and your provider.
+
+## Pull request database validation
+
+Backend CI discovers the bounded-context DBContext types in BT.Persistence. Each context must have SQL Server and PostgreSQL variants in the same namespace, each with an initial migration and a snapshot. EF compares the current models with the committed migration snapshots without opening a database connection. When the check reports a changed model, generate and commit the missing migration and updated snapshot for the reported provider and context. The local script and Azure deployment workflow apply committed migrations to their respective databases.
+
 ## Existing databases
 
 Back up the selected database and check `status` before upgrading. Then run:

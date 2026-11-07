@@ -1,5 +1,6 @@
 using BT.Application.Contracts.Interfaces.Common;
 using BT.Application.Utilities;
+using BT.Domain.Features.ControlPlane.Contracts;
 using BT.Domain.Features.IAM.Contracts;
 using BT.SharedKernel.Dtos.Common;
 using BT.SharedKernel.Features.IAM.ReferenceData.Dtos;
@@ -8,9 +9,10 @@ using Microsoft.Extensions.Logging;
 
 namespace BT.Application.Features.IAM.ReferenceData.Queries;
 
-
-
-internal sealed class GetIamReferenceDataQueryHandler(IIamUnitOfWork unitOfWork, ILogger<GetIamReferenceDataQueryHandler> logger)
+internal sealed class GetIamReferenceDataQueryHandler(
+    IIamUnitOfWork unitOfWork,
+    IControlPlaneUnitOfWork controlPlane,
+    ILogger<GetIamReferenceDataQueryHandler> logger)
     : IRequestHandler<GetIamReferenceDataQuery, AppResponse<IamReferenceDataResponse>>
 {
     public async Task<AppResponse<IamReferenceDataResponse>> Handle(GetIamReferenceDataQuery query, CancellationToken cancellationToken)
@@ -57,9 +59,8 @@ internal sealed class GetIamReferenceDataQueryHandler(IIamUnitOfWork unitOfWork,
             var icons = await unitOfWork.MenuIconRepository
                 .ListAsync(
                     items => items
-                        .Where(static item => item.IsActive)
                         .OrderBy(static item => item.Label)
-                        .Select(static item => new CatalogOptionResponse(item.Key, item.Label, item.Description)),
+                        .Select(static item => new CatalogOptionResponse(item.Key, item.Label, item.Description, null, item.IsActive)),
                     cancellationToken)
                 .ConfigureAwait(false);
 
@@ -73,7 +74,15 @@ internal sealed class GetIamReferenceDataQueryHandler(IIamUnitOfWork unitOfWork,
                     cancellationToken)
                 .ConfigureAwait(false);
 
-            var response = new IamReferenceDataResponse(contexts, resources, actions, placements, icons, routes);
+            var modules = await controlPlane.Modules
+                .ListAsync(
+                    items => items
+                        .OrderBy(static module => module.Name)
+                        .Select(static module => new CatalogOptionResponse(module.Key, module.Name)),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            var response = new IamReferenceDataResponse(contexts, resources, actions, placements, icons, routes, modules);
             return AppResponses.Success("IAM reference data loaded.", response);
         }
         catch (Exception ex)

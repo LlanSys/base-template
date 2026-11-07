@@ -1,6 +1,5 @@
 @inject IIamAdminService IamAdminService
 @inject ISnackbar Snackbar
-@inject IAuthSession AuthSession
 
 <MudDialog>
     <DialogContent>
@@ -9,25 +8,70 @@
             <MudProgressLinear Color="Color.Success"
                                Indeterminate="true" />
         }
-        else
+        else if (_loaded)
         {
             <MudStack Spacing="2">
                 <MudText Typo="Typo.body2">Select roles assigned to <strong>@DisplayName</strong>.</MudText>
-                <MudGrid Spacing="1">
-                    @foreach (var role in _availableRoles)
+                <div class="assignment-options">
+                    @foreach (var group in _availableRoles.GroupBy(static role => role.ModuleKey ?? "Core", StringComparer.OrdinalIgnoreCase).OrderBy(static group => group.Key, StringComparer.OrdinalIgnoreCase))
                     {
-                        <MudItem xs="12"
-                                 sm="6">
-                            <MudCheckBox T="bool"
-                                         Value="@IsSelected(role)"
-                                         ValueChanged="@((selected) => ToggleRole(role, selected))"
-                                         Color="Color.Success"
-                                         Dense="true"
-                                         Label="@role" />
-                        </MudItem>
+                        <fieldset class="assignment-group">
+                            <legend>@group.Key</legend>
+                            <div class="assignment-grid">
+                                @foreach (var role in group)
+                                {
+                                    <div class="assignment-option"
+                                         @key="role.Id">
+                                        <MudCheckBox T="bool"
+                                                     Value="@_selectedRoles.Contains(role.Name)"
+                                                     ValueChanged="@((selected) => ToggleRole(role.Name, selected))"
+                                                     Disabled="@(_isSaving || !CanToggle(role))"
+                                                     Color="Color.Success"
+                                                     Dense="true"
+                                                     Label="@role.Name" />
+                                        @if (!role.IsActive)
+                                        {
+                                            <small>Inactive</small>
+                                        }
+                                        else if (!CanToggle(role))
+                                        {
+                                            <small>Unavailable for this account</small>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </fieldset>
                     }
-                </MudGrid>
+                    @if (_missingRoles.Count > 0)
+                    {
+                        <fieldset class="assignment-group">
+                            <legend>Other Assigned Roles</legend>
+                            <div class="assignment-grid">
+                                @foreach (var role in _missingRoles)
+                                {
+                                    <MudCheckBox T="bool"
+                                                 Value="@_selectedRoles.Contains(role)"
+                                                 ValueChanged="@((selected) => ToggleRole(role, selected))"
+                                                 Disabled="@_isSaving"
+                                                 Color="Color.Success"
+                                                 Dense="true"
+                                                 Label="@role" />
+                                }
+                            </div>
+                        </fieldset>
+                    }
+                    @if (_availableRoles.Count == 0 && _missingRoles.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Info"
+                                  Dense="true">No roles are available in this scope.</MudAlert>
+                    }
+                </div>
             </MudStack>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Error"
+                      Dense="true">Assignments could not be loaded. Close this dialog and try again.</MudAlert>
         }
     </DialogContent>
     <DialogActions>
@@ -39,13 +83,16 @@
                    Variant="Variant.Filled"
                    Size="Size.Small"
                    Color="Color.Success"
-                   Disabled="@(_isLoading || _isSaving)"
+                   Disabled="@(!_loaded || _isSaving || _selectedRoles.SetEquals(_originalRoles))"
                    OnClick="SaveAsync">@(_isSaving ? "Saving..." : "Update")</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    private readonly List<string> _availableRoles = [];
+    private readonly List<UserRoleOption> _availableRoles = [];
+    private readonly List<string> _missingRoles = [];
+    private readonly HashSet<string> _originalRoles = new(StringComparer.OrdinalIgnoreCase);
+    private bool _loaded;
     private readonly HashSet<string> _selectedRoles = new(StringComparer.OrdinalIgnoreCase);
     private bool _isLoading = true;
     private bool _isSaving;
@@ -60,15 +107,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var rolesResponse = await IamAdminService.GetRolesAsync();
         var userRolesResponse = await IamAdminService.GetUserRolesAsync(User.Id);
-
-        if (!rolesResponse.IsSuccess || rolesResponse.Data is null)
-        {
-            Snackbar.Add(rolesResponse.Message ?? "We could not load roles.", Severity.Error);
-            _isLoading = false;
-            return;
-        }
 
         if (!userRolesResponse.IsSuccess || userRolesResponse.Data is null)
         {
@@ -77,18 +116,20 @@
             return;
         }
 
-        _availableRoles.AddRange(rolesResponse.Data.Where(role => role.IsActive && role.IsPlatformRole == (AuthSession.CurrentUser?.IsPlatformStaff == true)
-            && (role.ModuleKey is null || AuthSession.CurrentUser?.EnabledModules?.Contains(role.ModuleKey, StringComparer.OrdinalIgnoreCase) == true))
-            .Select(static role => role.Name).Order(StringComparer.OrdinalIgnoreCase));
-        foreach (var role in userRolesResponse.Data.Roles)
-        {
-            _selectedRoles.Add(role);
-        }
-
+        _originalRoles.UnionWith(userRolesResponse.Data.Roles);
+        _selectedRoles.UnionWith(_originalRoles);
+        _availableRoles.AddRange(userRolesResponse.Data.Options ?? []);
+        _missingRoles.AddRange(_originalRoles
+            .Except(_availableRoles.Select(static role => role.Name), StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase));
+        _loaded = true;
         _isLoading = false;
     }
 
-    private bool IsSelected(string role) => _selectedRoles.Contains(role);
+    private bool CanToggle(UserRoleOption role)
+    {
+        return _originalRoles.Contains(role.Name) || role.CanAssign;
+    }
 
     private void ToggleRole(string role, bool selected)
     {
@@ -103,8 +144,13 @@
 
     private async Task SaveAsync()
     {
+        if (!_loaded || _isSaving || _selectedRoles.SetEquals(_originalRoles))
+        {
+            return;
+        }
+
         _isSaving = true;
-        var response = await IamAdminService.UpdateUserRolesAsync(User.Id, new UpdateUserRolesRequest([.. _selectedRoles.Order(StringComparer.OrdinalIgnoreCase)]));
+        var response = await IamAdminService.UpdateUserRolesAsync(User.Id, new UpdateUserRolesRequest([.. _selectedRoles.Order(StringComparer.OrdinalIgnoreCase)], [.. _originalRoles]));
         _isSaving = false;
 
         if (!response.IsSuccess)

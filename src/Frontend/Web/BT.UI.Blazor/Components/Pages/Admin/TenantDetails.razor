@@ -8,12 +8,17 @@
 @inject IAuthSession AuthSession
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
-<MudButton Href="/control-panel/tenants"
-           StartIcon="@Icons.Material.Filled.ArrowBack">Tenants</MudButton>
+<div class="mb-4">
+    <MudButton Href="/control-panel/tenants"
+               Variant="Variant.Text"
+               StartIcon="@Icons.Material.Filled.ArrowBack"
+               Color="Color.Primary"
+               Class="px-0">Back to Tenants</MudButton>
+</div>
 @if (_tenant is not null && _details is not null)
 {
     <PageTitle>@_tenant.DisplayName | Tenant</PageTitle>
-    <MudPaper Class="poc-panel mt-3"
+    <MudPaper Class="poc-panel"
               Elevation="0">
         <div class="panel-heading">
             <h2>@_tenant.DisplayName</h2>
@@ -57,9 +62,6 @@
             @if (AuthSession.HasPermission("controlplane.manage_tenant_administrators"))
             {
                 <MudTabPanel Text="Administrators">
-                    <MudButton StartIcon="@Icons.Material.Filled.PersonAdd"
-                               OnClick="InviteAsync"
-                               Class="my-2">Invite administrator</MudButton>
                     <div class="bt-table-scroll">
                         <MudTable Items="_details.Administrators"
                                   Dense="true"
@@ -76,8 +78,14 @@
                             </RowTemplate>
                         </MudTable>
                     </div>
-                    <MudText Typo="Typo.subtitle2"
-                             Class="mt-3">Invitations</MudText>
+                    <div class="panel-heading mt-3">
+                        <h3>Invitations</h3>
+                        <MudButton StartIcon="@Icons.Material.Filled.PersonAdd"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="InviteAsync">Invite administrator</MudButton>
+                    </div>
                     <MudText Typo="Typo.caption">Pending invitations are delivered after tenant activation. Failed attempts retry automatically.</MudText>
                     <div class="bt-table-scroll">
                         <MudTable Items="_details.Invitations"

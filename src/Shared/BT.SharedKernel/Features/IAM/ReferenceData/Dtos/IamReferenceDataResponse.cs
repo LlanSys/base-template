@@ -6,4 +6,5 @@ public sealed record IamReferenceDataResponse(
     IReadOnlyList<CatalogOptionResponse> PermissionActions,
     IReadOnlyList<CatalogOptionResponse> MenuPlacements,
     IReadOnlyList<CatalogOptionResponse> MenuIcons,
-    IReadOnlyList<CatalogOptionResponse> MenuRoutes);
+    IReadOnlyList<CatalogOptionResponse> MenuRoutes,
+    IReadOnlyList<CatalogOptionResponse>? MenuModules = null);

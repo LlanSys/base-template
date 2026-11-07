@@ -12,60 +12,57 @@
     <meta name="referrer"
           content="no-referrer" />
 </HeadContent>
-<section class="auth-shell">
-    <div class="auth-copy">
-        <span class="eyebrow">Organization invitation</span>
-        <h1>@(_preview is null ? "Review your invitation." : $"Welcome to {_preview.OrganizationName}.")</h1>
-        <p>You have been invited to administer this organization. Accept the invitation and complete your account security to continue.</p>
-    </div>
-    <div class="auth-card">
-        @if (_loading)
-        {
-            <MudProgressCircular Indeterminate="true"
-                                 aria-label="Loading invitation" />
-        }
-        @if (!string.IsNullOrWhiteSpace(_error))
-        {
-            <div class="alert alert-danger"
-                 role="alert">@_error</div>
-        }
-        @if (_preview is not null)
-        {
-            <p>Invitation for <strong>@_preview.Email</strong>.</p>
-            <p>@(_preview.ExistingAccount ? "Enter your current password to accept. Your password will remain unchanged." : "Create your password, then set up your authenticator.")</p>
-            <EditForm Model="_form"
-                      OnValidSubmit="AcceptAsync">
-                <DataAnnotationsValidator />
-                <div class="form-stack">
-                    <label for="invitation-password">@(_preview.ExistingAccount ? "Current password" : "Create password")</label>
-                    <InputText id="invitation-password"
-                               type="password"
-                               class="form-control form-control-lg"
-                               @bind-Value="_form.Password"
-                               autocomplete="@(_preview.ExistingAccount ? "current-password" : "new-password")" />
-                    <ValidationMessage For="@(() => _form.Password)" />
-                    @if (!_preview.ExistingAccount)
-                    {
-                        <p class="small">Use at least 8 characters, including uppercase and lowercase letters, a number and a symbol.</p>
-                        <label for="invitation-confirm">Confirm password</label>
-                        <InputText id="invitation-confirm"
-                                   type="password"
-                                   class="form-control form-control-lg"
-                                   @bind-Value="_form.Confirmation"
-                                   autocomplete="new-password" />
-                    }
-                    <button class="btn btn-bt-primary btn-lg"
-                            type="submit"
-                            disabled="@_busy">@(_busy ? "Accepting..." : "Accept invitation and continue")</button>
-                </div>
-            </EditForm>
-            <BT.UI.Blazor.Features.IAM.Users.Components.ExternalSignInOptions InvitationId="@Id"
-                                                                              InvitationToken="@Token" />
-            <p class="small mt-3">If you did not expect this invitation, you can leave this page. Opening it does not activate access.</p>
-        }
-        <a href="/iam/sign-in">Back to sign in</a>
-    </div>
-</section>
+<header class="auth-heading">
+    <h1>@(_preview is null ? "Accept invitation" : $"Join {_preview.OrganizationName}")</h1>
+</header>
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true"
+                         aria-label="Loading invitation" />
+}
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="alert alert-danger"
+         role="alert">@_error</div>
+}
+@if (_preview is not null)
+{
+    <p class="auth-invitation-details">Administrator invitation for <strong>@_preview.Email</strong>.</p>
+    <EditForm Model="_form"
+              OnValidSubmit="AcceptAsync">
+        <DataAnnotationsValidator />
+        <div class="form-stack">
+            <label for="invitation-password">@(_preview.ExistingAccount ? "Current password" : "Create password")</label>
+            <InputText id="invitation-password"
+                       type="password"
+                       class="form-control form-control-lg"
+                       @bind-Value="_form.Password"
+                       autocomplete="@(_preview.ExistingAccount ? "current-password" : "new-password")" />
+            <ValidationMessage For="@(() => _form.Password)" />
+            @if (!_preview.ExistingAccount)
+            {
+                <p class="small">Use at least 8 characters, including uppercase and lowercase letters, a number and a symbol.</p>
+                <label for="invitation-confirm">Confirm password</label>
+                <InputText id="invitation-confirm"
+                           type="password"
+                           class="form-control form-control-lg"
+                           @bind-Value="_form.Confirmation"
+                           autocomplete="new-password" />
+            }
+            <button class="btn btn-bt-primary btn-lg"
+                    type="submit"
+                    disabled="@_busy">@(_busy ? "Accepting..." : "Accept invitation")</button>
+        </div>
+    </EditForm>
+    <ExternalSignInOptions InvitationId="@Id"
+                           InvitationToken="@Token" />
+}
+<div class="auth-footer">
+    <a class="auth-recovery-link"
+       href="/iam/sign-in">Back to sign in</a>
+</div>
+
 @code {
     [SupplyParameterFromQuery(Name = "id")] public Guid Id { get; set; }
     [SupplyParameterFromQuery(Name = "token")] public string? Token { get; set; }

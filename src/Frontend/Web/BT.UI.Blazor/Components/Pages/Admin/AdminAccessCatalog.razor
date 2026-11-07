@@ -19,22 +19,17 @@
                    Class="px-0">Back to Control Panel</MudButton>
     </div>
 
-    <div class="list-page-actions">
-        <MudButton Variant="Variant.Filled"
-                   Size="Size.Small"
-                   Color="Color.Primary"
-                   StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="CreateAsync">
-            Create item
-        </MudButton>
-
-    </div>
     <MudPaper Class="poc-panel"
               Elevation="0">
         <div class="panel-heading">
-            <h2 style="color: var(--bt-moss); font-weight: 700;">Access Catalog</h2>
-            <MudChip T="string"
-                     Size="Size.Small">@(FilteredItems.Count()) shown</MudChip>
+            <h2>Access Catalog</h2>
+            <MudButton Variant="Variant.Filled"
+                       Size="Size.Small"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="CreateAsync">
+                @(IsMenuIconCatalog ? "Customize icon" : "Create item")
+            </MudButton>
         </div>
         <MudTabs ActivePanelIndex="_activeTab"
                  ActivePanelIndexChanged="OnTabChanged"
@@ -48,7 +43,9 @@
         </MudTabs>
 
         <div class="list-toolbar">
-            <MudTextField @bind-Value="_searchText"
+            <MudTextField T="string"
+                          Value="@_searchText"
+                          ValueChanged="OnSearchChanged"
                           Placeholder="Search key, label, description..."
                           Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.Filled.Search"
@@ -76,7 +73,7 @@
                       Style="min-width: 980px;"
                       Breakpoint="Breakpoint.None">
                 <HeaderContent>
-                    <MudTh>Key</MudTh>
+                    <MudTh>@(IsMenuIconCatalog ? "Icon Key" : "Key")</MudTh>
                     <MudTh>Label</MudTh>
                     <MudTh>@RelationshipColumnLabel</MudTh>
                     <MudTh>URL</MudTh>
@@ -85,7 +82,15 @@
                     <MudTh>Actions</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Key">@context.Key</MudTd>
+                    <MudTd DataLabel="Key">
+                        @if (IsMenuIconCatalog && MenuIconMapper.IsSupported(context.Key))
+                        {
+                            <MudIcon Icon="@MenuIconMapper.Resolve(context.Key)"
+                                     Size="Size.Small"
+                                     Class="me-2" />
+                        }
+                        @context.Key
+                    </MudTd>
                     <MudTd DataLabel="Label">@context.Label</MudTd>
                     <MudTd DataLabel="@RelationshipColumnLabel">@(context.ParentKey ?? "-")</MudTd>
                     <MudTd DataLabel="URL">@(context.Url ?? "-")</MudTd>
@@ -96,9 +101,12 @@
                                  Color="@(context.IsActive ? Color.Success : Color.Default)">@(context.IsActive ? "Active" : "Inactive")</MudChip>
                     </MudTd>
                     <MudTd DataLabel="Actions">
-                        <TableRowActions OnView="@(() => Snackbar.Add(context.Description, Severity.Info))"
-                                         OnEdit="@(() => EditAsync(context))"
-                                         OnDelete="@(() => DeactivateAsync(context))" />
+                        @if (context.Id != Guid.Empty)
+                        {
+                            <TableRowActions OnView="@(() => Snackbar.Add(context.Description, Severity.Info))"
+                                             OnEdit="@(() => EditAsync(context))"
+                                             OnDelete="@(() => DeactivateAsync(context))" />
+                        }
                     </MudTd>
                 </RowTemplate>
                 <NoRecordsContent>
@@ -125,9 +133,9 @@
         new("permission-contexts", "Contexts"),
         new("permission-resources", "Resources"),
         new("permission-actions", "Actions"),
-        new("menu-placements", "Menu placements"),
-        new("menu-icons", "Menu icons"),
-        new("menu-routes", "Menu routes")
+        new("menu-placements", "Menu Placements"),
+        new("menu-icons", "Menu Icons"),
+        new("menu-routes", "Menu Routes")
     ];
 
     private readonly List<ReferenceCatalogItemResponse> _items = [];
@@ -138,6 +146,7 @@
     private MudTable<ReferenceCatalogItemResponse>? _table;
 
     private CatalogDefinition CurrentCatalog => _catalogs[_activeTab];
+    private bool IsMenuIconCatalog => CurrentCatalog.Type == "menu-icons";
     private string RelationshipColumnLabel => CurrentCatalog.Type switch
     {
         "permission-resources" => "Context",
@@ -173,10 +182,16 @@
         await LoadCatalogAsync();
     }
 
+    private void OnSearchChanged(string? text)
+    {
+        _searchText = text;
+        _table?.NavigateTo(0);
+    }
+
     private async Task OnTabChanged(int index)
     {
         _activeTab = index;
-        _searchText = null;
+        OnSearchChanged(null);
         await LoadCatalogAsync();
     }
 
@@ -220,11 +235,12 @@
         {
             { nameof(ReferenceCatalogFormDialog.CatalogType), CurrentCatalog.Type },
             { nameof(ReferenceCatalogFormDialog.ExistingItem), item },
-            { nameof(ReferenceCatalogFormDialog.ParentOptions), ParentOptions() }
+            { nameof(ReferenceCatalogFormDialog.ParentOptions), ParentOptions() },
+            { nameof(ReferenceCatalogFormDialog.IconCatalog), _referenceData.MenuIcons }
         };
 
         var dialog = await DialogService.ShowAsync<ReferenceCatalogFormDialog>(
-            item is null ? $"Create {CurrentCatalog.Label}" : $"Edit - {item.Label}",
+            item is null ? (IsMenuIconCatalog ? "Customize icon" : $"Create {CurrentCatalog.Label}") : $"Edit - {item.Label}",
             parameters,
             new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true, BackdropClick = false });
 

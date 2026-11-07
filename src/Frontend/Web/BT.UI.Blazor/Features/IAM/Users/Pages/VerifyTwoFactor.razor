@@ -6,55 +6,48 @@
 
 <PageTitle>Verify sign in | Base Template</PageTitle>
 
-<section class="auth-shell compact">
-    <div class="auth-copy">
-        <span class="eyebrow">Step-up verification</span>
-        <h1>Verification Code</h1>
-        <p>
-            Enter the 6-digit code from your authenticator app to continue.
-        </p>
+<header class="auth-heading">
+    <h1>Verify your sign-in</h1>
+    <p>Enter the code from your authenticator app.</p>
+</header>
+
+<EditForm FormName="@VerifyTwoFactorFormName"
+          Model="VerificationModel"
+          OnValidSubmit="VerifyAsync">
+    <DataAnnotationsValidator />
+    <input type="hidden"
+           name="VerificationModel.UserId"
+           value="@VerificationModel!.UserId" />
+
+    <div class="form-stack">
+        <div>
+            <label for="code">6-digit code</label>
+            <InputText id="code"
+                       class="form-control form-control-lg otp-input"
+                       @bind-Value="VerificationModel!.Code"
+                       inputmode="numeric"
+                       autocomplete="one-time-code" />
+            <ValidationMessage For="@(() => VerificationModel!.Code)" />
+        </div>
+
+        <label class="remember-row">
+            <InputCheckbox @bind-Value="VerificationModel!.RememberDevice" />
+            <span>Trust this device where supported</span>
+        </label>
+
+        @if (!string.IsNullOrWhiteSpace(_message))
+        {
+            <div class="alert alert-danger"
+                 role="alert">@_message</div>
+        }
+
+        <button class="btn btn-bt-primary btn-lg"
+                type="submit"
+                disabled="@_isBusy">
+            @(_isBusy ? "Verifying..." : "Verify")
+        </button>
     </div>
-
-    <div class="auth-card">
-        <EditForm FormName="@VerifyTwoFactorFormName"
-                  Model="VerificationModel"
-                  OnValidSubmit="VerifyAsync">
-            <DataAnnotationsValidator />
-            <input type="hidden"
-                   name="VerificationModel.UserId"
-                   value="@VerificationModel!.UserId" />
-
-            <div class="form-stack">
-                <div>
-                    <label for="code">6-digit code</label>
-                    <InputText id="code"
-                               class="form-control form-control-lg otp-input"
-                               @bind-Value="VerificationModel!.Code"
-                               inputmode="numeric"
-                               autocomplete="one-time-code" />
-                    <ValidationMessage For="@(() => VerificationModel!.Code)" />
-                </div>
-
-                <label class="remember-row">
-                    <InputCheckbox @bind-Value="VerificationModel!.RememberDevice" />
-                    <span>Trust this device where supported</span>
-                </label>
-
-                @if (!string.IsNullOrWhiteSpace(_message))
-                {
-                    <div class="alert alert-danger"
-                         role="alert">@_message</div>
-                }
-
-                <button class="btn btn-bt-primary btn-lg"
-                        type="submit"
-                        disabled="@_isBusy">
-                    @(_isBusy ? "Verifying..." : "Verify and continue")
-                </button>
-            </div>
-        </EditForm>
-    </div>
-</section>
+</EditForm>
 
 @code {
     private const string VerifyTwoFactorFormName = "iam-verify-two-factor";

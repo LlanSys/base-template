@@ -1,6 +1,7 @@
 @inject IIamAdminService IamAdminService
 @inject ISnackbar Snackbar
-@inject IAuthSession AuthSession
+@using BT.UI.Blazor.Features.IAM.Permissions
+@using BT.UI.Blazor.Features.IAM.Permissions.Components
 
 <MudDialog>
     <DialogContent>
@@ -9,44 +10,21 @@
             <MudProgressLinear Color="Color.Success"
                                Indeterminate="true" />
         }
-        else
+        else if (_loaded)
         {
             <MudStack Spacing="2">
                 <MudText Typo="Typo.body2">Direct permissions are exceptions granted to <strong>@DisplayName</strong> outside role membership.</MudText>
-                <MudText Typo="Typo.caption">Tenant administrators can grant only permissions approved for delegation by the vendor.</MudText>
-                <div class="bt-table-scroll">
-                    <MudTable Items="_permissions"
-                              Dense="true"
-                              Hover="true"
-                              Elevation="0"
-                              FixedHeader="true"
-                              Height="28rem"
-                              Style="min-width: 760px;"
-                              Breakpoint="Breakpoint.None">
-                        <HeaderContent>
-                            <MudTh Style="width: 4rem;">Grant</MudTh>
-                            <MudTh>Key</MudTh>
-                            <MudTh>Context</MudTh>
-                            <MudTh>Resource</MudTh>
-                            <MudTh>Description</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="Grant">
-                                <MudCheckBox T="bool"
-                                             Value="@IsSelected(context.Key)"
-                                             ValueChanged="@((selected) => TogglePermission(context.Key, selected))"
-                                             Disabled="@(AuthSession.CurrentUser?.IsPlatformStaff != true && !context.IsTenantDelegatable && !IsSelected(context.Key))"
-                                             Color="Color.Success"
-                                             Dense="true" />
-                            </MudTd>
-                            <MudTd DataLabel="Key">@context.Key</MudTd>
-                            <MudTd DataLabel="Context">@context.Context</MudTd>
-                            <MudTd DataLabel="Resource">@context.Resource</MudTd>
-                            <MudTd DataLabel="Description">@context.Description</MudTd>
-                        </RowTemplate>
-                    </MudTable>
-                </div>
+                <PermissionAssignmentList Permissions="_permissions"
+                                          SelectedKeys="_selectedKeys"
+                                          OriginalKeys="_originalKeys"
+                                          IsSaving="_isSaving"
+                                          OnToggle="TogglePermission" />
             </MudStack>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Error"
+                      Dense="true">Assignments could not be loaded. Close this dialog and try again.</MudAlert>
         }
     </DialogContent>
     <DialogActions>
@@ -58,7 +36,7 @@
                    Variant="Variant.Filled"
                    Size="Size.Small"
                    Color="Color.Success"
-                   Disabled="@(_isLoading || _isSaving)"
+                   Disabled="@(!_loaded || _isSaving || _selectedKeys.SetEquals(_originalKeys))"
                    OnClick="SaveAsync">@(_isSaving ? "Saving..." : "Update")</MudButton>
     </DialogActions>
 </MudDialog>
@@ -66,7 +44,9 @@
 @code {
     private readonly List<PermissionResponse> _permissions = [];
     private readonly HashSet<string> _selectedKeys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _originalKeys = new(StringComparer.OrdinalIgnoreCase);
     private bool _isLoading = true;
+    private bool _loaded;
     private bool _isSaving;
 
     [CascadingParameter]
@@ -79,7 +59,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var permissionsResponse = await BT.UI.Blazor.Features.IAM.Permissions.PermissionCatalogLoader.LoadAsync(IamAdminService);
+        var permissionsResponse = await PermissionCatalogLoader.LoadAsync(IamAdminService, forUserAssignment: true);
         var userPermissionsResponse = await IamAdminService.GetUserPermissionsAsync(User.Id);
 
         if (!permissionsResponse.IsSuccess || permissionsResponse.Data is null)
@@ -96,19 +76,16 @@
             return;
         }
 
-        _permissions.AddRange(permissionsResponse.Data);
-        foreach (var key in userPermissionsResponse.Data.PermissionKeys)
-        {
-            _selectedKeys.Add(key);
-        }
-
+        _originalKeys.UnionWith(userPermissionsResponse.Data.PermissionKeys);
+        _selectedKeys.UnionWith(_originalKeys);
+        _permissions.AddRange(permissionsResponse.Data.Where(permission => permission.IsActive || _originalKeys.Contains(permission.Key)));
+        _loaded = true;
         _isLoading = false;
     }
 
-    private bool IsSelected(string key) => _selectedKeys.Contains(key);
-
-    private void TogglePermission(string key, bool selected)
+    private void TogglePermission((string Key, bool Selected) selection)
     {
+        var (key, selected) = selection;
         if (selected)
         {
             _selectedKeys.Add(key);
@@ -120,8 +97,13 @@
 
     private async Task SaveAsync()
     {
+        if (!_loaded || _isSaving || _selectedKeys.SetEquals(_originalKeys))
+        {
+            return;
+        }
+
         _isSaving = true;
-        var response = await IamAdminService.UpdateUserPermissionsAsync(User.Id, new UpdateUserPermissionsRequest([.. _selectedKeys.Order(StringComparer.OrdinalIgnoreCase)]));
+        var response = await IamAdminService.UpdateUserPermissionsAsync(User.Id, new UpdateUserPermissionsRequest([.. _selectedKeys.Order(StringComparer.OrdinalIgnoreCase)], [.. _originalKeys]));
         _isSaving = false;
 
         if (!response.IsSuccess)

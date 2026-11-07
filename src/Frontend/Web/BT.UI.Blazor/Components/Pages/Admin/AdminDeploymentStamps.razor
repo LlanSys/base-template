@@ -19,23 +19,18 @@
                    Class="px-0">Back to Control Panel</MudButton>
     </div>
 
-    <div class="list-page-actions">
-        @if (AuthSession.HasPermission("controlplane.manage_stamps"))
-        {
-            <MudButton Variant="Variant.Filled"
-                       Size="Size.Small"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="@(() => OpenFormDialogAsync(null))">Create stamp</MudButton>
-        }
-
-    </div>
     <MudPaper Class="poc-panel"
               Elevation="0">
         <div class="panel-heading">
-            <h2 style="color: var(--bt-moss); font-weight: 700;">Deployment Stamps</h2>
-            <MudChip T="string"
-                     Size="Size.Small">@(FilteredStamps.Count()) shown</MudChip>
+            <h2>Deployment Stamps</h2>
+            @if (AuthSession.HasPermission("controlplane.manage_stamps"))
+            {
+                <MudButton Variant="Variant.Filled"
+                           Size="Size.Small"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@(() => OpenFormDialogAsync(null))">Create stamp</MudButton>
+            }
         </div>
 
         <div class="list-toolbar">

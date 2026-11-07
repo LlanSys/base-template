@@ -459,7 +459,7 @@
         var dialog = await DialogService.ShowAsync<UserRolesDialog>(
             $"Roles - {DisplayName(user)}",
             parameters,
-            new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true, BackdropClick = false });
+            new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = true, BackdropClick = false });
 
         var result = await dialog.Result;
         if (result is { Canceled: false })

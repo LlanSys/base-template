@@ -108,20 +108,8 @@
                 </MudItem>
                 <MudItem xs="12"
                          sm="6">
-                    <MudSelect @bind-Value="_model.Icon"
-                               Label="Icon"
-                               Margin="Margin.Dense"
-                               Variant="Variant.Outlined">
-                        @foreach (var option in _referenceData.MenuIcons)
-                        {
-                            <MudSelectItem Value="@option.Key">
-                                <MudIcon Icon="@MenuIconMapper.Resolve(option.Key)"
-                                         Size="Size.Small"
-                                         Class="me-1" />
-                                @option.Label
-                            </MudSelectItem>
-                        }
-                    </MudSelect>
+                    <MenuIconPicker @bind-Value="_model.Icon"
+                                    Catalog="_referenceData.MenuIcons" />
                 </MudItem>
                 <MudItem xs="12">
                     <MudSelect @bind-Value="_model.RequiredPermissionKey"
@@ -136,11 +124,17 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_model.RequiredModule"
-                                  Label="Required Module (e.g. HR, Banking)"
-                                  Margin="Margin.Dense"
-                                  Variant="Variant.Outlined"
-                                  Clearable="true" />
+                    <MudSelect T="string"
+                               @bind-Value="_model.RequiredModule"
+                               Label="Required Module"
+                               Margin="Margin.Dense"
+                               Variant="Variant.Outlined"
+                               Clearable="true">
+                        @foreach (var module in _referenceData.MenuModules ?? [])
+                        {
+                            <MudSelectItem Value="@module.Key">@module.Label</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudItem>
                 <MudItem xs="12">
                     <MudTextField @bind-Value="_model.Description"
@@ -227,6 +221,13 @@
         }
 
         _referenceData = response.Data;
+        var module = _referenceData.MenuModules?.FirstOrDefault(option =>
+            string.Equals(option.Key, _model.RequiredModule, StringComparison.OrdinalIgnoreCase));
+
+        if (module is not null)
+        {
+            _model.RequiredModule = module.Key;
+        }
     }
 
     private async Task LoadDepartmentsAsync()

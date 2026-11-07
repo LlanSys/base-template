@@ -7,32 +7,43 @@
 @inject ModuleService Modules
 @inject IAuthSession AuthSession
 <PageTitle>Module details | BaseTemplate</PageTitle>
-<MudButton Href="/control-panel/modules"
-           StartIcon="@Icons.Material.Filled.ArrowBack">Modules</MudButton>
+<div class="mb-4">
+    <MudButton Href="/control-panel/modules"
+               Variant="Variant.Text"
+               StartIcon="@Icons.Material.Filled.ArrowBack"
+               Color="Color.Primary"
+               Class="px-0">Back to Modules</MudButton>
+</div>
 @if (_module is not null)
 {
-    <div class="list-page-actions">
-        @if (Tab == 1 && AuthSession.HasPermission("roles.create"))
-        {
-            <MudButton StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="@(() => _roles?.OpenCreateDialogAsync() ?? Task.CompletedTask)"
-                       Color="Color.Primary"
-                       Variant="Variant.Filled"
-                       Size="Size.Small">Add default role</MudButton>
-        }
-        else if (Tab == 2 && AuthSession.HasPermission("permissions.manage"))
-        {
-            <MudButton StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="@(() => _permissions?.OpenCreateDialogAsync() ?? Task.CompletedTask)"
-                       Color="Color.Primary"
-                       Variant="Variant.Filled"
-                       Size="Size.Small">Add permission</MudButton>
-        }
-    </div>
-    <MudPaper Class="poc-panel mt-3"
+    <MudPaper Class="poc-panel"
               Elevation="0">
         <div class="panel-heading">
             <h2>@_module.Name</h2>
+            @if (Tab == 1 && AuthSession.HasPermission("roles.create"))
+            {
+                <MudButton StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@(() => _roles?.OpenCreateDialogAsync() ?? Task.CompletedTask)"
+                           Color="Color.Primary"
+                           Variant="Variant.Filled"
+                           Size="Size.Small">Add default role</MudButton>
+            }
+            else if (Tab == 2 && AuthSession.HasPermission("permissions.manage"))
+            {
+                <MudButton StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@(() => _permissions?.OpenCreateDialogAsync() ?? Task.CompletedTask)"
+                           Color="Color.Primary"
+                           Variant="Variant.Filled"
+                           Size="Size.Small">Add permission</MudButton>
+            }
+            else if (Tab == 3 && AuthSession.HasPermission("menus.view") && AuthSession.HasPermission("menus.create"))
+            {
+                <MudButton StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@(() => _menus?.OpenCreateDialogAsync() ?? Task.CompletedTask)"
+                           Color="Color.Primary"
+                           Variant="Variant.Filled"
+                           Size="Size.Small">Create menu</MudButton>
+            }
         </div>
         <MudTabs @bind-ActivePanelIndex="Tab"
                  Rounded="true"
@@ -48,23 +59,27 @@
                 <MudText Class="pa-4">Status: @(_module.IsActive ? "Active" : "Disabled")</MudText>
             </MudTabPanel>
             <MudTabPanel Text="Default Roles"
-                         Disabled="@(!AuthSession.HasPermission("roles.view"))">@if (AuthSession.HasPermission("roles.view"))
+                         Disabled="@(!AuthSession.HasPermission("roles.view"))">
+                @if (AuthSession.HasPermission("roles.view"))
                 {
                     <AdminRoles @ref="_roles"
                                 ModuleKey="@_module.Key" />
                 }
             </MudTabPanel>
             <MudTabPanel Text="Permissions"
-                         Disabled="@(!AuthSession.HasPermission("roles.manage_permissions"))">@if (AuthSession.HasPermission("roles.manage_permissions"))
+                         Disabled="@(!AuthSession.HasPermission("roles.manage_permissions"))">
+                @if (AuthSession.HasPermission("roles.manage_permissions"))
                 {
                     <AdminPermissions @ref="_permissions"
                                       ModuleKey="@_module.Key" />
                 }
             </MudTabPanel>
             <MudTabPanel Text="Menus"
-                         Disabled="@(!AuthSession.HasPermission("menus.view"))">@if (AuthSession.HasPermission("menus.view"))
+                         Disabled="@(!AuthSession.HasPermission("menus.view"))">
+                @if (AuthSession.HasPermission("menus.view"))
                 {
-                    <AdminMenus ModuleKey="@_module.Key"
+                    <AdminMenus @ref="_menus"
+                                ModuleKey="@_module.Key"
                                 Embedded="true" />
                 }
             </MudTabPanel>
@@ -85,6 +100,7 @@ else
     private ModuleDefinitionResponse? _module;
     private AdminRoles? _roles;
     private AdminPermissions? _permissions;
+    private AdminMenus? _menus;
     private string? _error;
     protected override async Task OnParametersSetAsync()
     {

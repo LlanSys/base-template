@@ -1,0 +1,65 @@
+<MudAutocomplete T="string"
+                 Value="@Value"
+                 ValueChanged="ValueChanged"
+                 SearchFunc="SearchAsync"
+                 ToStringFunc="IconLabel"
+                 Label="@Label"
+                 Placeholder="Search icons by name"
+                 Margin="Margin.Dense"
+                 Variant="Variant.Outlined"
+                 Dense="true"
+                 Strict="false"
+                 CoerceValue="false"
+                 MaxItems="30"
+                 Required="true">
+    <ItemTemplate Context="iconKey">
+        <MudIcon Icon="@MenuIconMapper.Resolve(iconKey)"
+                 Size="Size.Small"
+                 Class="me-2" />
+        @IconLabel(iconKey)
+    </ItemTemplate>
+    <NoItemsTemplate>
+        <MudText Typo="Typo.caption"
+                 Class="pa-2">No matching icons.</MudText>
+    </NoItemsTemplate>
+    <MoreItemsTemplate>
+        <MudText Typo="Typo.caption"
+                 Class="pa-2">Type to narrow the results.</MudText>
+    </MoreItemsTemplate>
+</MudAutocomplete>
+
+@code {
+    private ILookup<string, CatalogOptionResponse> _overrides = Array.Empty<CatalogOptionResponse>()
+        .ToLookup(static option => option.Key, StringComparer.OrdinalIgnoreCase);
+
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Label { get; set; } = "Icon";
+    [Parameter] public IReadOnlyList<CatalogOptionResponse> Catalog { get; set; } = [];
+
+    protected override void OnParametersSet()
+    {
+        _overrides = Catalog.ToLookup(static option => option.Key, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private string IconLabel(string? key)
+    {
+        return key is null ? string.Empty : _overrides[key].FirstOrDefault()?.Label ?? key;
+    }
+
+    private Task<IEnumerable<string>> SearchAsync(string? search, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var term = search?.Trim() ?? string.Empty;
+        var keys = MenuIconMapper.Keys
+            .Where(key => _overrides[key].All(static option => option.IsActive)
+                && (key.Contains(term, StringComparison.OrdinalIgnoreCase)
+                    || IconLabel(key).Contains(term, StringComparison.OrdinalIgnoreCase)))
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .Take(31)
+            .ToArray();
+
+        return Task.FromResult<IEnumerable<string>>(keys);
+    }
+}

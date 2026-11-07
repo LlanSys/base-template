@@ -40,7 +40,7 @@ internal interface IIamAdminService
 
     Task<AppResponse<RolePermissionsResponse>> UpdateRolePermissionsAsync(string roleId, UpdateRolePermissionsRequest request);
 
-    Task<AppResponse<PagedResponse<PermissionResponse, Guid>>> SearchPermissionsAsync(PermissionSearchRequest request);
+    Task<AppResponse<PagedResponse<PermissionResponse, Guid>>> SearchPermissionsAsync(PermissionSearchRequest request, bool forUserAssignment = false);
 
     Task<AppResponse<IamReferenceDataResponse>> GetReferenceDataAsync();
 

@@ -12,35 +12,33 @@
 <PageTitle>Menus | Base Template</PageTitle>
 
 <section class="dashboard-page">
-    <div class="mb-4">
-        @if (!Embedded)
-        {
+    @if (!Embedded)
+    {
+        <div class="mb-4">
             <MudButton Href="/control-panel"
                        Variant="Variant.Text"
                        StartIcon="@Icons.Material.Filled.ArrowBack"
                        Color="Color.Primary"
                        Class="px-0">Back to Control Panel</MudButton>
-        }
-    </div>
-
-    <div class="list-page-actions">
-        @if (AuthSession.HasPermission("menus.create"))
-        {
-            <MudButton Variant="Variant.Filled"
-                       Size="Size.Small"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="@(() => OpenFormDialogAsync(null))">Create menu</MudButton>
-        }
-
-    </div>
-    <MudPaper Class="poc-panel"
-              Elevation="0">
-        <div class="panel-heading">
-            <h2 style="color: var(--bt-moss); font-weight: 700;">Menu Catalog</h2>
-            <MudChip T="string"
-                     Size="Size.Small">@(FilteredMenus.Count) shown</MudChip>
         </div>
+    }
+
+    <MudPaper Class="@(Embedded ? null : "poc-panel")"
+              Elevation="0">
+        @if (!Embedded)
+        {
+            <div class="panel-heading">
+                <h2>Menu Catalog</h2>
+                @if (AuthSession.HasPermission("menus.create"))
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Size="Size.Small"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenCreateDialogAsync">Create menu</MudButton>
+                }
+            </div>
+        }
 
         <div class="list-toolbar menu-catalog-toolbar">
             <MudTextField @bind-Value="_searchText"
@@ -164,6 +162,12 @@
 @code {
     [Parameter] public string? ModuleKey { get; set; }
     [Parameter] public bool Embedded { get; set; }
+
+    public Task OpenCreateDialogAsync()
+    {
+        return OpenFormDialogAsync(null);
+    }
+
     private readonly List<MenuResponse> _menus = [];
     private readonly List<DepartmentResponse> _departments = [];
     private bool _isLoading = true;
@@ -289,7 +293,8 @@
         var parameters = new DialogParameters
         {
             { nameof(ConfirmDialog.Message), $"Delete menu {menu.Title}? Child menus must be moved or deleted first." },
-            { nameof(ConfirmDialog.ConfirmText), "Delete" }
+            { nameof(ConfirmDialog.ConfirmText), "Delete" },
+            { nameof(ConfirmDialog.ConfirmColor), Color.Error }
         };
 
         var dialog = await DialogService.ShowAsync<ConfirmDialog>(

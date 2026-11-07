@@ -4,7 +4,11 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using BT.SharedKernel.Features.Banking.Customers.Dtos;
+using BT.SharedKernel.Features.IAM.Menus;
+using BT.SharedKernel.Features.IAM.Menus.Dtos;
 using BT.SharedKernel.Features.IAM.Permissions.Dtos;
+using BT.SharedKernel.Features.IAM.ReferenceData.Dtos;
+using BT.SharedKernel.Features.IAM.Users.Dtos;
 using BT.SharedKernel.Dtos.Common;
 using Xunit;
 using Microsoft.Extensions.DependencyInjection;
@@ -369,6 +373,62 @@ public class TenantIsolationApiTests : IClassFixture<TestFixtures.BaseTemplateWe
         Assert.DoesNotContain(foreignId, ids);
     }
 
+    [Fact]
+    public async Task Menu_reference_data_lists_configured_modules_for_menu_administrators()
+    {
+        var (userId, tenantId) = await SeedPlatformAsync("menus.view");
+        using var client = Client(userId, tenantId);
+        using var modules = await client.GetAsync("/api/v1/control-plane/modules");
+        Assert.Equal(HttpStatusCode.Forbidden, modules.StatusCode);
+
+        var referenceData = await client.GetFromJsonAsync<AppResponse<IamReferenceDataResponse>>(
+            "/api/v1/iam/admin/reference-data");
+
+        Assert.NotNull(referenceData?.Data?.MenuModules);
+        Assert.Contains(referenceData.Data.MenuModules, module => module.Key == "Banking" && module.Label == "Banking");
+        Assert.Contains(referenceData.Data.MenuModules, module => module.Key == "HR" && module.Label == "Human Resources");
+        Assert.Contains(referenceData.Data.MenuModules, module => module.Key == "Payments");
+    }
+
+    [Fact]
+    public async Task Menu_icon_catalog_supports_using_unregistered_mudblazor_icons()
+    {
+        var (userId, tenantId) = await SeedPlatformAsync("menus.view", "menus.create", "menus.edit");
+        using var client = Client(userId, tenantId);
+
+        var catalog = await client.GetFromJsonAsync<AppResponse<IReadOnlyList<ReferenceCatalogItemResponse>>>(
+            "/api/v1/iam/admin/reference-catalogs/menu-icons");
+
+        Assert.NotNull(catalog?.Data);
+        Assert.True(catalog.Data.Count >= MenuIconCatalog.Keys.Count);
+        Assert.Contains(catalog.Data, icon => icon.Key == "Extension" && icon.Id == Guid.Empty && icon.IsActive);
+        Assert.Contains(catalog.Data, icon => icon.Key == "AutoStories" && icon.Label == "Story/book");
+
+        const string endpoint = "/api/v1/iam/admin/menus";
+        var request = new CreateMenuRequest { Title = "Icon test " + Guid.CreateVersion7().ToString("N"), Icon = "Extension" };
+        using var created = await client.PostAsJsonAsync(endpoint, request);
+        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        var menu = await created.Content.ReadFromJsonAsync<AppResponse<MenuResponse>>();
+        Assert.NotNull(menu?.Data);
+        Assert.Equal("Extension", menu.Data.Icon);
+
+        using var updated = await client.PutAsJsonAsync(
+            endpoint + "/" + menu.Data.Id,
+            new UpdateMenuRequest { Id = menu.Data.Id, Title = request.Title, Icon = "Exposure" });
+
+        Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+
+        using var invalid = await client.PostAsJsonAsync(
+            endpoint,
+            request with
+            {
+                Title = request.Title + " invalid",
+                Icon = "DefinitelyNotAnIcon"
+            });
+
+        Assert.False(invalid.IsSuccessStatusCode);
+    }
+
     private async Task<(string UserId, Guid TenantId)> SeedPlatformAsync(params string[] permissions)
     {
         var tenantId = Guid.CreateVersion7();
@@ -424,6 +484,101 @@ public class TenantIsolationApiTests : IClassFixture<TestFixtures.BaseTemplateWe
         var verifiedIam = verification.ServiceProvider.GetRequiredService<IamDBContext>();
         Assert.Empty(await verifiedIam.UserRoles.Where(role => role.UserId == userId).ToListAsync());
         Assert.True((await verifiedIam.Users.IgnoreQueryFilters().SingleAsync(user => user.Id == userId)).RequiresOnboarding);
+    }
+
+    [Fact]
+    public async Task Permission_catalog_reports_the_last_cursor_page_correctly()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var actorId = await SeedIdentityAsync(tenantId, "users.manage_permissions", "customers.view");
+        using var client = Client(actorId, tenantId);
+        const string url = "/api/v1/iam/admin/permissions/user-assignment?pageSize=1";
+        var first = await client.GetFromJsonAsync<AppResponse<PagedResponse<PermissionResponse, Guid>>>(url);
+        Assert.NotNull(first?.Data);
+        Assert.Single(first.Data.Items);
+        Assert.True(first.Data.HasNextPage);
+        Assert.NotEqual(Guid.Empty, first.Data.NextCursor);
+
+        var last = await client.GetFromJsonAsync<AppResponse<PagedResponse<PermissionResponse, Guid>>>(
+            url + "&cursor=" + first.Data.NextCursor);
+
+        Assert.NotNull(last?.Data);
+        Assert.Single(last.Data.Items);
+        Assert.NotEqual(first.Data.Items[0].Id, last.Data.Items[0].Id);
+        Assert.False(last.Data.HasNextPage);
+    }
+
+    [Fact]
+    public async Task Role_edit_preserves_existing_out_of_scope_assignments_and_rejects_new_ones()
+    {
+        var tenantId = Guid.CreateVersion7();
+        var actorId = await SeedIdentityAsync(tenantId, "users.manage_roles");
+        var legacy = new AppRole
+        {
+            TenantId = tenantId,
+            Name = "Legacy Platform Role",
+            NormalizedName = "LEGACY PLATFORM ROLE",
+            IsPlatformRole = true
+        };
+
+        var tenantRole = new AppRole
+        {
+            TenantId = tenantId,
+            Name = "Tenant Operator",
+            NormalizedName = "TENANT OPERATOR"
+        };
+
+        var platformRole = new AppRole
+        {
+            TenantId = tenantId,
+            Name = "New Platform Role",
+            NormalizedName = "NEW PLATFORM ROLE",
+            IsPlatformRole = true
+        };
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var iam = scope.ServiceProvider.GetRequiredService<IamDBContext>();
+            iam.Roles.AddRange(legacy, tenantRole, platformRole);
+            iam.UserRoles.Add(new IdentityUserRole<string> { UserId = actorId, RoleId = legacy.Id });
+            await iam.SaveChangesAsync();
+        }
+
+        using var client = Client(actorId, tenantId);
+        var url = $"/api/v1/iam/admin/users/{actorId}/roles";
+        var initial = await client.GetFromJsonAsync<AppResponse<UserRolesResponse>>(url);
+        Assert.NotNull(initial?.Data);
+        Assert.Contains("Legacy Platform Role", initial.Data.Roles);
+        Assert.Contains(initial.Data.Options!, option => option.Id == tenantRole.Id && option.CanAssign);
+        Assert.Contains(initial.Data.Options!, option => option.Id == platformRole.Id && !option.CanAssign);
+
+        using var saved = await client.PutAsJsonAsync(
+            url,
+            new UpdateUserRolesRequest(["Legacy Platform Role", "Tenant Operator"], initial.Data.Roles));
+
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+
+        using var stale = await client.PutAsJsonAsync(url, new UpdateUserRolesRequest([], initial.Data.Roles));
+        Assert.False(stale.IsSuccessStatusCode);
+
+        using var denied = await client.PutAsJsonAsync(
+            url,
+            new UpdateUserRolesRequest(["Legacy Platform Role", "Tenant Operator", "New Platform Role"]));
+
+        Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+
+        var retained = await client.GetFromJsonAsync<AppResponse<UserRolesResponse>>(url);
+        Assert.NotNull(retained?.Data);
+        Assert.Equal(new[] { "Legacy Platform Role", "Tenant Operator" }, retained.Data.Roles);
+
+        using var removed = await client.PutAsJsonAsync(
+            url,
+            new UpdateUserRolesRequest(["Tenant Operator"], retained.Data.Roles));
+
+        Assert.Equal(HttpStatusCode.OK, removed.StatusCode);
+        var final = await client.GetFromJsonAsync<AppResponse<UserRolesResponse>>(url);
+        Assert.NotNull(final?.Data);
+        Assert.Equal("Tenant Operator", Assert.Single(final.Data.Roles));
     }
 
     private HttpClient Client(string userId, Guid tenantId)

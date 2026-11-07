@@ -12,9 +12,9 @@ using Microsoft.Extensions.Logging;
 
 namespace BT.Application.Features.IAM.Permissions.Queries;
 
-
-
-internal sealed class SearchPermissionsQueryHandler(IIamUnitOfWork unitOfWork, ILogger<SearchPermissionsQueryHandler> logger,
+internal sealed class SearchPermissionsQueryHandler(
+    IIamUnitOfWork unitOfWork,
+    ILogger<SearchPermissionsQueryHandler> logger,
     Authorization.IEffectiveAccessService accessService)
     : IRequestHandler<SearchPermissionsQuery, AppResponse<PagedResponse<PermissionResponse, Guid>>>
 {
@@ -29,7 +29,10 @@ internal sealed class SearchPermissionsQueryHandler(IIamUnitOfWork unitOfWork, I
 
             IQueryable<Permission> ApplyFilters(IQueryable<Permission> permissions)
             {
-                if (!access.IsPlatformStaff) permissions = permissions.Where(permission => allowedKeys.Contains(permission.Key));
+                if (!access.IsPlatformStaff)
+                {
+                    permissions = permissions.Where(permission => allowedKeys.Contains(permission.Key));
+                }
 
                 if (!string.IsNullOrWhiteSpace(request.GlobalSearch))
                 {
@@ -104,7 +107,11 @@ internal sealed class SearchPermissionsQueryHandler(IIamUnitOfWork unitOfWork, I
                 1,
                 pageSize,
                 request.Cursor is null || request.Cursor == Guid.Empty,
-                nextCursor ?? Guid.Empty);
+                nextCursor ?? Guid.Empty)
+            {
+                HasNextPage = hasNextPage,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            };
 
             return AppResponses.Success(result);
         }

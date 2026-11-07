@@ -8,13 +8,22 @@
             <MudGrid Spacing="2">
                 <MudItem xs="12"
                          sm="6">
-                    <MudTextField @bind-Value="_model.Key"
-                                  Label="Key"
-                                  Margin="Margin.Dense"
-                                  Variant="Variant.Outlined"
-                                  ReadOnly="ExistingItem is not null"
-                                  Required="true"
-                                  HelperText="Stable system identifier. It cannot be changed after creation." />
+                    @if (CatalogType == "menu-icons" && ExistingItem is null)
+                    {
+                        <MenuIconPicker @bind-Value="_model.Key"
+                                        Catalog="IconCatalog"
+                                        Label="MudBlazor Icon" />
+                    }
+                    else
+                    {
+                        <MudTextField @bind-Value="_model.Key"
+                                      Label="Key"
+                                      Margin="Margin.Dense"
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="ExistingItem is not null"
+                                      Required="true"
+                                      HelperText="Stable system identifier. It cannot be changed after creation." />
+                    }
                 </MudItem>
                 <MudItem xs="12"
                          sm="6">
@@ -97,6 +106,9 @@
     [Parameter]
     public IReadOnlyList<CatalogOptionResponse> ParentOptions { get; set; } = [];
 
+    [Parameter]
+    public IReadOnlyList<CatalogOptionResponse> IconCatalog { get; set; } = [];
+
     private bool RequiresParent => CatalogType is "permission-resources" or "menu-routes";
     private string ParentLabel => CatalogType == "permission-resources" ? "Permission context" : "Menu placement";
     private string SaveLabel => ExistingItem is null ? "Create" : "Update";
@@ -119,6 +131,11 @@
     private void Save()
     {
         if (string.IsNullOrWhiteSpace(_model.Key) || string.IsNullOrWhiteSpace(_model.Label))
+        {
+            return;
+        }
+
+        if (CatalogType == "menu-icons" && ExistingItem is null && !MenuIconMapper.IsSupported(_model.Key))
         {
             return;
         }

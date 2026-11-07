@@ -63,9 +63,10 @@
 
     @if (CanDelete)
     {
-        <MudTooltip Text="Delete">
+        <MudTooltip Text="@(DeleteDisabledReason ?? "Delete")">
             <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                           aria-label="Delete record"
+                           aria-label="@(DeleteDisabledReason ?? "Delete record")"
+                           Disabled="@(DeleteDisabledReason is not null)"
                            Color="Color.Error"
                            Size="Size.Small"
                            Class="table-action-button delete-action"
@@ -112,6 +113,9 @@
 
     [Parameter]
     public bool CanDelete { get; set; } = true;
+
+    [Parameter]
+    public string? DeleteDisabledReason { get; set; }
 
     [Parameter]
     public EventCallback<MouseEventArgs> OnView { get; set; }

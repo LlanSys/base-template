@@ -127,11 +127,14 @@ This file is the canonical source of truth and working contract for AI coding to
 
 - Blazor UI talks to the backend API boundary for app flows.
 - Use MudBlazor components where practical and keep UI compact, responsive, and consistent.
+- Use the shared auth layout for sign-in, recovery, verification, and invitation pages. Keep headings short and include copy that helps the user complete the current step.
+- Use MudBlazor icons in every icon picker. For menu icons, store the catalog key and resolve it to a MudBlazor Material icon in the UI.
+- Use the MudBlazor error color for the action that confirms a deletion.
 - Confirmation messages must describe the action and its effect on the user. Keep persistence and infrastructure terms such as "soft-delete" out of product wording unless they explain a meaningful user choice.
 - Use `wwwroot/css` for app CSS.
 - Avoid JavaScript unless Blazor cannot access the browser capability directly.
 - Tables should support compact layout, horizontal overflow, pagination/search/filter patterns, and consistent actions.
-- Listing pages follow the Customer hierarchy: create actions occupy a separate top-right page action row, shown-count badges occupy the list heading's right edge, and search/filter controls occupy a full-width row below the heading.
+- Keep the listing title and the right-aligned create action in the same heading row inside the table card. Place search and filters below the heading and show record counts in the pager. Use Title Case for tabs and omit headings that repeat the active tab label.
 - New route guards must use native Blazor authorization: `@attribute [Authorize]`, `@layout` with a policy-protected layout, or `<AuthorizeView>`. Do not add new ad-hoc `HasPermission()` checks for route-level gating; leave existing `HasPermission()` calls for inline UI visibility unchanged.
 - The web host serves only an empty HTTP shell before restoring protected browser storage in the interactive router. Keep protected prerendering disabled and preserve native component policies plus permission-protected API endpoints; never place authorized content or tokens in that anonymous shell.
 - Control Plane pages must use `ControlPlaneLayout` (`@layout ControlPlaneLayout`). Its `ControlPlane.Access` policy requires explicit platform identity and a supported platform capability. Add a native `[Authorize(Policy = "<operation permission>")]` route guard where a page owns a specific capability.

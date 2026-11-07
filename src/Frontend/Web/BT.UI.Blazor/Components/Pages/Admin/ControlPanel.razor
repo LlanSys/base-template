@@ -7,42 +7,97 @@
         <h2>Control Panel</h2>
     </div>
     <MudText Class="mb-4">Manage deployment stamps, tenants, business modules, and vendor-owned access definitions.</MudText>
-    <MudList T="string"
-             Dense="true">
+    <MudGrid Spacing="2">
         @if (AuthSession.HasPermission("controlplane.view_stamps"))
         {
-            <MudListItem Href="/control-panel/stamps"
-                         Icon="@Icons.Material.Filled.Dns">Deployment Stamps</MudListItem>
+            <MudItem xs="12"
+                     sm="6"
+                     md="3">
+                <a class="control-panel-tile"
+                   href="/control-panel/stamps">
+                    <MudIcon Icon="@Icons.Material.Filled.Dns"
+                             Size="Size.Small" />
+                    <span>Deployment Stamps</span>
+                </a>
+            </MudItem>
         }
         @if (AuthSession.HasPermission("controlplane.view_tenants"))
         {
-            <MudListItem Href="/control-panel/tenants"
-                         Icon="@Icons.Material.Filled.Business">Tenants</MudListItem>
+            <MudItem xs="12"
+                     sm="6"
+                     md="3">
+                <a class="control-panel-tile"
+                   href="/control-panel/tenants">
+                    <MudIcon Icon="@Icons.Material.Filled.Business"
+                             Size="Size.Small" />
+                    <span>Tenants</span>
+                </a>
+            </MudItem>
         }
         @if (AuthSession.HasPermission("modules.view"))
         {
-            <MudListItem Href="/control-panel/modules"
-                         Icon="@Icons.Material.Filled.Apps">Modules</MudListItem>
+            <MudItem xs="12"
+                     sm="6"
+                     md="3">
+                <a class="control-panel-tile"
+                   href="/control-panel/modules">
+                    <MudIcon Icon="@Icons.Material.Filled.Apps"
+                             Size="Size.Small" />
+                    <span>Modules</span>
+                </a>
+            </MudItem>
         }
         @if (AuthSession.HasPermission("menus.view"))
         {
-            <MudListItem Href="/control-panel/menus"
-                         Icon="@Icons.Material.Filled.Menu">Menus</MudListItem>
+            <MudItem xs="12"
+                     sm="6"
+                     md="3">
+                <a class="control-panel-tile"
+                   href="/control-panel/menus">
+                    <MudIcon Icon="@Icons.Material.Filled.Menu"
+                             Size="Size.Small" />
+                    <span>Menus</span>
+                </a>
+            </MudItem>
         }
         @if (AuthSession.HasAnyPermission("roles.view", "roles.manage_permissions", "users.view"))
         {
-            <MudListItem Href="/control-panel/access"
-                         Icon="@Icons.Material.Filled.Security">Roles, Permissions, and Platform Staff</MudListItem>
+            <MudItem xs="12"
+                     sm="6"
+                     md="3">
+                <a class="control-panel-tile"
+                   href="/control-panel/access">
+                    <MudIcon Icon="@Icons.Material.Filled.Security"
+                             Size="Size.Small" />
+                    <span>Roles, Permissions, and Platform Staff</span>
+                </a>
+            </MudItem>
         }
         @if (AuthSession.HasPermission("menus.view"))
         {
-            <MudListItem Href="/control-panel/access-catalog"
-                         Icon="@Icons.Material.Filled.List">Access Catalog</MudListItem>
+            <MudItem xs="12"
+                     sm="6"
+                     md="3">
+                <a class="control-panel-tile"
+                   href="/control-panel/access-catalog">
+                    <MudIcon Icon="@Icons.Material.Filled.List"
+                             Size="Size.Small" />
+                    <span>Access Catalog</span>
+                </a>
+            </MudItem>
         }
         @if (AuthSession.HasPermission("controlplane.view_audit"))
         {
-            <MudListItem Href="/control-panel/audit"
-                         Icon="@Icons.Material.Filled.History">Audit Log</MudListItem>
+            <MudItem xs="12"
+                     sm="6"
+                     md="3">
+                <a class="control-panel-tile"
+                   href="/control-panel/audit">
+                    <MudIcon Icon="@Icons.Material.Filled.History"
+                             Size="Size.Small" />
+                    <span>Audit Log</span>
+                </a>
+            </MudItem>
         }
-    </MudList>
+    </MudGrid>
 </section>

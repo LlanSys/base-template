@@ -5,11 +5,6 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<div class="panel-heading">
-    <h3>Roles</h3>
-    <MudChip T="string"
-             Size="Size.Small">@(FilteredRoles.Count) shown</MudChip>
-</div>
 <div class="list-toolbar">
     <MudTextField @bind-Value="_searchText"
                   Placeholder="Search role name..."
@@ -71,7 +66,8 @@
                                  OnDelete="@(() => ConfirmDeleteRoleAsync(context))"
                                  CanView="@AuthSession.HasPermission("roles.view")"
                                  CanEdit="@(AuthSession.HasPermission("roles.edit") && (!context.IsDefault || AuthSession.CurrentUser?.IsPlatformStaff == true))"
-                                 CanDelete="@(AuthSession.HasPermission("roles.delete") && !context.IsDefault)"
+                                 CanDelete="@AuthSession.HasPermission("roles.delete")"
+                                 DeleteDisabledReason="@(context.IsDefault ? "Default roles are required by BaseTemplate." : null)"
                                  ExtraActions="@RoleExtraActions(context)"
                                  OnExtraAction="@((action) => HandleRoleActionAsync(context, action))" />
             </MudTd>
@@ -210,7 +206,8 @@
         var parameters = new DialogParameters
         {
             { nameof(ConfirmDialog.Message), $"Delete role {role.Name}? This will only proceed if no users or permission claims are assigned." },
-            { nameof(ConfirmDialog.ConfirmText), "Delete" }
+            { nameof(ConfirmDialog.ConfirmText), "Delete" },
+            { nameof(ConfirmDialog.ConfirmColor), Color.Error }
         };
 
         var dialog = await DialogService.ShowAsync<ConfirmDialog>(

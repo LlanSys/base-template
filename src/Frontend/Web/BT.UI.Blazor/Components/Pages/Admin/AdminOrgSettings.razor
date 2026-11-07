@@ -12,13 +12,12 @@
     <MudButton Href="/admin"
                StartIcon="@Icons.Material.Filled.ArrowBack"
                Variant="Variant.Text"
-               Class="mb-3">Admin Center</MudButton>
+               Color="Color.Primary"
+               Class="mb-3 px-0">Back to Admin Center</MudButton>
     <MudPaper Class="poc-panel"
               Elevation="0">
         <div class="panel-heading">
             <h2>Organization Settings</h2>
-            <MudChip T="string"
-                     Size="Size.Small">@_settings.Count shown</MudChip>
         </div>
         <MudText Typo="Typo.body2"
                  Class="mb-3">Changes apply after saving and refreshing the current view.</MudText>

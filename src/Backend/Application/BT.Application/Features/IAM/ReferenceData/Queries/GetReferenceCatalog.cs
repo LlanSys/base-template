@@ -2,13 +2,12 @@ using BT.Application.Contracts.Interfaces.Common;
 using BT.Application.Utilities;
 using BT.Domain.Features.IAM.Contracts;
 using BT.SharedKernel.Dtos.Common;
+using BT.SharedKernel.Features.IAM.Menus;
 using BT.SharedKernel.Features.IAM.ReferenceData.Dtos;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace BT.Application.Features.IAM.ReferenceData.Queries;
-
-
 
 internal sealed class GetReferenceCatalogQueryHandler(IIamUnitOfWork unitOfWork, ILogger<GetReferenceCatalogQueryHandler> logger)
     : IRequestHandler<GetReferenceCatalogQuery, AppResponse<IReadOnlyList<ReferenceCatalogItemResponse>>>
@@ -57,13 +56,7 @@ internal sealed class GetReferenceCatalogQueryHandler(IIamUnitOfWork unitOfWork,
                         cancellationToken)
                     .ConfigureAwait(false),
 
-                ReferenceCatalogTypes.MenuIcons => await unitOfWork.MenuIconRepository
-                    .ListAsync(
-                        items => items
-                            .OrderBy(static item => item.Label)
-                            .Select(item => new ReferenceCatalogItemResponse(item.Id, ReferenceCatalogTypes.MenuIcons, item.Key, item.Label, item.Description, null, null, item.IsActive)),
-                        cancellationToken)
-                    .ConfigureAwait(false),
+                ReferenceCatalogTypes.MenuIcons => await GetMenuIconsAsync(cancellationToken).ConfigureAwait(false),
 
                 ReferenceCatalogTypes.MenuRoutes => await unitOfWork.MenuRouteRepository
                     .ListAsync(
@@ -84,5 +77,22 @@ internal sealed class GetReferenceCatalogQueryHandler(IIamUnitOfWork unitOfWork,
             LogDefinitions.LogPipelineException(logger, nameof(GetReferenceCatalogQueryHandler), ex);
             throw;
         }
+    }
+
+    private async Task<IReadOnlyList<ReferenceCatalogItemResponse>> GetMenuIconsAsync(CancellationToken cancellationToken)
+    {
+        var configured = await unitOfWork.MenuIconRepository
+            .ListAsync(
+                items => items.Select(item => new ReferenceCatalogItemResponse(
+                    item.Id, ReferenceCatalogTypes.MenuIcons, item.Key, item.Label, item.Description, null, null, item.IsActive)),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var defaults = MenuIconCatalog.Keys
+            .Except(configured.Select(static item => item.Key), StringComparer.OrdinalIgnoreCase)
+            .Select(static key => new ReferenceCatalogItemResponse(
+                Guid.Empty, ReferenceCatalogTypes.MenuIcons, key, key, "MudBlazor Material icon", null, null, true));
+
+        return configured.Concat(defaults).OrderBy(static item => item.Label, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 }

@@ -10,8 +10,6 @@ using Microsoft.Extensions.Logging;
 
 namespace BT.Application.Features.IAM.Menus.Commands;
 
-
-
 internal sealed class CreateMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogger<CreateMenuCommandHandler> logger)
     : IRequestHandler<CreateMenuCommand, AppResponse<MenuResponse>>
 {
@@ -22,7 +20,10 @@ internal sealed class CreateMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogge
             var request = command.Request;
 
             if (!BT.SharedKernel.Features.IAM.Menus.ImplementedMenuRoutes.Matches(request.Url, request.RequiredPermissionKey, request.RequiredModule))
+            {
                 return AppResponses.Failure<MenuResponse>("Select an implemented route with its registered permission and business module.");
+            }
+
             var catalogError = await ValidateCatalogAsync(unitOfWork, request.Placement, request.Icon, request.Url, request.RequiredPermissionKey, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -72,7 +73,9 @@ internal sealed class CreateMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogge
     }
 
     private static string Slugify(string value)
-        => string.Join('-', value.Trim().ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+    {
+        return string.Join('-', value.Trim().ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+    }
 
     private static async Task<string?> ValidateCatalogAsync(
         IIamUnitOfWork unitOfWork,
@@ -93,13 +96,9 @@ internal sealed class CreateMenuCommandHandler(IIamUnitOfWork unitOfWork, ILogge
             return $"Menu placement '{placement}' is not registered.";
         }
 
-        var iconExists = await unitOfWork.MenuIconRepository
-            .AnyAsync(item => item.IsActive && item.Key == icon.Trim(), cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!iconExists)
+        if (!await MenuIconAvailability.IsAvailableAsync(unitOfWork, icon, cancellationToken).ConfigureAwait(false))
         {
-            return $"Menu icon '{icon}' is not registered.";
+            return $"Menu icon '{icon}' is unavailable.";
         }
 
         var routeExists = string.IsNullOrWhiteSpace(url)

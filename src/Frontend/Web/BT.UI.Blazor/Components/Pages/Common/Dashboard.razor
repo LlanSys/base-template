@@ -29,7 +29,7 @@
                 <MudItem xs="12"
                          sm="6"
                          md="3">
-                    <MudPaper Class="pa-4"
+                    <MudPaper Class="@($"pa-4 dashboard-accent-card dashboard-accent-{metric.Accent}")"
                               Elevation="0">
                         <MudText Typo="Typo.body2">@metric.Label</MudText>
                         <MudText Typo="Typo.h5">@metric.Value</MudText>
@@ -49,7 +49,7 @@
     }
     else if (AuthSession.CurrentUser is { } user)
     {
-        <MudPaper Class="pa-4"
+        <MudPaper Class="pa-4 dashboard-accent-card"
                   Elevation="0">
             <MudText Typo="Typo.h6">@(user.OrganizationPreferences?.Name ?? "Your organization")</MudText>
             <MudText Typo="Typo.body2">Organization time: @OrganizationFormatting.FormatDate(Clock.GetUtcNow(), user.OrganizationPreferences)</MudText>
@@ -66,7 +66,7 @@
 @code {
     private bool _loading = true;
     private string? _message;
-    private readonly List<(string Label, string Value)> _metrics = [];
+    private readonly List<(string Label, string Value, string Accent)> _metrics = [];
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -77,16 +77,16 @@
             var response = await Client.SendAsync<PlatformDashboardResponse>(HttpMethod.Get, "api/v1/control-plane/tenants/dashboard");
             if (response.IsSuccess && response.Data is { } metrics)
             {
-                _metrics.Add(("Tenants", metrics.Tenants.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-                _metrics.Add(("Active tenants", metrics.Active.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-                _metrics.Add(("Suspended tenants", metrics.Suspended.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-                _metrics.Add(("Awaiting KYC", metrics.PendingKyc.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-                _metrics.Add(("Provisioning", metrics.Provisioning.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-                _metrics.Add(("Provisioning failures", metrics.ProvisioningFailed.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-                if (metrics.InvitationsPending is { } pending) _metrics.Add(("Invitations pending", pending.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-                if (metrics.InvitationsFailed is { } failed) _metrics.Add(("Invitation failures", failed.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-                if (metrics.ActiveStamps is { } stamps) _metrics.Add(("Active stamps", stamps.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-                if (metrics.DisabledStamps is { } disabled) _metrics.Add(("Disabled stamps", disabled.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                _metrics.Add(("Tenants", metrics.Tenants.ToString(System.Globalization.CultureInfo.InvariantCulture), "primary"));
+                _metrics.Add(("Active tenants", metrics.Active.ToString(System.Globalization.CultureInfo.InvariantCulture), "success"));
+                _metrics.Add(("Suspended tenants", metrics.Suspended.ToString(System.Globalization.CultureInfo.InvariantCulture), "neutral"));
+                _metrics.Add(("Awaiting KYC", metrics.PendingKyc.ToString(System.Globalization.CultureInfo.InvariantCulture), "warning"));
+                _metrics.Add(("Provisioning", metrics.Provisioning.ToString(System.Globalization.CultureInfo.InvariantCulture), "info"));
+                _metrics.Add(("Provisioning failures", metrics.ProvisioningFailed.ToString(System.Globalization.CultureInfo.InvariantCulture), "danger"));
+                if (metrics.InvitationsPending is { } pending) _metrics.Add(("Invitations pending", pending.ToString(System.Globalization.CultureInfo.InvariantCulture), "warning"));
+                if (metrics.InvitationsFailed is { } failed) _metrics.Add(("Invitation failures", failed.ToString(System.Globalization.CultureInfo.InvariantCulture), "danger"));
+                if (metrics.ActiveStamps is { } stamps) _metrics.Add(("Active stamps", stamps.ToString(System.Globalization.CultureInfo.InvariantCulture), "success"));
+                if (metrics.DisabledStamps is { } disabled) _metrics.Add(("Disabled stamps", disabled.ToString(System.Globalization.CultureInfo.InvariantCulture), "neutral"));
             }
             else _message = response.Message ?? "Platform metrics are unavailable.";
         }

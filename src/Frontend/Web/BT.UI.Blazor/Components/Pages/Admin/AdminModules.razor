@@ -12,22 +12,25 @@
 
 <PageTitle>Modules | BaseTemplate</PageTitle>
 <section class="dashboard-page">
-    <div class="list-page-actions">
-        @if (AuthSession.HasPermission("modules.create"))
-        {
-            <MudButton StartIcon="@Icons.Material.Filled.Add"
-                       Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       Size="Size.Small"
-                       OnClick="@(() => EditAsync(null))">Add module</MudButton>
-        }
+    <div class="mb-4">
+        <MudButton Href="/control-panel"
+                   Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   Color="Color.Primary"
+                   Class="px-0">Back to Control Panel</MudButton>
     </div>
     <MudPaper Class="poc-panel"
               Elevation="0">
         <div class="panel-heading">
             <h2>Modules</h2>
-            <MudChip T="string"
-                     Size="Size.Small">@Filtered.Count() shown</MudChip>
+            @if (AuthSession.HasPermission("modules.create"))
+            {
+                <MudButton StartIcon="@Icons.Material.Filled.Add"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           OnClick="@(() => EditAsync(null))">Add module</MudButton>
+            }
         </div>
         <div class="list-toolbar">
             <MudTextField @bind-Value="_search"
@@ -120,7 +123,23 @@
     }
     private async Task DeleteAsync(ModuleDefinitionResponse module)
     {
-        if (await Dialogs.ShowMessageBoxAsync("Delete module", $"Delete {module.Name}? Organizations using this module will lose access to it.", yesText: "Delete", cancelText: "Cancel") != true) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(ConfirmDialog.Message), $"Delete {module.Name}? Organizations using this module will lose access to it." },
+            { nameof(ConfirmDialog.ConfirmText), "Delete" },
+            { nameof(ConfirmDialog.ConfirmColor), Color.Error }
+        };
+
+        var dialog = await Dialogs.ShowAsync<ConfirmDialog>(
+            "Delete module",
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, CloseOnEscapeKey = true });
+        if (await dialog.Result is not { Canceled: false })
+        {
+            return;
+        }
+
+
         var response = await Modules.DeleteAsync(module.Id);
         if (!response.IsSuccess) Snackbar.Add(response.Message ?? "Module could not be deleted.", Severity.Error);
         await LoadAsync();

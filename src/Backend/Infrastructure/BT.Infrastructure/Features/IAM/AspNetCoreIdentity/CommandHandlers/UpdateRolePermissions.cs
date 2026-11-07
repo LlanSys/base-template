@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using BT.Application.Features.IAM.Permissions.Commands;
 using BT.Domain.Features.IAM.Users.Entities;
 using BT.Persistence.Features.IAM.DataContext;
@@ -21,8 +20,12 @@ internal sealed class UpdateRolePermissions(
     : IRequestHandler<UpdateRolePermissionsCommand, AppResponse<RolePermissionsResponse>>
 {
     public Task<AppResponse<RolePermissionsResponse>> Handle(UpdateRolePermissionsCommand command, CancellationToken cancellationToken)
-        => IdentityWriteScope.RunAsync(context,
-            () => HandleCore(command, cancellationToken), cancellationToken);
+    {
+        return IdentityWriteScope.RunAsync(
+            context,
+            () => HandleCore(command, cancellationToken),
+            cancellationToken);
+    }
 
     private async Task<AppResponse<RolePermissionsResponse>> HandleCore(UpdateRolePermissionsCommand command, CancellationToken cancellationToken)
     {
@@ -42,19 +45,38 @@ internal sealed class UpdateRolePermissions(
                 .Order(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            if (!await boundary.CanEditRoleAsync(command.UserId, role, cancellationToken).ConfigureAwait(false)
-                || !await boundary.CanGrantPermissionsAsync(command.UserId, requestedKeys, cancellationToken).ConfigureAwait(false))
-                return AppResponses.Failure<RolePermissionsResponse>(AppError.Forbidden("You cannot change this role or grant permissions outside your delegated access."));
+            if (!await boundary.CanEditRoleAsync(command.UserId, role, cancellationToken).ConfigureAwait(false))
+            {
+                return AppResponses.Failure<RolePermissionsResponse>(AppError.Forbidden("You cannot manage assignments for this role."));
+            }
+
+            var currentKeys = ((await roleManager.GetClaimsAsync(role).ConfigureAwait(false))
+                .Where(static claim => claim.Type == "permission")
+                .Select(static claim => claim.Value))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (command.Request.OriginalPermissionKeys is { } originalKeys && !currentKeys.SetEquals(originalKeys))
+            {
+                return AppResponses.Failure<RolePermissionsResponse>("Assignments changed. Reopen the dialog before saving.");
+            }
+
+            var addedKeys = requestedKeys.Except(currentKeys, StringComparer.OrdinalIgnoreCase).ToArray();
+
+            if (addedKeys.Length > 0
+                && !await boundary.CanGrantPermissionsAsync(command.UserId, addedKeys, cancellationToken).ConfigureAwait(false))
+            {
+                return AppResponses.Failure<RolePermissionsResponse>(AppError.Forbidden("One or more new permissions are outside your delegated access."));
+            }
 
             var validKeys = await context.Permissions
                 .AsNoTracking()
-                .Where(permission => requestedKeys.Contains(permission.Key) && permission.IsActive)
+                .Where(permission => addedKeys.Contains(permission.Key) && permission.IsActive)
                 .Where(permission => permission.DepartmentId == null || permission.DepartmentId == role.DepartmentId)
                 .Select(static permission => permission.Key)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-            var invalidKeys = requestedKeys
+            var invalidKeys = addedKeys
                 .Except(validKeys, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 

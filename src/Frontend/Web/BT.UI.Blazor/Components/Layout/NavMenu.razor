@@ -8,7 +8,8 @@
            href="/dashboard"
            aria-label="BaseTemplate dashboard">
             <span class="brand-mark"
-                  aria-hidden="true">BT</span><span class="brand-name">BaseTemplate</span>
+                  aria-hidden="true">BT</span>
+            <span>BaseTemplate</span>
         </a>
     </div>
     <input type="checkbox"
@@ -26,47 +27,9 @@
             {
                 <AuthorizeView Policy="ControlPlane.Access">
                     <NavLink class="nav-link"
-                             href="/control-panel"
-                             Match="NavLinkMatch.All">
+                             href="/control-panel">
                         <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings"
                                  Size="Size.Small" />Control Panel</NavLink>
-                    <div class="nav-children">
-                        @if (AuthSession.HasPermission("controlplane.view_stamps"))
-                        {
-                            <NavLink class="nav-link"
-                                     href="/control-panel/stamps">Deployment Stamps</NavLink>
-                        }
-                        @if (AuthSession.HasPermission("controlplane.view_tenants"))
-                        {
-                            <NavLink class="nav-link"
-                                     href="/control-panel/tenants">Tenants</NavLink>
-                        }
-                        @if (AuthSession.HasPermission("modules.view"))
-                        {
-                            <NavLink class="nav-link"
-                                     href="/control-panel/modules">Modules</NavLink>
-                        }
-                        @if (AuthSession.HasPermission("menus.view"))
-                        {
-                            <NavLink class="nav-link"
-                                     href="/control-panel/menus">Menus</NavLink>
-                        }
-                        @if (AuthSession.HasAnyPermission("roles.view", "roles.manage_permissions", "users.view"))
-                        {
-                            <NavLink class="nav-link"
-                                     href="/control-panel/access">Roles and Permissions</NavLink>
-                        }
-                        @if (AuthSession.HasPermission("menus.view"))
-                        {
-                            <NavLink class="nav-link"
-                                     href="/control-panel/access-catalog">Access Catalog</NavLink>
-                        }
-                        @if (AuthSession.HasPermission("controlplane.view_audit"))
-                        {
-                            <NavLink class="nav-link"
-                                     href="/control-panel/audit">Audit Log</NavLink>
-                        }
-                    </div>
                 </AuthorizeView>
             }
             else

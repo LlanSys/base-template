@@ -19,7 +19,7 @@
                        OnClick="Cancel">Cancel</MudButton>
             <MudButton Variant="Variant.Filled"
                        Size="Size.Small"
-                       Color="Color.Success"
+                       Color="@ConfirmColor"
                        OnClick="Confirm">Yes, @ConfirmText!</MudButton>
         </div>
     </DialogActions>
@@ -34,6 +34,9 @@
 
     [Parameter]
     public string ConfirmText { get; set; } = "Confirm";
+
+    [Parameter]
+    public Color ConfirmColor { get; set; } = Color.Success;
 
     private void Confirm() => MudDialog.Close(DialogResult.Ok(true));
 

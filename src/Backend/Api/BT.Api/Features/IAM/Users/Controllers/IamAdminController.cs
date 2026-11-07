@@ -29,11 +29,16 @@ public sealed class IamAdminController(ISender sender) : BaseController
     [HttpGet("permission-role-usage/{key}")]
     [RequirePermission("roles.view")]
     public async Task<IActionResult> GetPermissionRoleUsage(string key, CancellationToken cancellationToken)
-        => HandleResponse(await sender.Send(new GetPermissionRoleUsageQuery(key, GetActorId()), cancellationToken).ConfigureAwait(false));
+    {
+        return HandleResponse(await sender.Send(new GetPermissionRoleUsageQuery(key, GetActorId()), cancellationToken).ConfigureAwait(false));
+    }
+
     [HttpGet("users")]
     [RequirePermission("users.view")]
     public async Task<IActionResult> GetUsers([FromQuery] AdminUserSearchRequest request)
-        => HandleResponse(await sender.Send(new GetAdminUsersQuery(request)).ConfigureAwait(false));
+    {
+        return HandleResponse(await sender.Send(new GetAdminUsersQuery(request)).ConfigureAwait(false));
+    }
 
     [HttpPost("users")]
     [RequirePermission("users.create")]
@@ -98,12 +103,16 @@ public sealed class IamAdminController(ISender sender) : BaseController
     [HttpGet("roles/{roleId}/assigned-users")]
     [RequirePermission("roles.view")]
     public async Task<IActionResult> GetRoleAssignedUsers(string roleId, [FromQuery] string? cursor, CancellationToken cancellationToken)
-        => HandleResponse(await sender.Send(new GetRoleAssignedUsersQuery(roleId, GetActorId(), cursor), cancellationToken).ConfigureAwait(false));
+    {
+        return HandleResponse(await sender.Send(new GetRoleAssignedUsersQuery(roleId, GetActorId(), cursor), cancellationToken).ConfigureAwait(false));
+    }
 
     [HttpGet("roles")]
     [RequirePermission("roles.view")]
     public async Task<IActionResult> GetRoles()
-        => HandleResponse(await sender.Send(new GetAdminRolesQuery()).ConfigureAwait(false));
+    {
+        return HandleResponse(await sender.Send(new GetAdminRolesQuery()).ConfigureAwait(false));
+    }
 
     [HttpPost("roles")]
     [RequirePermission("roles.create")]
@@ -175,15 +184,30 @@ public sealed class IamAdminController(ISender sender) : BaseController
         return HandleResponse(await sender.Send(new SearchPermissionsQuery(request, userId)).ConfigureAwait(false));
     }
 
+    [HttpGet("permissions/user-assignment")]
+    [RequirePermission("users.manage_permissions")]
+    public async Task<IActionResult> SearchUserPermissionOptions([FromQuery] PermissionSearchRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var result = await sender.Send(new SearchPermissionsQuery(request, GetActorId()), cancellationToken).ConfigureAwait(false);
+
+        return HandleResponse(result);
+    }
+
     [HttpGet("reference-data")]
     [RequirePermission("menus.view")]
     public async Task<IActionResult> GetReferenceData()
-        => HandleResponse(await sender.Send(new GetIamReferenceDataQuery()).ConfigureAwait(false));
+    {
+        return HandleResponse(await sender.Send(new GetIamReferenceDataQuery()).ConfigureAwait(false));
+    }
 
     [HttpGet("reference-catalogs/{catalogType}")]
     [RequirePermission("menus.view")]
     public async Task<IActionResult> GetReferenceCatalog(string catalogType)
-        => HandleResponse(await sender.Send(new GetReferenceCatalogQuery(catalogType)).ConfigureAwait(false));
+    {
+        return HandleResponse(await sender.Send(new GetReferenceCatalogQuery(catalogType)).ConfigureAwait(false));
+    }
 
     [HttpPost("reference-catalogs/{catalogType}")]
     [RequirePermission("menus.create")]
@@ -238,7 +262,11 @@ public sealed class IamAdminController(ISender sender) : BaseController
         ArgumentNullException.ThrowIfNull(request);
 
         var userId = GetActorId();
-        return HandleResponse(await sender.Send(new UpdatePermissionCommand(permissionId, request with { Id = permissionId }, userId)).ConfigureAwait(false));
+        return HandleResponse(await sender.Send(new UpdatePermissionCommand(permissionId, request with
+        {
+            Id = permissionId
+        }, userId))
+            .ConfigureAwait(false));
     }
 
     [HttpDelete("permissions/{permissionId:guid}")]
@@ -295,7 +323,11 @@ public sealed class IamAdminController(ISender sender) : BaseController
         ArgumentNullException.ThrowIfNull(request);
 
         var userId = GetActorId();
-        return HandleResponse(await sender.Send(new UpdateMenuCommand(menuId, request with { Id = menuId }, userId)).ConfigureAwait(false));
+        return HandleResponse(await sender.Send(new UpdateMenuCommand(menuId, request with
+        {
+            Id = menuId
+        }, userId))
+            .ConfigureAwait(false));
     }
 
     [HttpDelete("menus/{menuId:guid}")]
@@ -309,7 +341,9 @@ public sealed class IamAdminController(ISender sender) : BaseController
     [HttpGet("user-devices")]
     [RequirePermission("users.view")]
     public async Task<IActionResult> GetUserDevices()
-        => HandleResponse(await sender.Send(new GetAdminUserDevicesQuery()).ConfigureAwait(false));
+    {
+        return HandleResponse(await sender.Send(new GetAdminUserDevicesQuery()).ConfigureAwait(false));
+    }
 
     [HttpPatch("user-devices/{deviceId:guid}/revoke")]
     [RequirePermission("users.deactivate")]

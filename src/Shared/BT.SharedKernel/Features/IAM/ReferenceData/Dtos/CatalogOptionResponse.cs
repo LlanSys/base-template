@@ -4,4 +4,5 @@ public sealed record CatalogOptionResponse(
     string Key,
     string Label,
     string? Description = null,
-    string? ParentKey = null);
+    string? ParentKey = null,
+    bool IsActive = true);

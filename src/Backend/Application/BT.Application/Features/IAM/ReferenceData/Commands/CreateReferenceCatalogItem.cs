@@ -4,13 +4,12 @@ using BT.Application.Utilities;
 using BT.Domain.Features.IAM.Contracts;
 using BT.Domain.Features.IAM.ReferenceData.Entities;
 using BT.SharedKernel.Dtos.Common;
+using BT.SharedKernel.Features.IAM.Menus;
 using BT.SharedKernel.Features.IAM.ReferenceData.Dtos;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace BT.Application.Features.IAM.ReferenceData.Commands;
-
-
 
 internal sealed class CreateReferenceCatalogItemCommandHandler(IIamUnitOfWork unitOfWork, ILogger<CreateReferenceCatalogItemCommandHandler> logger)
     : IRequestHandler<CreateReferenceCatalogItemCommand, AppResponse<ReferenceCatalogItemResponse>>
@@ -22,6 +21,12 @@ internal sealed class CreateReferenceCatalogItemCommandHandler(IIamUnitOfWork un
             if (!ReferenceCatalogTypes.All.Contains(command.CatalogType))
             {
                 return AppResponses.Failure<ReferenceCatalogItemResponse>($"Catalog '{command.CatalogType}' is not supported.");
+            }
+
+            if (command.CatalogType.Equals(ReferenceCatalogTypes.MenuIcons, StringComparison.OrdinalIgnoreCase)
+                && !MenuIconCatalog.Contains(command.Request.Key))
+            {
+                return AppResponses.Failure<ReferenceCatalogItemResponse>("Choose a MudBlazor icon from the library.");
             }
 
             var duplicate = await KeyExistsAsync(unitOfWork, command.CatalogType, command.Request.Key, command.Request.ParentKey, cancellationToken)

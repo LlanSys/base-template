@@ -7,12 +7,20 @@
 @inject ISnackbar Snackbar
 <PageTitle>Audit Log | BaseTemplate</PageTitle>
 <section class="dashboard-page">
+    @if (TenantId is null)
+    {
+        <div class="mb-4">
+            <MudButton Href="/control-panel"
+                       Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.ArrowBack"
+                       Color="Color.Primary"
+                       Class="px-0">Back to Control Panel</MudButton>
+        </div>
+    }
     <MudPaper Class="poc-panel"
               Elevation="0">
         <div class="panel-heading">
             <h2>Audit Log</h2>
-            <MudChip T="string"
-                     Size="Size.Small">Latest @_entries.Count changes</MudChip>
         </div>
         <div class="list-toolbar">
             <MudTextField @bind-Value="_search"

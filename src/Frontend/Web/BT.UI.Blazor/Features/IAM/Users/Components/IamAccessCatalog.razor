@@ -12,40 +12,37 @@
                        Variant="Variant.Text"
                        StartIcon="@Icons.Material.Filled.ArrowBack"
                        Color="Color.Primary"
-                       Class="px-0">Back</MudButton>
+                       Class="px-0">Back to @(AuthSession.CurrentUser?.IsPlatformStaff == true ? "Control Panel" : "Admin Center")</MudButton>
         </div>
 
-        <div class="list-page-actions">
-            @if (_activeTab == 0 && AuthSession.HasPermission("roles.create"))
-            {
-                <MudButton Variant="Variant.Filled"
-                           Size="Size.Small"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Add"
-                           OnClick="OpenRoleCreateDialogAsync">Create role</MudButton>
-            }
-            else if (_activeTab == 1 && AuthSession.HasPermission("permissions.manage"))
-            {
-                <MudButton Variant="Variant.Filled"
-                           Size="Size.Small"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Add"
-                           OnClick="OpenPermissionCreateDialogAsync">Create permission</MudButton>
-            }
-            else if (_activeTab == 2 && AuthSession.HasPermission("users.create"))
-            {
-                <MudButton Variant="Variant.Filled"
-                           Size="Size.Small"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Add"
-                           OnClick="OpenUserCreateDialogAsync">Create user</MudButton>
-            }
-
-        </div>
         <MudPaper Class="poc-panel"
                   Elevation="0">
             <div class="panel-heading">
-                <h2 style="color: var(--bt-moss); font-weight: 700;">Identity & Access</h2>
+                <h2>Identity & Access</h2>
+                @if (_activeTab == 0 && AuthSession.HasPermission("roles.create"))
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Size="Size.Small"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenRoleCreateDialogAsync">Create role</MudButton>
+                }
+                else if (_activeTab == 1 && AuthSession.HasPermission("permissions.manage"))
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Size="Size.Small"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenPermissionCreateDialogAsync">Create permission</MudButton>
+                }
+                else if (_activeTab == 2 && AuthSession.HasPermission("users.create"))
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Size="Size.Small"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenUserCreateDialogAsync">Create user</MudButton>
+                }
             </div>
 
             <MudTabs ActivePanelIndex="_activeTab"

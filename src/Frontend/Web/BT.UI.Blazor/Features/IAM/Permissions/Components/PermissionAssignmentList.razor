@@ -1,0 +1,90 @@
+@using BT.SharedKernel.Features.ControlPlane.Modules
+@inject IAuthSession AuthSession
+
+@if (!Permissions.Any() && MissingKeys.Count == 0)
+{
+    <MudAlert Severity="Severity.Info"
+              Dense="true">No permissions are available in this scope.</MudAlert>
+}
+else
+{
+    <div class="assignment-options">
+        @foreach (var group in Permissions.OrderBy(static permission => permission.Key, StringComparer.OrdinalIgnoreCase).GroupBy(GetGroup, StringComparer.OrdinalIgnoreCase).OrderBy(static group => group.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            <fieldset class="assignment-group">
+                <legend>@group.Key</legend>
+                <div class="assignment-grid">
+                    @foreach (var permission in group)
+                    {
+                        <div class="assignment-option"
+                             @key="permission.Key">
+                            <MudCheckBox T="bool"
+                                         Value="@SelectedKeys.Contains(permission.Key)"
+                                         ValueChanged="@((selected) => OnToggle.InvokeAsync((permission.Key, selected)))"
+                                         Disabled="@(IsSaving || !CanToggle(permission))"
+                                         Color="Color.Success"
+                                         Dense="true"
+                                         Label="@permission.Key" />
+                            @if (!permission.IsActive)
+                            {
+                                <small>Inactive</small>
+                            }
+                            else if (!CanToggle(permission))
+                            {
+                                <small>Outside your delegated access</small>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(permission.Description))
+                            {
+                                <small>@permission.Description</small>
+                            }
+                        </div>
+                    }
+                </div>
+            </fieldset>
+        }
+        @if (MissingKeys.Count > 0)
+        {
+            <fieldset class="assignment-group">
+                <legend>Other Assigned Permissions</legend>
+                <div class="assignment-grid">
+                    @foreach (var key in MissingKeys)
+                    {
+                        <MudCheckBox T="bool"
+                                     Value="@SelectedKeys.Contains(key)"
+                                     ValueChanged="@((selected) => OnToggle.InvokeAsync((key, selected)))"
+                                     Disabled="@IsSaving"
+                                     Color="Color.Success"
+                                     Dense="true"
+                                     Label="@key" />
+                    }
+                </div>
+            </fieldset>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<PermissionResponse> Permissions { get; set; } = [];
+    [Parameter] public IReadOnlySet<string> SelectedKeys { get; set; } = new HashSet<string>();
+    [Parameter] public IReadOnlySet<string> OriginalKeys { get; set; } = new HashSet<string>();
+    [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public EventCallback<(string Key, bool Selected)> OnToggle { get; set; }
+
+    private IReadOnlyList<string> MissingKeys => OriginalKeys
+        .Except(Permissions.Select(static permission => permission.Key), StringComparer.OrdinalIgnoreCase)
+        .Order(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    private static string GetGroup(PermissionResponse permission)
+    {
+        return permission.RequiredModule ?? ModuleCatalog.ForPermission(permission.Key)
+            ?? (ModuleCatalog.IsPlatformPermission(permission.Key) ? "Platform" : "Core");
+    }
+
+    private bool CanToggle(PermissionResponse permission)
+    {
+        return OriginalKeys.Contains(permission.Key) || (permission.IsActive
+            && (AuthSession.CurrentUser?.IsPlatformStaff == true
+                || permission.IsTenantDelegatable && AuthSession.HasPermission(permission.Key)));
+    }
+}

@@ -7,102 +7,96 @@
 
 <PageTitle>Profile | Base Template</PageTitle>
 
-<section class="dashboard-page">
+<section class="profile-page"
+         aria-label="Profile">
     @if (!_isReady)
     {
-        <MudPaper Class="status-card"
-                  Elevation="0">Loading profile...</MudPaper>
+        <MudProgressLinear Indeterminate="true"
+                           aria-label="Loading profile" />
     }
-    else
+    else if (AuthSession.CurrentUser is { } user)
     {
-        <div class="dashboard-hero compact-hero">
-            <div>
-                <span class="eyebrow">Profile</span>
-                <h1>@DisplayName</h1>
-                <p>@AuthSession.CurrentUser?.Email</p>
+        <MudPaper Class="poc-panel profile-overview"
+                  Elevation="0">
+            <div class="profile-identity">
+                <MudAvatar Size="Size.Large"
+                           Class="profile-avatar-large">
+                    @if (ProfilePictureSource is not null)
+                    {
+                        <MudImage Src="@ProfilePictureSource"
+                                  Alt=""
+                                  ObjectFit="ObjectFit.Cover" />
+                    }
+                    else
+                    {
+                        @Initials
+                    }
+                </MudAvatar>
+                <div>
+                    <span class="eyebrow">Profile</span>
+                    <h1>@DisplayName</h1>
+                    <p>@PrimaryRole</p>
+                </div>
             </div>
+
             <MudButton Href="/iam/security"
-                       Variant="Variant.Filled"
+                       Variant="Variant.Outlined"
                        Size="Size.Small"
                        Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Security">
-                Security settings
-            </MudButton>
-        </div>
+                       StartIcon="@Icons.Material.Filled.Security">Security Settings</MudButton>
 
-        <MudPaper Class="poc-panel profile-detail-card"
+            <div class="profile-upload-control">
+                <label class="profile-upload-button"
+                       for="profile-photo">
+                    <MudIcon Icon="@Icons.Material.Filled.PhotoCamera"
+                             Size="Size.Small" />
+                    @(_isUploading ? "Uploading…" : "Change Photo")
+                </label>
+                <InputFile id="profile-photo"
+                           class="visually-hidden"
+                           aria-describedby="profile-photo-help"
+                           OnChange="OnProfilePictureSelectedAsync"
+                           accept="image/jpeg,image/png,image/webp"
+                           disabled="@_isUploading" />
+                <small id="profile-photo-help">JPEG, PNG, or WebP up to 10 MB.</small>
+            </div>
+        </MudPaper>
+
+        <MudPaper Class="poc-panel profile-details"
                   Elevation="0">
-            <MudGrid Spacing="3"
-                     Class="profile-detail-grid">
-                <MudItem xs="12"
-                         md="3">
-                    <div class="profile-summary-card embedded">
-                        <MudAvatar Size="Size.Large"
-                                   Class="profile-avatar-large">
-                            @if (ProfilePictureSource is not null)
-                            {
-                                <MudImage Src="@ProfilePictureSource"
-                                          Alt="@DisplayName"
-                                          ObjectFit="ObjectFit.Cover" />
-                            }
-                            else
-                            {
-                                @Initials
-                            }
-                        </MudAvatar>
-                        <h2>@DisplayName</h2>
-                        <span>@PrimaryRole</span>
+            <div class="panel-heading">
+                <h2>Account Details</h2>
+            </div>
+            <dl class="profile-details-grid">
+                <div>
+                    <dt>Username</dt>
+                    <dd>@user.UserName</dd>
+                </div>
+                <div>
+                    <dt>Email</dt>
+                    <dd>@user.Email</dd>
+                </div>
+                <div>
+                    <dt>Roles</dt>
+                    <dd>@(user.Roles.Count > 0 ? string.Join(", ", user.Roles) : "No roles assigned")</dd>
+                </div>
+                <div>
+                    <dt>Two-Factor Authentication</dt>
+                    <dd>
                         <MudChip T="string"
                                  Size="Size.Small"
-                                 Color="Color.Success">Active</MudChip>
-                        <div class="profile-upload-control">
-                            <InputFile OnChange="OnProfilePictureSelectedAsync"
-                                       accept="image/jpeg,image/png,image/webp"
-                                       disabled="@_isUploading" />
-                            <small>JPEG, PNG, or WebP up to 10 MB.</small>
-                        </div>
-                    </div>
-                </MudItem>
-
-                <MudItem xs="12"
-                         md="9">
-                    <div class="panel-heading">
-                        <div>
-                            <span class="eyebrow">Account details</span>
-                            <h2>Signed-in user</h2>
-                        </div>
-                    </div>
-
-                    <MudGrid>
-                        <MudItem xs="12"
-                                 sm="6">
-                            <strong>Username</strong>
-                            <p>@AuthSession.CurrentUser?.UserName</p>
-                        </MudItem>
-                        <MudItem xs="12"
-                                 sm="6">
-                            <strong>Email</strong>
-                            <p>@AuthSession.CurrentUser?.Email</p>
-                        </MudItem>
-                        <MudItem xs="12"
-                                 sm="6">
-                            <strong>Role</strong>
-                            <p>@PrimaryRole</p>
-                        </MudItem>
-                        <MudItem xs="12"
-                                 sm="6">
-                            <strong>Two-factor</strong>
-                            <p>@(AuthSession.CurrentUser?.TwoFactorEnabled == true ? "Enabled" : "Recommended")</p>
-                        </MudItem>
-                    </MudGrid>
-                </MudItem>
-            </MudGrid>
+                                 Color="@(user.TwoFactorEnabled ? Color.Success : Color.Default)">
+                            @(user.TwoFactorEnabled ? "Enabled" : "Not enabled")
+                        </MudChip>
+                    </dd>
+                </div>
+            </dl>
         </MudPaper>
     }
 </section>
 
 @code {
-    private bool _isReady = true;
+    private bool _isReady;
     private bool _isUploading;
     private const long MaxProfilePictureBytes = 10_485_760;
 

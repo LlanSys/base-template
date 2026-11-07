@@ -19,7 +19,7 @@
     <MudPaper Class="poc-panel"
               Elevation="0">
         <div class="panel-heading">
-            <h2 style="color: var(--bt-moss); font-weight: 700;">Customers</h2>
+            <h2>Customers</h2>
             <div class="d-flex align-center gap-3">
                 @if (AuthSession.HasPermission("customers.create"))
                 {
@@ -412,7 +412,8 @@
         var parameters = new DialogParameters
         {
             { nameof(ConfirmDialog.Message), $"Delete {customer.CompanyName}? This will remove the customer from active lists." },
-            { nameof(ConfirmDialog.ConfirmText), "Delete" }
+            { nameof(ConfirmDialog.ConfirmText), "Delete" },
+            { nameof(ConfirmDialog.ConfirmColor), Color.Error }
         };
 
         var dialog = await DialogService.ShowAsync<ConfirmDialog>(

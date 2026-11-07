@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <Folder Include="Exceptions\" />
+    <EmbeddedResource Include="Features/IAM/Menus/MaterialFilledIconKeys.txt" LogicalName="BT.MenuIconKeys" />
   </ItemGroup>
 
   <ItemGroup>

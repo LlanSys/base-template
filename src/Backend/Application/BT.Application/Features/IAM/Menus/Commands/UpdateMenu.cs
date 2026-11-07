@@ -10,8 +10,6 @@ using Microsoft.Extensions.Logging;
 
 namespace BT.Application.Features.IAM.Menus.Commands;
 
-
-
 internal sealed class UpdateMenuCommandHandler(TimeProvider timeProvider, IIamUnitOfWork unitOfWork, ILogger<UpdateMenuCommandHandler> logger)
     : IRequestHandler<UpdateMenuCommand, AppResponse<MenuResponse>>
 {
@@ -20,7 +18,10 @@ internal sealed class UpdateMenuCommandHandler(TimeProvider timeProvider, IIamUn
         try
         {
             if (!BT.SharedKernel.Features.IAM.Menus.ImplementedMenuRoutes.Matches(command.Request.Url, command.Request.RequiredPermissionKey, command.Request.RequiredModule))
+            {
                 return AppResponses.Failure<MenuResponse>("Select an implemented route with its registered permission and business module.");
+            }
+
             var request = command.Request;
             var catalogError = await ValidateCatalogAsync(unitOfWork, request.Placement, request.Icon, request.Url, request.RequiredPermissionKey, cancellationToken)
                 .ConfigureAwait(false);
@@ -57,7 +58,6 @@ internal sealed class UpdateMenuCommandHandler(TimeProvider timeProvider, IIamUn
                     return AppResponses.Failure<MenuResponse>("Parent menu must use the same placement and department scope.");
                 }
             }
-
 
             menu.Update(
                 timeProvider.GetUtcNow(),
@@ -107,13 +107,9 @@ internal sealed class UpdateMenuCommandHandler(TimeProvider timeProvider, IIamUn
             return $"Menu placement '{placement}' is not registered.";
         }
 
-        var iconExists = await unitOfWork.MenuIconRepository
-            .AnyAsync(item => item.IsActive && item.Key == icon.Trim(), cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!iconExists)
+        if (!await MenuIconAvailability.IsAvailableAsync(unitOfWork, icon, cancellationToken).ConfigureAwait(false))
         {
-            return $"Menu icon '{icon}' is not registered.";
+            return $"Menu icon '{icon}' is unavailable.";
         }
 
         var routeExists = string.IsNullOrWhiteSpace(url)

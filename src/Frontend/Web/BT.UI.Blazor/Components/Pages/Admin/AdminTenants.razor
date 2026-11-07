@@ -20,23 +20,18 @@
                    Class="px-0">Back to Control Panel</MudButton>
     </div>
 
-    <div class="list-page-actions">
-        @if (AuthSession.HasPermission("controlplane.create_tenants"))
-        {
-            <MudButton Variant="Variant.Filled"
-                       Size="Size.Small"
-                       Color="Color.Primary"
-                       StartIcon="@Icons.Material.Filled.Add"
-                       OnClick="@(() => OpenFormDialogAsync(null))">Create tenant</MudButton>
-        }
-
-    </div>
     <MudPaper Class="poc-panel"
               Elevation="0">
         <div class="panel-heading">
-            <h2 style="color: var(--bt-moss); font-weight: 700;">Tenant List</h2>
-            <MudChip T="string"
-                     Size="Size.Small">@(FilteredTenants.Count()) shown</MudChip>
+            <h2>Tenant List</h2>
+            @if (AuthSession.HasPermission("controlplane.create_tenants"))
+            {
+                <MudButton Variant="Variant.Filled"
+                           Size="Size.Small"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@(() => OpenFormDialogAsync(null))">Create tenant</MudButton>
+            }
         </div>
 
         <div class="list-toolbar">
@@ -154,7 +149,23 @@
 
     private async Task DeleteAsync(TenantResponse tenant)
     {
-        if (await DialogService.ShowMessageBoxAsync("Delete tenant", $"Delete {tenant.DisplayName}? Users will lose access to this organization.", yesText: "Delete", cancelText: "Cancel") != true) return;
+        var parameters = new DialogParameters
+        {
+            { nameof(ConfirmDialog.Message), $"Delete {tenant.DisplayName}? Users will lose access to this organization." },
+            { nameof(ConfirmDialog.ConfirmText), "Delete" },
+            { nameof(ConfirmDialog.ConfirmColor), Color.Error }
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>(
+            "Delete tenant",
+            parameters,
+            new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, CloseOnEscapeKey = true });
+        if (await dialog.Result is not { Canceled: false })
+        {
+            return;
+        }
+
+
         var response = await TenantService.DeleteAsync(tenant.Id);
         if (!response.IsSuccess) Snackbar.Add(response.Message ?? "Tenant could not be deleted.", Severity.Error);
         await LoadTenantsAsync();
